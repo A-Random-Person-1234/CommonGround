@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CommonGround</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <section class="home-page" id="homePage">
+      <div class="home-shell">
+        <div class="brand-lockup">
+          <div class="mark">CG</div>
+          <div>
+            <p class="eyebrow">CommonGround</p>
+            <h1>Find a time that works for everyone.</h1>
+            <p class="lead">
+              Create a shared room, invite people, and see everyone’s busy/free calendar blocks in one place.
+            </p>
+          </div>
+        </div>
+
+        <div class="home-grid">
+          <form class="panel" id="createRoomForm">
+            <p class="panel-label">Create room</p>
+            <input id="createRoomName" type="text" placeholder="Room name (optional)" autocomplete="off" />
+            <input id="createDisplayName" type="text" placeholder="Your display name" autocomplete="off" />
+            <button class="primary" type="submit">Create room</button>
+          </form>
+
+          <form class="panel" id="joinRoomForm">
+            <p class="panel-label">Join room</p>
+            <input id="joinRoomCode" type="text" placeholder="Enter room code" autocomplete="off" />
+            <input id="joinDisplayName" type="text" placeholder="Your display name" autocomplete="off" />
+            <button class="secondary strong" type="submit">Join room</button>
+          </form>
+        </div>
+
+        <div class="inline-status" id="homeStatus">Checking your session...</div>
+      </div>
+    </section>
+
+    <section class="room-page hidden" id="roomPage">
+      <header class="room-topbar">
+        <div class="room-heading">
+          <div class="mark">CG</div>
+          <div>
+            <p class="eyebrow">CommonGround</p>
+            <div class="room-title-row">
+              <h2 id="roomName">Room</h2>
+              <span class="room-code" id="roomCode">------</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="room-actions">
+          <button class="secondary" id="copyInviteButton" type="button">Copy invite link</button>
+          <button class="secondary" id="connectGoogleButton" type="button">Connect Google Calendar</button>
+          <button class="secondary" id="refreshButton" type="button">Refresh</button>
+          <div class="view-switcher" id="viewSwitcher" aria-label="Calendar view">
+            <button type="button" data-view="day">D</button>
+            <button type="button" data-view="week">W</button>
+            <button type="button" data-view="month">M</button>
+            <button type="button" data-view="year">Y</button>
+          </div>
+          <label class="theme-toggle" title="Toggle light and dark mode">
+            <input type="checkbox" id="themeToggle" />
+            <span>Light</span>
+            <strong>Dark</strong>
+          </label>
+        </div>
+      </header>
+
+      <section class="room-meta">
+        <div class="participants-card">
+          <div class="participants-header">
+            <div>
+              <p class="panel-label">Participants</p>
+              <p class="muted" id="roomStatus">Waiting for room data...</p>
+            </div>
+            <form class="name-form" id="displayNameForm">
+              <input id="displayNameInput" type="text" placeholder="Your display name" autocomplete="off" />
+              <button class="secondary" type="submit">Save name</button>
+            </form>
+          </div>
+          <div class="participant-strip" id="participantStrip"></div>
+        </div>
+
+        <details class="host-panel" id="hostPanel">
+          <summary>Host controls</summary>
+          <form class="host-row" id="renameRoomForm">
+            <input id="renameRoomInput" type="text" placeholder="Rename room" autocomplete="off" />
+            <button class="secondary" type="submit">Save</button>
+          </form>
+          <button class="danger" id="deleteRoomButton" type="button">Delete room</button>
+        </details>
+      </section>
+
+      <section class="room-content">
+        <main class="calendar-stage">
+          <div class="calendar-toolbar">
+            <div class="inline-status" id="calendarStatus">Loading room…</div>
+            <button class="primary" id="addEventButton" type="button">Add group event</button>
+          </div>
+          <div class="empty-room hidden" id="emptyRoomState">
+            <p>You’re in. Now invite people to join this room.</p>
+            <div class="empty-room-actions">
+              <span class="room-code large" id="emptyRoomCode">------</span>
+              <button class="secondary" id="copyInviteButtonEmpty" type="button">Copy invite link</button>
+            </div>
+          </div>
+          <div class="calendar-wrap">
+            <div class="calendar-grid" id="calendarGrid"></div>
+          </div>
+        </main>
+
+        <aside class="detail-panel" id="detailPanel">
+          <div class="panel-head">
+            <div>
+              <p class="panel-label" id="detailLabel">Event details</p>
+              <h3 id="detailTitle">Select an event</h3>
+            </div>
+            <button class="ghost" id="closeDetailButton" type="button">Close</button>
+          </div>
+
+          <div class="detail-empty" id="detailEmpty">
+            Tap a group event or busy stack to inspect it in more detail.
+          </div>
+
+          <div class="detail-body hidden" id="eventDetail">
+            <div class="detail-block">
+              <p class="detail-time" id="detailTime"></p>
+              <p class="detail-meta" id="detailLocation"></p>
+              <p class="detail-description" id="detailDescription"></p>
+            </div>
+
+            <div class="vote-row">
+              <button class="vote-button" data-response="yes" type="button">Yes</button>
+              <button class="vote-button" data-response="maybe" type="button">Maybe</button>
+              <button class="vote-button" data-response="no" type="button">No</button>
+            </div>
+
+            <div class="response-summary" id="responseSummary"></div>
+            <div class="response-groups" id="responseGroups"></div>
+
+            <div class="comment-section">
+              <div class="comment-list" id="commentList"></div>
+              <form class="comment-form" id="commentForm">
+                <textarea id="commentInput" rows="3" maxlength="500" placeholder="Add a comment"></textarea>
+                <button class="secondary strong" type="submit">Comment</button>
+              </form>
+            </div>
+
+            <div class="detail-actions">
+              <button class="secondary" id="downloadIcsButton" type="button">Add to calendar</button>
+              <button class="secondary" id="editEventButton" type="button">Edit</button>
+              <button class="danger" id="deleteEventButton" type="button">Delete</button>
+            </div>
+          </div>
+
+          <div class="detail-body hidden" id="busyDetail">
+            <div class="busy-detail-list" id="busyDetailList"></div>
+          </div>
+        </aside>
+      </section>
+    </section>
+
+    <dialog class="modal" id="eventModal">
+      <form class="modal-card" id="eventForm" method="dialog">
+        <div class="panel-head">
+          <div>
+            <p class="panel-label" id="eventModalLabel">Add group event</p>
+            <h3 id="eventModalTitle">Create proposal</h3>
+          </div>
+          <button class="ghost" id="cancelEventButton" type="button">Close</button>
+        </div>
+
+        <div class="modal-grid">
+          <input id="eventTitleInput" type="text" placeholder="Title" autocomplete="off" required />
+          <input id="eventDateInput" type="date" required />
+          <input id="eventStartInput" type="time" required />
+          <input id="eventEndInput" type="time" required />
+          <input id="eventLocationInput" type="text" placeholder="Location (optional)" autocomplete="off" />
+          <textarea id="eventDescriptionInput" rows="4" placeholder="Description (optional)"></textarea>
+        </div>
+
+        <div class="modal-actions">
+          <button class="secondary" id="cancelEventSecondary" type="button">Cancel</button>
+          <button class="primary" id="saveEventButton" type="submit">Save event</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
