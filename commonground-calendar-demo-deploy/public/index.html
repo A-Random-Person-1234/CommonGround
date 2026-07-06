@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>CommonGround Demo</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <section class="auth-gate" id="authGate">
+      <div class="auth-card">
+        <div class="mark">CG</div>
+        <p class="eyebrow">CommonGround</p>
+        <h1>Connect your calendar first.</h1>
+        <p class="auth-copy">
+          Busy/free only. No event titles.
+        </p>
+        <button class="primary full" id="connectButton">Connect Google Calendar</button>
+        <button class="secondary full" id="demoButton">Bypass for demo</button>
+        <div class="status" id="connectionStatus">Checking calendar setup...</div>
+      </div>
+    </section>
+
+    <div class="app hidden" id="appShell">
+      <aside class="sidebar">
+        <div class="rail-mark">CG</div>
+        <div class="sidebar-content">
+          <div class="brand">
+            <div class="mark">CG</div>
+            <div>
+              <h1>CommonGround</h1>
+              <p>Calendar planner</p>
+            </div>
+          </div>
+
+          <div class="section-title">Groups</div>
+          <div class="groups" id="groups"></div>
+
+          <form class="add-person" id="addPersonForm">
+            <label for="personName">Add someone</label>
+            <div>
+              <input id="personName" name="personName" type="text" autocomplete="off" placeholder="Name or email (pending)" />
+              <button class="primary" type="submit">Add</button>
+            </div>
+          </form>
+        </div>
+      </aside>
+
+      <main class="calendar-stage">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow" id="groupType">Friend group</p>
+            <h2 id="groupName">Loading...</h2>
+          </div>
+          <div class="actions">
+            <span id="sourcePill" class="pill">Demo mode</span>
+            <div class="view-switcher" id="viewSwitcher" aria-label="Calendar view">
+              <button type="button" data-view="day">D</button>
+              <button type="button" data-view="week">W</button>
+              <button type="button" data-view="month">M</button>
+              <button type="button" data-view="year">Y</button>
+            </div>
+            <label class="theme-toggle" title="Toggle light and dark mode">
+              <input type="checkbox" id="themeToggle" />
+              <span>Light</span>
+              <strong>Dark</strong>
+            </label>
+            <button class="secondary" id="reconnectButton">Reconnect</button>
+            <button class="secondary" id="refreshButton">Refresh</button>
+          </div>
+        </header>
+
+        <div class="calendar-wrap">
+          <div class="calendar-grid" id="calendarGrid"></div>
+        </div>
+      </main>
+    </div>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
