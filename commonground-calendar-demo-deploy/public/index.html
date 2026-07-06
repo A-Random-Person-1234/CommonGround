@@ -36,10 +36,19 @@
           <div class="section-title">Groups</div>
           <div class="groups" id="groups"></div>
 
+          <form class="create-group" id="createGroupForm">
+            <label for="newGroupName">New group</label>
+            <div>
+              <input id="newGroupName" name="newGroupName" type="text" autocomplete="off" placeholder="Group name" />
+              <input id="newGroupType" name="newGroupType" type="text" autocomplete="off" placeholder="Type" />
+              <button class="primary" type="submit">Create</button>
+            </div>
+          </form>
+
           <form class="add-person" id="addPersonForm">
             <label for="personName">Add someone</label>
             <div>
-              <input id="personName" name="personName" type="text" autocomplete="off" placeholder="Name or email (pending)" />
+              <input id="personName" name="personName" type="text" autocomplete="off" placeholder="Email works best" />
               <button class="primary" type="submit">Add</button>
             </div>
           </form>

@@ -8,15 +8,16 @@ A deployable Node.js prototype for planning meetups from Google Calendar busy/fr
 - Reads Google Calendar **busy/free blocks only**.
 - Does not read event titles, descriptions, locations, or attendees.
 - Shows busy blocks on day/week/month/year calendar views.
-- Lets you create/select local demo groups and add pending people.
+- Lets connected people create shared groups and add others by email.
+- Resolves pending email invites automatically when that person later signs in.
 
 ## Important Prototype Limits
 
-This is still a prototype. It can be deployed online, but it is not yet a full multi-user production app.
+This is now a shared prototype with server-backed groups, but it is still not a full production app.
 
-- Added people are pending names until they connect their own calendar in a future multi-user flow.
-- The current session store is file/in-memory based for demo use.
-- For a real public product, replace `.local-session.json` with a database and store one OAuth token set per user.
+- The current data store is a local JSON file called `.shared-store.json`.
+- Sessions are still in memory, so people may need to reconnect after a server restart.
+- For a real public product, replace `.shared-store.json` with a proper database and encrypted token storage.
 - Rotate your Google client secret before using this beyond local testing, because it was pasted into chat earlier.
 
 ## Google Cloud Setup

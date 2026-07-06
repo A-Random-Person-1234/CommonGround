@@ -1,5 +1,3 @@
-const groupStorageKey = "cg-groups-v2";
-
 const fixedMemberColors = {
   You: "#1a73e8",
   Maya: "#d93025",
@@ -44,7 +42,8 @@ const defaultGroups = [
     id: "uni",
     name: "Uni friends",
     type: "Weekend crew",
-    members: ["You", "Maya", "Sam", "Leah", "Omar"],
+    members: [{ id: "you", name: "You" }, { id: "maya", name: "Maya" }, { id: "sam", name: "Sam" }, { id: "leah", name: "Leah" }, { id: "omar", name: "Omar" }],
+    pendingMembers: [],
     sampleBusy: {
       You: ["mon-09", "wed-18"],
       Maya: ["tue-11", "fri-18"],
@@ -57,7 +56,8 @@ const defaultGroups = [
     id: "work",
     name: "Work mates",
     type: "After work",
-    members: ["You", "Priya", "Jordan", "Nia"],
+    members: [{ id: "you", name: "You" }, { id: "priya", name: "Priya" }, { id: "jordan", name: "Jordan" }, { id: "nia", name: "Nia" }],
+    pendingMembers: [],
     sampleBusy: {
       You: ["mon-09", "tue-16"],
       Priya: ["mon-14", "wed-10", "fri-18"],
@@ -69,7 +69,8 @@ const defaultGroups = [
     id: "football",
     name: "Football group",
     type: "Activity group",
-    members: ["You", "Callum", "Zara", "Ben", "Iqra", "Tariq"],
+    members: [{ id: "you", name: "You" }, { id: "callum", name: "Callum" }, { id: "zara", name: "Zara" }, { id: "ben", name: "Ben" }, { id: "iqra", name: "Iqra" }, { id: "tariq", name: "Tariq" }],
+    pendingMembers: [],
     sampleBusy: {
       You: ["sat-18"],
       Callum: ["sat-14", "wed-18"],
@@ -113,8 +114,8 @@ const candidateSlots = [
   { id: "sat-18", day: 6, hour: 18, duration: 2 }
 ];
 
-let groups = loadGroups();
-let selectedGroupId = groups[0].id;
+let groups = cloneDefaultGroups();
+let selectedGroupId = groups[0]?.id || null;
 const savedView = localStorage.getItem("cg-view");
 let currentView = ["day", "week", "month", "year"].includes(savedView) ? savedView : "week";
 let googleBusy = [];
@@ -124,6 +125,7 @@ let googleConnected = false;
 let googleUser = null;
 let demoBypass = false;
 let refreshTimer = null;
+let usingServerGroups = false;
 
 const authGate = document.querySelector("#authGate");
 const appShell = document.querySelector("#appShell");
@@ -137,6 +139,9 @@ const themeToggle = document.querySelector("#themeToggle");
 const addPersonForm = document.querySelector("#addPersonForm");
 const personNameInput = document.querySelector("#personName");
 const viewSwitcher = document.querySelector("#viewSwitcher");
+const createGroupForm = document.querySelector("#createGroupForm");
+const newGroupNameInput = document.querySelector("#newGroupName");
+const newGroupTypeInput = document.querySelector("#newGroupType");
 
 document.querySelector("#connectButton").addEventListener("click", () => {
   window.location.href = "/auth/google";
@@ -144,13 +149,15 @@ document.querySelector("#connectButton").addEventListener("click", () => {
 
 document.querySelector("#demoButton").addEventListener("click", async () => {
   demoBypass = true;
+  usingServerGroups = false;
+  groups = cloneDefaultGroups();
+  selectedGroupId = groups[0]?.id || null;
   await loadAvailability();
   showApp();
 });
 
 document.querySelector("#refreshButton").addEventListener("click", async () => {
-  await loadAvailability();
-  render();
+  await refreshAll();
 });
 
 document.querySelector("#reconnectButton").addEventListener("click", () => {
@@ -163,58 +170,115 @@ themeToggle.addEventListener("change", () => {
   localStorage.setItem("cg-theme", theme);
 });
 
-viewSwitcher.addEventListener("click", (event) => {
+viewSwitcher.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-view]");
   if (!button) return;
   currentView = button.dataset.view;
   localStorage.setItem("cg-view", currentView);
-  loadAvailability().then(render);
+  await loadAvailability();
+  render();
 });
 
-addPersonForm.addEventListener("submit", (event) => {
+createGroupForm.addEventListener("submit", async (event) => {
   event.preventDefault();
-  const name = personNameInput.value.trim();
+  const name = newGroupNameInput.value.trim();
+  const type = newGroupTypeInput.value.trim();
   if (!name) return;
 
-  const group = activeGroup();
-  const exists = group.members.some((member) => member.toLowerCase() === name.toLowerCase());
-  if (!exists) {
-    group.members.push(name);
-    group.sampleBusy[name] = [];
-    saveGroups();
+  if (usesDemoData()) {
+    const id = `demo-${Math.random().toString(16).slice(2, 10)}`;
+    groups.unshift({
+      id,
+      name,
+      type: type || "Friend group",
+      members: [{ id: "you", name: "You" }],
+      pendingMembers: [],
+      sampleBusy: { You: [] }
+    });
+    selectedGroupId = id;
+    newGroupNameInput.value = "";
+    newGroupTypeInput.value = "";
     render();
+    return;
   }
-  personNameInput.value = "";
+
+  const response = await fetch("/api/groups", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, type })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    connectionStatus.innerHTML = `<span class="warn">${data.error || "Could not create group."}</span>`;
+    return;
+  }
+
+  groups.unshift(data.group);
+  selectedGroupId = data.group.id;
+  usingServerGroups = true;
+  newGroupNameInput.value = "";
+  newGroupTypeInput.value = "";
+  await loadAvailability();
+  render();
 });
 
-function loadGroups() {
-  const stored = localStorage.getItem(groupStorageKey);
-  if (!stored) return cloneDefaultGroups();
+addPersonForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const identifier = personNameInput.value.trim();
+  if (!identifier) return;
 
-  try {
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) && parsed.length ? parsed : cloneDefaultGroups();
-  } catch {
-    return cloneDefaultGroups();
+  const group = activeGroup();
+  if (!group) return;
+
+  if (usesDemoData()) {
+    const exists = group.members.some((member) => member.name.toLowerCase() === identifier.toLowerCase());
+    if (!exists) {
+      group.members.push({ id: identifier.toLowerCase(), name: identifier });
+      group.sampleBusy[identifier] = [];
+      render();
+    }
+    personNameInput.value = "";
+    return;
   }
-}
 
-function saveGroups() {
-  localStorage.setItem(groupStorageKey, JSON.stringify(groups));
-}
+  const response = await fetch(`/api/groups/${group.id}/members`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ identifier })
+  });
+  const data = await response.json();
+  if (!response.ok) {
+    connectionStatus.innerHTML = `<span class="warn">${data.error || "Could not add that person."}</span>`;
+    return;
+  }
+
+  replaceGroup(data.group);
+  personNameInput.value = "";
+  render();
+});
 
 function cloneDefaultGroups() {
   return JSON.parse(JSON.stringify(defaultGroups));
 }
 
 function colorFor(member) {
-  if (fixedMemberColors[member]) return fixedMemberColors[member];
-  const hash = [...member].reduce((total, char) => total + char.charCodeAt(0), 0);
+  const name = typeof member === "string" ? member : member?.name || "Member";
+  if (fixedMemberColors[name]) return fixedMemberColors[name];
+  const hash = [...name].reduce((total, char) => total + char.charCodeAt(0), 0);
   return colorPalette[hash % colorPalette.length];
 }
 
 function activeGroup() {
-  return groups.find((group) => group.id === selectedGroupId) || groups[0];
+  return groups.find((group) => group.id === selectedGroupId) || null;
+}
+
+function replaceGroup(nextGroup) {
+  groups = groups.map((group) => group.id === nextGroup.id ? nextGroup : group);
+}
+
+function ensureSelectedGroup() {
+  if (selectedGroupId && groups.some((group) => group.id === selectedGroupId)) return;
+  selectedGroupId = groups[0]?.id || null;
 }
 
 function startOfWeek(date) {
@@ -276,52 +340,23 @@ function formatTime(hour) {
   return `${face}:${String(minutes).padStart(2, "0")} ${suffix}`;
 }
 
-function googleBlocksSlot(slot) {
-  const start = dateForSlot(slot);
-  const end = new Date(start);
-  end.setHours(end.getHours() + slot.duration);
-
-  return googleBusy.some((busy) => {
-    const busyStart = new Date(busy.start);
-    const busyEnd = new Date(busy.end);
-    return busyStart < end && busyEnd > start;
-  });
-}
-
 function usesDemoData() {
-  return demoBypass && freebusySource !== "google";
-}
-
-function scoreSlot(group, slot) {
-  const busyPeople = [];
-  for (const member of group.members) {
-    const isYou = member === "You";
-    const isBusy =
-      isYou && freebusySource === "google"
-        ? googleBlocksSlot(slot)
-        : usesDemoData() && group.sampleBusy[member]?.includes(slot.id);
-    if (isBusy) busyPeople.push(member);
-  }
-
-  return {
-    slot,
-    date: dateForSlot(slot),
-    busyPeople
-  };
+  return demoBypass || !googleConnected;
 }
 
 function sampleBusyEvents(group) {
-  if (!usesDemoData()) return [];
+  if (!usesDemoData() || !group?.sampleBusy) return [];
 
   const events = [];
-  for (const member of group.members) {
-    const slots = group.sampleBusy[member] || [];
+  for (const member of group.members || []) {
+    const name = member.name || member;
+    const slots = group.sampleBusy[name] || [];
     for (const slotId of slots) {
       const slot = candidateSlots.find((candidate) => candidate.id === slotId);
       if (!slot) continue;
       const date = dateForSlot(slot);
       events.push({
-        member,
+        member: name,
         date,
         dateKey: dateKey(date),
         day: slot.day,
@@ -335,7 +370,6 @@ function sampleBusyEvents(group) {
 
 function googleBusyEvents() {
   if (freebusySource !== "google") return [];
-
   return googleBusy.flatMap((busy) => splitGoogleBusyBlock(new Date(busy.start), new Date(busy.end), busy));
 }
 
@@ -361,7 +395,7 @@ function splitGoogleBusyBlock(start, end, sourceBlock) {
 
     if (clampedEnd > clampedStart) {
       events.push({
-        member: sourceBlock.ownerName || sourceBlock.calendarSummary || googleUser?.name || "You",
+        member: sourceBlock.ownerName || "Member",
         date: new Date(dayStart),
         dateKey: dateKey(dayStart),
         day: dayStart.getDay(),
@@ -382,22 +416,32 @@ function busyEvents(group) {
   return [...sampleBusyEvents(group), ...googleBusyEvents()];
 }
 
-function freeSlots(group) {
-  if (googleConnected && freebusySource !== "google" && !usesDemoData()) return [];
-
-  return candidateSlots
-    .map((slot) => scoreSlot(group, slot))
-    .filter((entry) => entry.busyPeople.length === 0);
-}
-
 function renderGroups() {
   groupList.innerHTML = "";
+
+  if (!groups.length) {
+    const empty = document.createElement("div");
+    empty.className = "groups-empty";
+    empty.textContent = googleConnected
+      ? "Create your first group, then add people by email so they can join the same shared calendar."
+      : "Use the demo bypass to explore the layout.";
+    groupList.appendChild(empty);
+    return;
+  }
+
   for (const group of groups) {
     const button = document.createElement("button");
     button.className = `group-button ${group.id === selectedGroupId ? "active" : ""}`;
-    button.innerHTML = `<strong>${group.name}</strong><span>${group.members.length} people</span>`;
-    button.addEventListener("click", () => {
+    const pendingCount = (group.pendingMembers || []).length;
+    const liveCount = group.connectedCount ?? group.members.length;
+    const totalCount = group.memberCount ?? (group.members.length + pendingCount);
+    const subtitle = pendingCount
+      ? `${liveCount} live · ${pendingCount} pending`
+      : `${totalCount} people`;
+    button.innerHTML = `<strong>${group.name}</strong><span>${subtitle}</span>`;
+    button.addEventListener("click", async () => {
       selectedGroupId = group.id;
+      await loadAvailability();
       render();
     });
     groupList.appendChild(button);
@@ -405,6 +449,12 @@ function renderGroups() {
 }
 
 function renderCalendar(group) {
+  if (!group) {
+    calendarGrid.className = "calendar-grid empty-state";
+    calendarGrid.innerHTML = `<div class="groups-empty">Create a group, then add people by email. Once they connect their own calendar, everyone in the group will appear together here.</div>`;
+    return;
+  }
+
   calendarGrid.innerHTML = "";
   calendarGrid.className = `calendar-grid ${currentView}-view`;
 
@@ -461,7 +511,6 @@ function renderPlanner(group, days) {
   calendarGrid.appendChild(eventsLayer);
 
   const visibleDays = new Set(days.map((day) => day.day));
-
   const laneCounts = new Map();
   for (const event of busyEvents(group).filter((entry) => visibleDays.has(entry.day))) {
     const lane = laneCounts.get(event.day) || 0;
@@ -578,29 +627,38 @@ function renderViewButtons() {
   }
 }
 
-function render() {
-  const group = activeGroup();
-  groupName.textContent = group.name;
-  const viewNames = { day: "Day", week: "Week", month: "Month", year: "Year" };
-  groupType.textContent = `${viewNames[currentView]} planner - ${currentView === "year" ? new Date().getFullYear() : currentView === "month" ? formatMonthYear(new Date()) : formatRange()}`;
-  sourcePill.textContent = liveStatusText();
-  sourcePill.classList.toggle("error", freebusySource === "error");
-  renderGroups();
-  renderViewButtons();
-  renderCalendar(group);
-}
-
 function liveStatusText() {
   if (freebusySource === "error") {
     return liveMeta?.error?.includes("disabled") ? "Google Calendar API disabled" : "Google fetch error";
   }
   if (freebusySource === "google") {
-    const calendarCount = liveMeta?.calendarCount || 1;
-    const suffix = liveMeta?.needsReconnect ? " · reconnect for all calendars" : "";
-    const name = googleUser?.name || "Google";
-    return `${name} live · ${calendarCount} cal · ${googleBusy.length} busy${suffix}`;
+    const connectedCount = liveMeta?.connectedCount || 0;
+    return `${connectedCount} people live · ${googleBusy.length} busy`;
+  }
+  if (googleConnected) {
+    return "Connected";
   }
   return demoBypass ? "Demo sample data" : "Not connected";
+}
+
+function render() {
+  ensureSelectedGroup();
+  const group = activeGroup();
+  const viewNames = { day: "Day", week: "Week", month: "Month", year: "Year" };
+
+  if (group) {
+    groupName.textContent = group.name;
+    groupType.textContent = `${group.type} · ${viewNames[currentView]} planner${currentView === "year" ? ` - ${new Date().getFullYear()}` : currentView === "month" ? ` - ${formatMonthYear(new Date())}` : ` - ${formatRange()}`}`;
+  } else {
+    groupName.textContent = "Create your first group";
+    groupType.textContent = googleConnected ? "Shared backend live" : "Demo mode";
+  }
+
+  sourcePill.textContent = liveStatusText();
+  sourcePill.classList.toggle("error", freebusySource === "error");
+  renderGroups();
+  renderViewButtons();
+  renderCalendar(group);
 }
 
 function showGate() {
@@ -617,10 +675,9 @@ function showApp() {
 
 function startLiveRefresh() {
   window.clearInterval(refreshTimer);
-  if (!googleConnected) return;
+  if (!googleConnected || !selectedGroupId || usesDemoData()) return;
   refreshTimer = window.setInterval(async () => {
-    await loadAvailability();
-    render();
+    await refreshAll();
   }, 20_000);
 }
 
@@ -639,8 +696,7 @@ async function loadConfig() {
     connectionStatus.innerHTML = `<span class="warn">Google credentials not found. Use the demo bypass.</span>`;
   } else if (googleConnected) {
     const name = googleUser?.name ? ` as ${googleUser.name}` : "";
-    const reconnect = me.needsProfileReconnect ? " Reconnect to add your name." : "";
-    connectionStatus.innerHTML = `<span class="connected">Google Calendar connected${name}.${reconnect}</span>`;
+    connectionStatus.innerHTML = `<span class="connected">Google Calendar connected${name}.</span>`;
   } else {
     connectionStatus.textContent = "Connect Google Calendar to enter the planner.";
   }
@@ -679,35 +735,69 @@ function visibleRange() {
   };
 }
 
+async function loadServerGroups() {
+  const response = await fetch("/api/groups", { cache: "no-store" });
+  const data = await response.json();
+  if (!response.ok) {
+    groups = [];
+    usingServerGroups = true;
+    return;
+  }
+
+  groups = data.groups || [];
+  googleUser = data.user || googleUser;
+  usingServerGroups = true;
+  ensureSelectedGroup();
+}
+
 async function loadAvailability() {
+  if (usesDemoData()) {
+    googleBusy = [];
+    liveMeta = null;
+    freebusySource = demoBypass ? "demo" : "none";
+    return;
+  }
+
+  const group = activeGroup();
+  if (!group) {
+    googleBusy = [];
+    liveMeta = { connectedCount: 0 };
+    freebusySource = "none";
+    return;
+  }
+
   const range = visibleRange();
   const params = new URLSearchParams({
     timeMin: range.start.toISOString(),
     timeMax: range.end.toISOString()
   });
-  let response = await fetch(`/api/freebusy?${params.toString()}`, { cache: "no-store" });
-  let data = await response.json();
-  if (data.source === "none" && googleConnected) {
-    const meResponse = await fetch("/api/me", { cache: "no-store" });
-    const me = await meResponse.json();
-    googleConnected = Boolean(me.connected);
-    if (googleConnected) {
-      response = await fetch(`/api/freebusy?${params.toString()}`, { cache: "no-store" });
-      data = await response.json();
-    }
+
+  const response = await fetch(`/api/groups/${group.id}/freebusy?${params.toString()}`, { cache: "no-store" });
+  const data = await response.json();
+  if (!response.ok) {
+    googleBusy = [];
+    liveMeta = { error: data.error || "Could not load group calendars." };
+    freebusySource = "error";
+    return;
   }
+
   googleBusy = data.busy || [];
   liveMeta = {
-    calendarCount: data.calendarCount,
-    calendars: data.calendars || [],
+    connectedCount: data.connectedCount || 0,
+    members: data.members || [],
     fetchedAt: data.fetchedAt,
-    needsReconnect: Boolean(data.needsReconnect),
-    calendarListError: data.calendarListError,
-    error: data.error
+    error: data.error || null
   };
-  freebusySource = data.error ? "error" : googleConnected && data.source === "google" ? "google" : demoBypass ? "demo" : "none";
-  sourcePill.textContent = liveStatusText();
-  sourcePill.classList.toggle("error", freebusySource === "error");
+  if (data.group) replaceGroup(data.group);
+  freebusySource = "google";
+}
+
+async function refreshAll() {
+  if (googleConnected && !demoBypass) {
+    await loadServerGroups();
+  }
+  await loadAvailability();
+  render();
 }
 
 async function boot() {
@@ -725,6 +815,7 @@ async function boot() {
   }
 
   if (googleConnected) {
+    await loadServerGroups();
     await loadAvailability();
     showApp();
     return;

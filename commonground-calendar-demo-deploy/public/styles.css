@@ -255,17 +255,25 @@ p {
   font-size: 12px;
 }
 
+.create-group,
 .add-person {
   display: grid;
   gap: 9px;
   margin-top: 24px;
 }
 
+.create-group label,
 .add-person label {
   color: var(--muted);
   font-size: 12px;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+.create-group div {
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr) auto;
+  gap: 8px;
 }
 
 .add-person div {
@@ -274,6 +282,7 @@ p {
   gap: 8px;
 }
 
+.create-group input,
 .add-person input {
   min-width: 0;
   height: 42px;
@@ -282,6 +291,15 @@ p {
   padding: 0 12px;
   background: var(--surface);
   color: var(--ink);
+}
+
+.groups-empty {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 14px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
 }
 
 .calendar-stage {
@@ -436,6 +454,12 @@ h2 {
   grid-template-rows: 52px repeat(var(--hour-count), var(--row-height));
   min-width: 1140px;
   min-height: 100%;
+}
+
+.calendar-grid.empty-state {
+  display: block;
+  min-width: 0;
+  padding: 24px;
 }
 
 .calendar-grid.day-view {
