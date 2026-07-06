@@ -275,8 +275,11 @@ async function fetchCalendarList(accessToken) {
       backgroundColor: calendar.backgroundColor
     }));
 
+  const primaryCalendar = calendars.find((calendar) => calendar.primary);
+  const preferredCalendars = primaryCalendar ? [primaryCalendar] : calendars.slice(0, 1);
+
   return {
-    calendars: calendars.length ? calendars : [{ id: "primary", summary: "Google calendar", primary: true }],
+    calendars: preferredCalendars.length ? preferredCalendars : [{ id: "primary", summary: "Google calendar", primary: true }],
     needsReconnect: false,
     calendarListError: null
   };
