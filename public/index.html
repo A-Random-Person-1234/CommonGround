@@ -110,7 +110,11 @@
               <h2 id="roomName">Room</h2>
               <button class="room-code room-code-button" id="roomCode" type="button" aria-label="Copy room code" title="Copy room code">------</button>
               <button class="icon-button room-copy-inline" id="copyInviteButton" type="button" title="Copy invite message" aria-label="Copy invite message">
-                <span class="icon icon-link"></span>
+                <svg class="icon icon-link" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M10 13.5 8.5 15a4 4 0 0 1-5.7-5.6l3-3A4 4 0 0 1 11.5 6" />
+                  <path d="m14 10.5 1.5-1.5a4 4 0 0 1 5.7 5.6l-3 3a4 4 0 0 1-5.7.4" />
+                  <path d="m8.5 12 7-7" />
+                </svg>
               </button>
               <span class="host-pill hidden" id="hostPill">Host</span>
             </div>
@@ -126,13 +130,21 @@
             <button type="button" data-view="year" aria-label="Year view" title="Year view">Y</button>
           </div>
           <button class="icon-button" id="refreshButton" type="button" title="Refresh" aria-label="Refresh">
-            <span class="icon icon-refresh"></span>
+            <svg class="icon icon-refresh" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+              <path d="M20 4v7h-7" />
+            </svg>
           </button>
           <button class="icon-button" id="fullscreenButton" type="button" title="Fullscreen" aria-label="Toggle fullscreen">
-            <span class="icon icon-fullscreen"></span>
+            <svg class="icon icon-fullscreen" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M8 3H3v5M16 3h5v5M21 16v5h-5M8 21H3v-5" />
+            </svg>
           </button>
           <button class="icon-button" id="settingsButton" type="button" title="Settings" aria-label="Open settings">
-            <span class="icon icon-gear"></span>
+            <svg class="icon icon-gear" viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1-2.8 2.8-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6v.2h-4V21a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1L4.2 17l.1-.1a1.7 1.7 0 0 0 .3-1.9A1.7 1.7 0 0 0 3 14H2.8v-4H3a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9L4.2 7 7 4.2l.1.1a1.7 1.7 0 0 0 1.9.3A1.7 1.7 0 0 0 10 3V2.8h4V3a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1L19.8 7l-.1.1a1.7 1.7 0 0 0-.3 1.9 1.7 1.7 0 0 0 1.6 1h.2v4H21a1.7 1.7 0 0 0-1.6 1Z" />
+            </svg>
           </button>
           <button class="primary add-event-button" id="addEventButton" type="button">Add group event</button>
         </div>
@@ -238,11 +250,15 @@
           <div class="calendar-toolbar">
             <div class="calendar-date-nav" aria-label="Calendar date navigation">
               <button class="icon-button date-nav-button" id="prevPeriodButton" type="button" title="Previous period" aria-label="Previous period">
-                <span aria-hidden="true">&lt;</span>
+                <svg class="icon icon-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m15 18-6-6 6-6" />
+                </svg>
               </button>
               <div class="calendar-period-label" id="calendarPeriodLabel">Today</div>
               <button class="icon-button date-nav-button" id="nextPeriodButton" type="button" title="Next period" aria-label="Next period">
-                <span aria-hidden="true">&gt;</span>
+                <svg class="icon icon-chevron" viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="m9 18 6-6-6-6" />
+                </svg>
               </button>
             </div>
             <nav class="room-switcher hidden" id="roomSwitcher" aria-label="Your rooms"></nav>
