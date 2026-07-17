@@ -10,6 +10,24 @@ const runtimeDir = mkdtempSync(path.join(tmpdir(), "commonground-smoke-"));
 const databasePath = path.join(runtimeDir, "commonground.db");
 const port = 44000 + Math.floor(Math.random() * 1000);
 const baseUrl = `http://127.0.0.1:${port}`;
+const expectedParticipantPalette = [
+  { name: "Bordeaux", value: "#743F45" },
+  { name: "Merlot", value: "#6C4652" },
+  { name: "Sienna", value: "#A36F52" },
+  { name: "Cognac", value: "#A97952" },
+  { name: "Gilded", value: "#B39458" },
+  { name: "Verdant", value: "#777653" },
+  { name: "Cashmere", value: "#83907B" },
+  { name: "Sylvan", value: "#536B5E" },
+  { name: "Aegean", value: "#496B70" },
+  { name: "Sterling", value: "#65758A" },
+  { name: "Nocturne", value: "#435267" },
+  { name: "Amethyst", value: "#80768E" },
+  { name: "Aubergine", value: "#665267" },
+  { name: "Roselle", value: "#9A7275" },
+  { name: "Truffle", value: "#8D8174" },
+  { name: "Graphite", value: "#66635F" }
+];
 
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -132,9 +150,16 @@ try {
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
   assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
   assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
+  for (const option of expectedParticipantPalette) {
+    assert.ok(
+      eventComposerScript.text.includes(`{ value: "${option.value}", name: "${option.name}" }`),
+      `${option.name} is missing from the participant colour picker`
+    );
+  }
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
   assert.match(eventComposerStyles.text, /grid-template-rows: auto auto minmax\(0, 1fr\) auto auto/);
   assert.match(eventComposerStyles.text, /\.composer-body textarea\s*\{[^}]*min-height: 72px/s);
+  assert.match(eventComposerStyles.text, /\.color-option-list\s*\{[^}]*max-height: calc\(100dvh - 96px\)/s);
   const contentSecurityPolicy = home.response.headers.get("content-security-policy");
   assert.ok(contentSecurityPolicy, "CSP header is missing");
   assert.doesNotMatch(contentSecurityPolicy, /script-src[^;]*'unsafe-inline'/);
@@ -188,6 +213,19 @@ try {
   const hostId = hostRoom.payload.participant.id;
   assert.equal(hostRoom.payload.room.participants.length, 3);
   assertNoKeys(hostRoom.payload, new Set(["userId", "ownerEmail", "tokens", "googleTokens", "microsoftTokens"]));
+
+  for (const { value: color } of expectedParticipantPalette) {
+    const recolored = await host.request(`/api/rooms/${firstCode}/participants/${hostId}`, {
+      method: "PATCH",
+      body: { color }
+    });
+    assert.equal(recolored.payload.participant.color, color);
+  }
+  const migratedLegacyColor = await host.request(`/api/rooms/${firstCode}/participants/${hostId}`, {
+    method: "PATCH",
+    body: { color: "#2F6F9F" }
+  });
+  assert.equal(migratedLegacyColor.payload.participant.color, "#65758A");
 
   await guest.request(`/api/rooms/${firstCode}`, {
     method: "PATCH",
