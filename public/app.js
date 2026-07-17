@@ -4205,7 +4205,7 @@ function downloadIcs() {
 }
 
 function maybeRestoreTheme() {
-  const storedTheme = localStorage.getItem("cg-theme") || "light";
+  const storedTheme = localStorage.getItem("cg-theme") || "dark";
   document.documentElement.dataset.theme = storedTheme;
   themeToggle.checked = storedTheme === "dark";
 }
