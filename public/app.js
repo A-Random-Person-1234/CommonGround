@@ -94,6 +94,7 @@ const eventLocationInput = document.querySelector("#eventLocationInput");
 const eventDescriptionInput = document.querySelector("#eventDescriptionInput");
 const eventGoogleSyncInput = document.querySelector("#eventGoogleSyncInput");
 const eventGoogleSyncStatus = document.querySelector("#eventGoogleSyncStatus");
+const eventFormFeedback = document.querySelector("#eventFormFeedback");
 const inviteePicker = document.querySelector("#inviteePicker");
 const inviteeCountText = document.querySelector("#inviteeCountText");
 const saveEventButton = document.querySelector("#saveEventButton");
@@ -381,6 +382,24 @@ function eventFormStateSnapshot() {
 
 function eventFormHasUnsavedChanges() {
   return eventFormStateSnapshot() !== eventModalInitialState;
+}
+
+function setEventFormFeedback(message = "", tone = "") {
+  if (!eventFormFeedback) return;
+  eventFormFeedback.textContent = message;
+  eventFormFeedback.classList.toggle("is-error", tone === "error");
+}
+
+function setEventFormSaving(saving) {
+  const isSaving = Boolean(saving);
+  eventForm.dataset.saving = isSaving ? "true" : "false";
+  eventForm.toggleAttribute("aria-busy", isSaving);
+  saveEventButton.disabled = isSaving;
+  cancelEventButton.disabled = isSaving;
+  cancelEventSecondary.disabled = isSaving;
+  saveEventButton.textContent = isSaving
+    ? editingEventId ? "Saving..." : "Creating..."
+    : editingEventId ? "Save changes" : "Create event";
 }
 
 function updateInviteeCountText() {
@@ -3901,7 +3920,7 @@ function positionEventModal() {
   const card = eventModal.querySelector(".modal-card");
   if (!card) return;
 
-  const width = Math.min(500, window.innerWidth - 20);
+  const width = Math.min(440, window.innerWidth - 20);
   const height = Math.min(card.offsetHeight || 520, window.innerHeight - 24);
   let left = eventModalAnchorRect.left;
   let top = eventModalAnchorRect.top;
@@ -3948,6 +3967,8 @@ function openEventModal(mode = "create", options = {}) {
   if (eventModalLabel) eventModalLabel.textContent = mode === "edit" ? "Edit group event" : "Add group event";
   if (eventModalTitle) eventModalTitle.textContent = mode === "edit" ? "Update proposal" : pendingEventPrefill ? "Create group event" : "Create proposal";
   saveEventButton.textContent = mode === "edit" ? "Save changes" : "Create event";
+  setEventFormFeedback();
+  setEventFormSaving(false);
   eventModalAnchorRect = options.anchorRect || null;
   eventModal.classList.toggle("anchored-composer", Boolean(eventModalAnchorRect));
 
@@ -4016,11 +4037,13 @@ function closeEventModal() {
   eventModalInitialState = "";
   eventModalAnchorRect = null;
   eventModal.classList.remove("anchored-composer");
+  setEventFormFeedback();
 }
 
 async function saveEvent(event) {
   event.preventDefault();
-  if (!currentRoom) return;
+  if (!currentRoom || eventForm.dataset.saving === "true") return;
+  setEventFormFeedback();
 
   const date = eventDateInput.value;
   const allDay = Boolean(eventAllDayInput?.checked);
@@ -4035,6 +4058,7 @@ async function saveEvent(event) {
   }
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
     calendarStatus.textContent = "Pick a valid event time.";
+    setEventFormFeedback("Pick a valid event time.", "error");
     return;
   }
   const payload = {
@@ -4049,6 +4073,7 @@ async function saveEvent(event) {
     inviteeParticipantIds: [...inviteePicker.querySelectorAll("input:checked")].map((input) => input.value)
   };
 
+  setEventFormSaving(true);
   try {
     let data;
     if (editingEventId) {
@@ -4076,6 +4101,9 @@ async function saveEvent(event) {
     fetchNotifications();
   } catch (error) {
     calendarStatus.textContent = error.message;
+    setEventFormFeedback(error.message || "The event could not be created. Try again.", "error");
+  } finally {
+    setEventFormSaving(false);
   }
 }
 
