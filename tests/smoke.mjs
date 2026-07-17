@@ -178,8 +178,7 @@ try {
     );
   }
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
-  assert.match(eventComposerStyles.text, /grid-template-rows: auto auto minmax\(0, 1fr\) auto auto/);
-  assert.match(eventComposerStyles.text, /\.composer-body textarea\s*\{[^}]*min-height: 72px/s);
+  assert.match(eventComposerStyles.text, /\.composer-body textarea\s*\{[^}]*min-height: 48px[^}]*resize: none/s);
   assert.match(eventComposerStyles.text, /\.color-option-list\s*\{[^}]*max-height: calc\(100dvh - 96px\)/s);
   assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*width: 18px[^}]*height: 18px/s);
   assert.match(eventComposerStyles.text, /--motion-fast:\s*140ms/);
@@ -188,6 +187,12 @@ try {
   assert.match(eventComposerStyles.text, /--ease-standard:\s*cubic-bezier\(0\.22, 1, 0\.36, 1\)/);
   assert.match(eventComposerStyles.text, /\.modal\.is-closing \.modal-card/);
   assert.match(eventComposerStyles.text, /\.calendar-grid\.is-view-entering/);
+  assert.match(eventComposerStyles.text, /\.event-composer\s*\{[^}]*max-height: calc\(100dvh - 12px\)[^}]*grid-template-rows: auto auto auto auto auto/s);
+  assert.match(eventComposerStyles.text, /#eventModal\s*\{[^}]*width: 100vw[^}]*height: 100dvh[^}]*max-width: none[^}]*overflow: visible/s);
+  assert.match(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow: visible/s);
+  assert.match(eventComposerStyles.text, /\.invite-dropdown-panel\s*\{[^}]*position: absolute[^}]*max-height: min\(220px, calc\(100dvh - 160px\)\)[^}]*overflow-y: auto/s);
+  assert.match(eventComposerStyles.text, /@media \(max-height: 560px\)[\s\S]*?\.composer-sync-toggle small\s*\{[^}]*display: none/);
+  assert.doesNotMatch(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow-y:\s*auto/s);
   assert.match(eventComposerStyles.text, /\.calendar-legal-links\s*\{[^}]*position:\s*static[^}]*margin:\s*12px 12px 14px auto/s);
   assert.match(eventComposerStyles.text, /\.calendar-wrap > \.calendar-grid\s*\{[^}]*min-height:\s*calc\(100% \+ 1px\)/s);
   assert.match(
