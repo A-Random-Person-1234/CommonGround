@@ -4306,6 +4306,19 @@ a:focus-visible {
   background: transparent;
 }
 
+#eventModal {
+  width: 100vw;
+  height: 100dvh;
+  max-width: none;
+  max-height: none;
+  overflow: visible;
+}
+
+#eventModal[open] {
+  display: grid;
+  place-items: center;
+}
+
 .modal::backdrop {
   background: rgba(9, 13, 20, 0.52);
 }
@@ -4338,11 +4351,11 @@ a:focus-visible {
 
 .event-composer {
   width: min(560px, calc(100vw - 20px));
-  max-height: min(680px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 12px);
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
-  overflow: hidden;
-  padding: 14px 18px 16px;
+  grid-template-rows: auto auto auto auto auto;
+  overflow: visible;
+  padding: 10px 14px 12px;
   border-radius: 24px;
 }
 
@@ -4351,23 +4364,23 @@ a:focus-visible {
   left: var(--composer-left, 24px);
   top: var(--composer-top, 24px);
   width: min(440px, calc(100vw - 24px));
-  max-height: min(78vh, 720px);
-  overflow: auto;
+  max-height: calc(100dvh - 12px);
+  overflow: visible;
   pointer-events: auto;
   box-shadow: 0 24px 54px rgba(70, 45, 25, 0.2);
 }
 
 .modal.anchored-composer .event-composer {
   width: min(440px, calc(100vw - 20px));
-  max-height: min(680px, calc(100dvh - 24px));
+  max-height: calc(100dvh - 12px);
 }
 
 .event-composer-top {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 28px;
-  margin-bottom: 6px;
+  min-height: 26px;
+  margin-bottom: 2px;
 }
 
 .composer-handle {
@@ -4397,23 +4410,23 @@ a:focus-visible {
 }
 
 .composer-close {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
   padding: 0;
   color: var(--text-muted);
 }
 
 .composer-title {
-  min-height: 54px;
+  min-height: 44px;
   padding: 0 2px;
   border: 0;
   border-bottom: 2px solid var(--border-strong);
   border-radius: 0;
   background: transparent;
   color: var(--text);
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 500;
 }
 
@@ -4425,15 +4438,14 @@ a:focus-visible {
 .composer-body {
   display: grid;
   grid-template-columns: 28px minmax(0, 1fr);
-  gap: 12px 14px;
+  gap: 8px 12px;
   align-items: start;
   min-height: 0;
-  margin-top: 14px;
-  padding-right: 3px;
-  overflow-x: hidden;
-  overflow-y: auto;
+  margin-top: 8px;
+  padding-right: 0;
+  overflow: visible;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
 }
 
 .composer-body > .composer-row-icon {
@@ -4454,7 +4466,7 @@ a:focus-visible {
   display: block;
   width: 22px;
   height: 22px;
-  margin-top: 11px;
+  margin-top: 7px;
   color: var(--text-muted);
 }
 
@@ -4488,7 +4500,7 @@ a:focus-visible {
 .composer-time-grid {
   display: grid;
   grid-template-columns: minmax(150px, 1fr) minmax(118px, 0.72fr) auto minmax(118px, 0.72fr);
-  gap: 10px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -4537,27 +4549,28 @@ a:focus-visible {
 .composer-body > input,
 .composer-body textarea,
 .invite-dropdown summary {
-  min-height: 40px;
+  min-height: 36px;
   border-radius: 10px;
   background: color-mix(in srgb, var(--surface-2) 64%, var(--surface));
   border-color: transparent;
 }
 
 .composer-body textarea {
-  min-height: 72px;
-  max-height: 120px;
-  padding-block: 10px;
+  min-height: 48px;
+  max-height: 48px;
+  padding-block: 8px;
+  resize: none;
 }
 
 .composer-time-grid input {
   padding: 0 12px;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 650;
   letter-spacing: 0;
 }
 
 .composer-time-grid input[type="time"] {
-  min-width: 118px;
+  min-width: 0;
   padding-right: 9px;
   font-variant-numeric: tabular-nums;
 }
@@ -4584,8 +4597,8 @@ a:focus-visible {
   grid-column: 1 / -1;
   display: flex;
   align-items: center;
-  gap: 12px;
-  min-height: 34px;
+  gap: 10px;
+  min-height: 28px;
   color: var(--text);
   font-weight: 650;
 }
@@ -4599,6 +4612,7 @@ a:focus-visible {
 }
 
 .invite-dropdown {
+  position: relative;
   min-width: 0;
 }
 
@@ -4607,7 +4621,7 @@ a:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 36px;
+  min-height: 32px;
   padding: 0;
   cursor: pointer;
   list-style: none;
@@ -4646,31 +4660,45 @@ a:focus-visible {
 }
 
 .invite-dropdown-panel {
-  display: grid;
-  grid-template-rows: 0fr;
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  left: 0;
+  z-index: 30;
+  display: block;
+  max-height: min(220px, calc(100dvh - 160px));
+  padding: 8px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  visibility: hidden;
   opacity: 0;
   transform: translateY(-4px);
-  overflow: hidden;
+  transform-origin: top center;
+  pointer-events: none;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
   transition:
-    grid-template-rows var(--motion-standard) var(--ease-in-out),
     opacity var(--motion-fast) var(--ease-standard),
     transform var(--motion-standard) var(--ease-standard),
-    margin-top var(--motion-standard) var(--ease-in-out);
+    visibility 0s linear var(--motion-standard);
 }
 
 .invite-dropdown[open] .invite-dropdown-panel {
-  grid-template-rows: 1fr;
+  visibility: visible;
   opacity: 1;
   transform: translateY(0);
-  margin-top: 8px;
+  pointer-events: auto;
+  transition-delay: 0s;
 }
 
 .composer-sync-toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
-  min-height: 42px;
+  gap: 10px;
+  min-height: 36px;
 }
 
 .composer-sync-toggle > div {
@@ -4680,7 +4708,7 @@ a:focus-visible {
 .composer-sync-toggle strong {
   display: block;
   color: var(--text);
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 750;
   overflow-wrap: normal;
 }
@@ -4689,9 +4717,9 @@ a:focus-visible {
   display: block;
   margin-top: 2px;
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 650;
-  line-height: 1.3;
+  line-height: 1.2;
   overflow-wrap: normal;
 }
 
@@ -4720,14 +4748,20 @@ a:focus-visible {
 }
 
 .event-composer .modal-actions {
-  margin-top: 12px;
+  margin-top: 8px;
+}
+
+.event-composer .modal-actions > button {
+  min-height: 40px;
+  padding-inline: 16px;
 }
 
 .composer-feedback {
-  margin: 10px 0 0;
+  margin: 6px 0 0;
   color: var(--text-muted);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 700;
+  line-height: 1.2;
 }
 
 .composer-feedback:empty {
@@ -5169,18 +5203,18 @@ a:focus-visible {
   }
 
   .event-composer {
-    padding: 12px 14px 14px;
+    padding: 8px 12px 10px;
     border-radius: 20px;
   }
 
   .composer-title {
-    min-height: 48px;
-    font-size: 24px;
+    min-height: 40px;
+    font-size: 22px;
   }
 
   .composer-body {
-    grid-template-columns: 22px minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 8px 10px;
   }
 
   .composer-time-grid {
@@ -5215,7 +5249,7 @@ a:focus-visible {
   .composer-body > input,
   .composer-body textarea,
   .invite-dropdown summary {
-    min-height: 42px;
+    min-height: 36px;
   }
 
   .composer-time-grid input[type="time"] {
@@ -6510,6 +6544,161 @@ a:focus-visible {
   .event-composer .modal-actions > button {
     width: auto;
     flex: 1 1 0;
+  }
+}
+
+@media (max-height: 720px) {
+  .event-composer,
+  .modal.anchored-composer .modal-card,
+  .modal.anchored-composer .event-composer {
+    max-height: calc(100dvh - 8px);
+  }
+
+  .event-composer {
+    padding: 7px 11px 9px;
+  }
+
+  .event-composer-top {
+    min-height: 24px;
+    margin-bottom: 0;
+  }
+
+  .composer-close {
+    width: 28px;
+    min-width: 28px;
+    height: 28px;
+    min-height: 28px;
+  }
+
+  .composer-title {
+    min-height: 36px;
+    font-size: 21px;
+  }
+
+  .composer-body {
+    margin-top: 5px;
+    gap: 5px 9px;
+  }
+
+  .composer-row-icon,
+  .composer-row-icon.ui-icon {
+    margin-top: 6px;
+  }
+
+  .composer-time-grid {
+    gap: 4px;
+  }
+
+  .composer-time-grid input,
+  .composer-body > input,
+  .composer-body textarea {
+    min-height: 34px;
+  }
+
+  .composer-body textarea {
+    max-height: 38px;
+    min-height: 38px;
+    padding-block: 6px;
+  }
+
+  .all-day-toggle {
+    min-height: 24px;
+  }
+
+  .invite-dropdown summary {
+    min-height: 28px;
+  }
+
+  .composer-sync-toggle {
+    min-height: 32px;
+  }
+
+  .event-composer .modal-actions {
+    margin-top: 5px;
+  }
+
+  .event-composer .modal-actions > button {
+    min-height: 36px;
+  }
+
+  .composer-feedback {
+    margin-top: 4px;
+  }
+}
+
+@media (max-height: 560px) {
+  .event-composer {
+    padding: 5px 9px 7px;
+    border-radius: 18px;
+  }
+
+  .event-composer-top {
+    min-height: 22px;
+  }
+
+  .composer-handle {
+    visibility: hidden;
+  }
+
+  .composer-close {
+    width: 26px;
+    min-width: 26px;
+    height: 26px;
+    min-height: 26px;
+  }
+
+  .composer-title {
+    min-height: 32px;
+    font-size: 19px;
+  }
+
+  .composer-body {
+    grid-template-columns: 18px minmax(0, 1fr);
+    margin-top: 3px;
+    gap: 4px 7px;
+  }
+
+  .composer-row-icon,
+  .composer-row-icon.ui-icon {
+    width: 16px;
+    height: 16px;
+    margin: 5px 0 0;
+  }
+
+  .composer-time-grid input,
+  .composer-body > input,
+  .composer-body textarea {
+    min-height: 31px;
+  }
+
+  .composer-body textarea {
+    max-height: 32px;
+    min-height: 32px;
+    padding-block: 4px;
+  }
+
+  .all-day-toggle {
+    min-height: 22px;
+  }
+
+  .invite-dropdown summary {
+    min-height: 26px;
+  }
+
+  .composer-sync-toggle {
+    min-height: 28px;
+  }
+
+  .composer-sync-toggle small {
+    display: none;
+  }
+
+  .event-composer .modal-actions {
+    margin-top: 4px;
+  }
+
+  .event-composer .modal-actions > button {
+    min-height: 34px;
   }
 }
 
