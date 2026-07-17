@@ -185,16 +185,140 @@ function setButtonLabelWithIcon(button, label, iconClass) {
 
 function updateFullscreenControl() {
   const active = Boolean(document.fullscreenElement);
+  const previousState = fullscreenButton.dataset.fullscreenState;
   fullscreenButton.classList.toggle("is-active", active);
   fullscreenButton.title = active ? "Exit fullscreen" : "Fullscreen";
   fullscreenButton.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
   fullscreenIcon?.classList.toggle("ui-icon-maximize", !active);
   fullscreenIcon?.classList.toggle("ui-icon-minimize", active);
+  fullscreenButton.dataset.fullscreenState = active ? "active" : "inactive";
+  if (previousState && previousState !== fullscreenButton.dataset.fullscreenState) {
+    replayMotionClass(fullscreenButton, "motion-state-change");
+  }
 }
 
 function updateRoomLockIcon(locked) {
   roomLockIcon?.classList.toggle("ui-icon-lock", Boolean(locked));
   roomLockIcon?.classList.toggle("ui-icon-lock-open", !locked);
+}
+
+const motionFastMs = 140;
+const motionStandardMs = 220;
+const motionSlowMs = 320;
+const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+const panelMotionTimers = new WeakMap();
+let calendarMotionGeneration = 0;
+
+function prefersReducedMotion() {
+  return reducedMotionQuery.matches;
+}
+
+function motionDelay(duration) {
+  return prefersReducedMotion() ? 1 : duration;
+}
+
+function replayMotionClass(node, className, duration = motionStandardMs) {
+  if (!node) return;
+  node.classList.remove(className);
+  if (prefersReducedMotion()) return;
+  requestAnimationFrame(() => {
+    node.classList.add(className);
+    window.setTimeout(() => node.classList.remove(className), duration + 40);
+  });
+}
+
+function showAppPage(targetPage) {
+  const pages = [homePage, entryChoicePage, roomPage];
+  const wasHidden = targetPage?.classList.contains("hidden");
+  for (const page of pages) {
+    page.classList.toggle("hidden", page !== targetPage);
+  }
+  if (wasHidden) replayMotionClass(targetPage, "motion-page-enter");
+}
+
+function setPanelVisibility(panel, visible, { afterHide } = {}) {
+  if (!panel) return;
+  if (visible && panel.classList.contains("is-entering") && !panel.classList.contains("is-closing")) return;
+  const existingTimer = panelMotionTimers.get(panel);
+  if (existingTimer) window.clearTimeout(existingTimer);
+  panelMotionTimers.delete(panel);
+
+  if (visible) {
+    const shouldAnimate = panel.classList.contains("hidden") || panel.classList.contains("is-closing");
+    panel.classList.remove("hidden", "is-closing");
+    if (shouldAnimate && !prefersReducedMotion()) {
+      panel.classList.add("is-entering");
+      const timer = window.setTimeout(() => {
+        panel.classList.remove("is-entering");
+        panelMotionTimers.delete(panel);
+      }, motionStandardMs + 40);
+      panelMotionTimers.set(panel, timer);
+    }
+    return;
+  }
+
+  if (panel.classList.contains("hidden")) {
+    afterHide?.();
+    return;
+  }
+  panel.classList.remove("is-entering");
+  if (prefersReducedMotion()) {
+    panel.classList.add("hidden");
+    afterHide?.();
+    return;
+  }
+  panel.classList.add("is-closing");
+  const timer = window.setTimeout(() => {
+    if (!panel.classList.contains("is-closing")) return;
+    panel.classList.add("hidden");
+    panel.classList.remove("is-closing");
+    panelMotionTimers.delete(panel);
+    afterHide?.();
+  }, motionFastMs + 40);
+  panelMotionTimers.set(panel, timer);
+}
+
+function closeDialogWithMotion(dialog, afterClose) {
+  if (!dialog?.open) {
+    afterClose?.();
+    return;
+  }
+  if (dialog.classList.contains("is-closing")) return;
+  if (prefersReducedMotion()) {
+    dialog.close();
+    afterClose?.();
+    return;
+  }
+  dialog.classList.add("is-closing");
+  window.setTimeout(() => {
+    if (dialog.open) dialog.close();
+    dialog.classList.remove("is-closing");
+    afterClose?.();
+  }, motionFastMs + 40);
+}
+
+async function animateCalendarTransition(renderAction) {
+  if (!calendarGrid || prefersReducedMotion()) {
+    renderAction();
+    return;
+  }
+  const generation = ++calendarMotionGeneration;
+  calendarGrid.classList.remove("is-view-entering");
+  calendarGrid.classList.add("is-view-exiting");
+  await new Promise((resolve) => window.setTimeout(resolve, motionFastMs));
+  if (generation !== calendarMotionGeneration) return;
+  renderAction();
+  calendarGrid.classList.remove("is-view-exiting");
+  replayMotionClass(calendarGrid, "is-view-entering");
+}
+
+async function loadCalendarRangeWithMotion() {
+  calendarStatus?.classList.add("is-loading");
+  try {
+    return await loadFreeBusy();
+  } finally {
+    calendarStatus?.classList.remove("is-loading");
+  }
 }
 let displayNameSaveTimer = null;
 let roomNameSaveTimer = null;
@@ -229,21 +353,15 @@ function roomEntryRequested() {
 }
 
 function showHome() {
-  homePage.classList.remove("hidden");
-  entryChoicePage.classList.add("hidden");
-  roomPage.classList.add("hidden");
+  showAppPage(homePage);
 }
 
 function showEntryChoice() {
-  homePage.classList.add("hidden");
-  entryChoicePage.classList.remove("hidden");
-  roomPage.classList.add("hidden");
+  showAppPage(entryChoicePage);
 }
 
 function showRoom() {
-  homePage.classList.add("hidden");
-  entryChoicePage.classList.add("hidden");
-  roomPage.classList.remove("hidden");
+  showAppPage(roomPage);
 }
 
 function startOfWeek(date) {
@@ -419,6 +537,7 @@ function setEventFormFeedback(message = "", tone = "") {
   if (!eventFormFeedback) return;
   eventFormFeedback.textContent = message;
   eventFormFeedback.classList.toggle("is-error", tone === "error");
+  if (message) replayMotionClass(eventFormFeedback, "motion-feedback");
 }
 
 function setEventFormSaving(saving) {
@@ -574,12 +693,14 @@ function setStatus(target, text, kind = "") {
   target.replaceChildren();
   if (!kind) {
     target.textContent = String(text || "");
+    if (text) replayMotionClass(target, "motion-feedback");
     return;
   }
   const message = document.createElement("span");
   message.className = kind;
   message.textContent = String(text || "");
   target.appendChild(message);
+  replayMotionClass(target, "motion-feedback");
 }
 
 function normalizeRoomCodeInput(value) {
@@ -867,8 +988,8 @@ function applyParticipantPatchLocally(participantId, patch) {
 async function setCurrentView(view) {
   if (!view || currentView === view) return;
   currentView = view;
-  await loadFreeBusy();
-  render();
+  await loadCalendarRangeWithMotion();
+  await animateCalendarTransition(render);
 }
 
 function calendarPeriodText() {
@@ -916,8 +1037,8 @@ async function shiftCalendarPeriod(direction) {
     currentFocusDate = startOfDay(addDays(currentFocusDate, step * 7));
   }
 
-  await loadFreeBusy();
-  render();
+  await loadCalendarRangeWithMotion();
+  await animateCalendarTransition(render);
 }
 
 async function toggleFullscreenMode() {
@@ -936,8 +1057,8 @@ async function goToDay(date) {
   if (currentView !== "day") {
     currentView = "day";
   }
-  await loadFreeBusy();
-  render();
+  await loadCalendarRangeWithMotion();
+  await animateCalendarTransition(render);
 }
 
 function shouldIgnoreViewShortcut(target) {
@@ -1005,6 +1126,9 @@ async function copyInviteLink() {
   try {
     await copyTextToClipboard(roomInviteMessage());
     calendarStatus.textContent = "Invite message copied.";
+    replayMotionClass(calendarStatus, "motion-feedback");
+    replayMotionClass(copyInviteButton, "motion-feedback");
+    replayMotionClass(copyInviteButtonEmpty, "motion-feedback");
   } catch {
     calendarStatus.textContent = roomInviteMessage();
   }
@@ -1014,7 +1138,7 @@ function dismissInviteStrip() {
   if (currentRoom?.code) {
     dismissedInviteRoomCodes.add(currentRoom.code);
   }
-  emptyRoomState?.classList.add("hidden");
+  setPanelVisibility(emptyRoomState, false);
 }
 
 async function copyTextToClipboard(text) {
@@ -1400,7 +1524,7 @@ function renderRoomMeta() {
 
   const onlyOneParticipant = (currentRoom?.participants?.length || 0) <= 1;
   const inviteDismissed = Boolean(currentRoom?.code && dismissedInviteRoomCodes.has(currentRoom.code));
-  emptyRoomState.classList.toggle("hidden", !onlyOneParticipant || inviteDismissed);
+  setPanelVisibility(emptyRoomState, onlyOneParticipant && !inviteDismissed);
 
   if (currentParticipantNeedsReconnect()) {
     setButtonLabelWithIcon(connectGoogleButton, "Reconnect calendar", "ui-icon-rotate");
@@ -1491,10 +1615,19 @@ function buildSelfEditPanel() {
   return wrap;
 }
 
+function syncSelectedEventCard() {
+  for (const card of calendarGrid?.querySelectorAll(".event-card[data-event-id]") || []) {
+    const selected = Boolean(selectedEventId && card.dataset.eventId === selectedEventId);
+    card.classList.toggle("is-selected", selected);
+    card.setAttribute("aria-pressed", String(selected));
+  }
+}
+
 function openBusyDetail(group) {
-  detailPanel.classList.remove("hidden");
+  setPanelVisibility(detailPanel, true);
   selectedBusyGroup = group;
   selectedEventId = null;
+  syncSelectedEventCard();
   detailEmpty.classList.add("hidden");
   eventDetail.classList.add("hidden");
   busyDetail.classList.remove("hidden");
@@ -1707,7 +1840,8 @@ function openEventDetail(eventId) {
     clearDetailPanel();
     return;
   }
-  detailPanel.classList.remove("hidden");
+  setPanelVisibility(detailPanel, true);
+  syncSelectedEventCard();
 
   detailEmpty.classList.add("hidden");
   busyDetail.classList.add("hidden");
@@ -1737,14 +1871,18 @@ function openEventDetail(eventId) {
 function clearDetailPanel() {
   selectedEventId = null;
   selectedBusyGroup = null;
-  detailPanel.classList.add("hidden");
-  detailEmpty.classList.remove("hidden");
-  eventDetail.classList.add("hidden");
-  busyDetail.classList.add("hidden");
-  detailLabel.textContent = "Event details";
-  detailTitle.textContent = "Select an event";
-  inviteeSummary.textContent = "";
-  eventPanelInitialState = "";
+  syncSelectedEventCard();
+  setPanelVisibility(detailPanel, false, {
+    afterHide: () => {
+      detailEmpty.classList.remove("hidden");
+      eventDetail.classList.add("hidden");
+      busyDetail.classList.add("hidden");
+      detailLabel.textContent = "Event details";
+      detailTitle.textContent = "Select an event";
+      inviteeSummary.textContent = "";
+      eventPanelInitialState = "";
+    }
+  });
   for (const button of document.querySelectorAll(".vote-button")) {
     button.disabled = false;
   }
@@ -2446,8 +2584,11 @@ function createEventBlock(item, dayIndex) {
     laneCount > 1 ? "event-overlap-lane" : "",
     laneSizeClass,
     item.isInvitee ? "invitee" : "",
-    item.isInvitedViewer ? "is-invited-viewer" : ""
+    item.isInvitedViewer ? "is-invited-viewer" : "",
+    item.id === selectedEventId ? "is-selected" : ""
   ].filter(Boolean).join(" ");
+  block.dataset.eventId = item.id;
+  block.setAttribute("aria-pressed", String(item.id === selectedEventId));
   block.style.setProperty("--day-index", dayIndex);
   block.style.setProperty("--start", item.startHour - calendarStartHour);
   block.style.setProperty("--duration", duration);
@@ -3117,7 +3258,7 @@ function removeNotificationCard(notificationId) {
   card.classList.add("is-leaving");
   window.setTimeout(() => {
     card.remove();
-  }, 180);
+  }, motionDelay(motionStandardMs));
 }
 
 async function patchNotification(notificationId, action) {
@@ -3144,7 +3285,9 @@ function setNotificationSuccess(notificationId, text) {
   const card = notificationStack?.querySelector(`[data-notification-id="${CSS.escape(notificationId)}"]`);
   if (!card) return;
   const message = card.querySelector(".notification-message");
+  const icon = card.querySelector(".notification-icon");
   if (message) message.textContent = text;
+  if (icon) icon.textContent = "âœ“";
   card.classList.add("is-success");
 }
 
@@ -3207,7 +3350,7 @@ async function viewJoinNotification(notification) {
   if (currentRoom?.code !== notification.roomCode) {
     await switchRoom(notification.roomCode);
   }
-  hostPopover?.classList.remove("hidden");
+  setPanelVisibility(hostPopover, true);
   joinRequestQueue?.scrollIntoView({ block: "nearest" });
   await markNotificationRead(notification.id);
 }
@@ -3358,6 +3501,9 @@ async function switchRoom(code) {
   const nextCode = normalizeRoomCodeInput(code);
   if (!nextCode || nextCode === currentRoom?.code) return;
 
+  roomPage.classList.remove("is-room-entering");
+  roomPage.classList.add("is-room-switching");
+  calendarStatus.classList.add("is-loading");
   window.clearInterval(refreshTimer);
   abortRoomDataRequests();
   resetRoomScopedState({ clearRoom: true });
@@ -3367,11 +3513,18 @@ async function switchRoom(code) {
   calendarStatus.textContent = "Switching room...";
 
   try {
-    await refreshRoomData();
+    const switched = await refreshRoomData();
+    if (switched) {
+      roomPage.classList.remove("is-room-switching");
+      replayMotionClass(roomPage, "is-room-entering");
+    }
     startAutoRefresh();
   } catch (error) {
     if (isAbortError(error)) return;
     calendarStatus.textContent = error.message;
+  } finally {
+    roomPage.classList.remove("is-room-switching");
+    calendarStatus.classList.remove("is-loading");
   }
 }
 
@@ -3635,12 +3788,13 @@ async function openRoomEntryPage() {
 function openCreateRoomModal() {
   if (!createRoomModal) return;
   createRoomModalForm?.reset();
+  createRoomModal.classList.remove("is-closing");
   createRoomModal.showModal();
   quickRoomNameInput?.focus();
 }
 
 function closeCreateRoomModal() {
-  if (createRoomModal?.open) createRoomModal.close();
+  closeDialogWithMotion(createRoomModal);
 }
 
 async function createRoomFromSwitcher(event) {
@@ -4061,6 +4215,7 @@ function openEventModal(mode = "create", options = {}) {
   }
 
   updateEventGoogleSyncControl();
+  eventModal.classList.remove("is-closing");
   eventModal.showModal();
   eventModalInitialState = eventFormStateSnapshot();
   requestAnimationFrame(positionEventModal);
@@ -4069,13 +4224,14 @@ function openEventModal(mode = "create", options = {}) {
 
 function closeEventModal() {
   stopDragCreate();
-  eventModal.close();
-  editingEventId = null;
-  pendingEventPrefill = null;
-  eventModalInitialState = "";
-  eventModalAnchorRect = null;
-  eventModal.classList.remove("anchored-composer");
-  setEventFormFeedback();
+  closeDialogWithMotion(eventModal, () => {
+    editingEventId = null;
+    pendingEventPrefill = null;
+    eventModalInitialState = "";
+    eventModalAnchorRect = null;
+    eventModal.classList.remove("anchored-composer");
+    setEventFormFeedback();
+  });
 }
 
 async function saveEvent(event) {
@@ -4471,11 +4627,16 @@ customRoomCodeInput?.addEventListener("blur", async () => {
 roomLockToggle?.addEventListener("change", saveRoomLockState);
 themeToggle.addEventListener("change", () => {
   const theme = themeToggle.checked ? "dark" : "light";
+  document.documentElement.classList.add("is-theme-switching");
   document.documentElement.dataset.theme = theme;
   localStorage.setItem("cg-theme", theme);
+  window.setTimeout(() => {
+    document.documentElement.classList.remove("is-theme-switching");
+  }, motionDelay(motionStandardMs + 40));
 });
 settingsButton.addEventListener("click", () => {
-  hostPopover.classList.toggle("hidden");
+  const shouldOpen = hostPopover.classList.contains("hidden") || hostPopover.classList.contains("is-closing");
+  setPanelVisibility(hostPopover, shouldOpen);
 });
 participantsRail?.addEventListener("click", () => {
   setParticipantsPanelExpanded(participantsRail.getAttribute("aria-expanded") !== "true");
@@ -4598,7 +4759,7 @@ window.addEventListener("popstate", async () => {
 document.addEventListener("click", (event) => {
   if (hostPopover && !hostPopover.classList.contains("hidden")) {
     if (!hostPopover.contains(event.target) && !settingsButton.contains(event.target)) {
-      hostPopover.classList.add("hidden");
+      setPanelVisibility(hostPopover, false);
     }
   }
 
@@ -4625,6 +4786,7 @@ document.addEventListener("click", (event) => {
 document.addEventListener("fullscreenchange", () => {
   document.documentElement.classList.toggle("fullscreen-mode", Boolean(document.fullscreenElement));
   updateFullscreenControl();
+  replayMotionClass(calendarGrid, "is-view-entering");
 });
 
 enableDialogBackdropClose(eventModal, attemptCloseEventModal);
