@@ -162,6 +162,10 @@ try {
   assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
   assert.match(eventComposerScript.text, /function updateFullscreenControl\(\)/);
   assert.match(eventComposerScript.text, /function setButtonLabelWithIcon\(button, label, iconClass\)/);
+  assert.match(eventComposerScript.text, /function setPanelVisibility\(panel, visible/);
+  assert.match(eventComposerScript.text, /function closeDialogWithMotion\(dialog, afterClose\)/);
+  assert.match(eventComposerScript.text, /async function animateCalendarTransition\(renderAction\)/);
+  assert.match(eventComposerScript.text, /function prefersReducedMotion\(\)/);
   for (const option of expectedParticipantPalette) {
     assert.ok(
       eventComposerScript.text.includes(`{ value: "${option.value}", name: "${option.name}" }`),
@@ -173,6 +177,14 @@ try {
   assert.match(eventComposerStyles.text, /\.composer-body textarea\s*\{[^}]*min-height: 72px/s);
   assert.match(eventComposerStyles.text, /\.color-option-list\s*\{[^}]*max-height: calc\(100dvh - 96px\)/s);
   assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*width: 18px[^}]*height: 18px/s);
+  assert.match(eventComposerStyles.text, /--motion-fast:\s*140ms/);
+  assert.match(eventComposerStyles.text, /--motion-standard:\s*220ms/);
+  assert.match(eventComposerStyles.text, /--motion-slow:\s*320ms/);
+  assert.match(eventComposerStyles.text, /--ease-standard:\s*cubic-bezier\(0\.22, 1, 0\.36, 1\)/);
+  assert.match(eventComposerStyles.text, /\.modal\.is-closing \.modal-card/);
+  assert.match(eventComposerStyles.text, /\.calendar-grid\.is-view-entering/);
+  assert.match(eventComposerStyles.text, /@media \(prefers-reduced-motion: reduce\)[\s\S]*transition-duration: 1ms !important/);
+  assert.doesNotMatch(eventComposerStyles.text, /transition:\s*all\b/);
   for (const iconAsset of expectedIconAssets) {
     const icon = await publicSession.request(`/icons/${iconAsset}`, { accept: "image/svg+xml" });
     assert.match(icon.text, /<svg[^>]*viewBox="0 0 24 24"/);
@@ -395,4 +407,3 @@ try {
   await stopServer(server);
   rmSync(runtimeDir, { recursive: true, force: true });
 }
-
