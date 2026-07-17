@@ -289,7 +289,7 @@ function hasMicrosoftCalendarWriteScope(scopes = []) {
 
 function normalizeCalendarEventSync(sync = {}, scopes = []) {
   return {
-    enabled: typeof sync.enabled === "boolean" ? sync.enabled : false,
+    enabled: typeof sync.enabled === "boolean" ? sync.enabled : true,
     updatedAt: sync.updatedAt || nowIso()
   };
 }
@@ -538,14 +538,25 @@ function normalizeRoomRecord(room = {}) {
 }
 
 function normalizeLoadedStore(saved = {}) {
+  const sourceSchemaVersion = Number(saved.meta?.schemaVersion || 0);
   return {
     meta: {
-      schemaVersion: 2,
+      schemaVersion: 3,
       updatedAt: saved.meta?.updatedAt || nowIso()
     },
     users: Object.fromEntries(
       Object.entries(saved.users || {})
-        .map(([key, user]) => [key, normalizeUserRecord({ ...user, id: user?.id || key })])
+        .map(([key, user]) => {
+          const migratedUser = { ...user, id: user?.id || key };
+          if (sourceSchemaVersion < 3) {
+            migratedUser.calendarEventSync = {
+              ...(user?.calendarEventSync || user?.calendarSync || {}),
+              enabled: true,
+              updatedAt: user?.calendarEventSync?.updatedAt || nowIso()
+            };
+          }
+          return [key, normalizeUserRecord(migratedUser)];
+        })
     ),
     rooms: Object.fromEntries(
       Object.entries(saved.rooms || {})
@@ -1235,7 +1246,7 @@ function setUserGoogleConnection(userId, profile, tokens) {
       lastError: null
     },
     calendarEventSync: {
-      enabled: typeof existingEventSync.enabled === "boolean" ? existingEventSync.enabled : false,
+      enabled: typeof existingEventSync.enabled === "boolean" ? existingEventSync.enabled : true,
       updatedAt: nowIso()
     },
     createdAt: store.users[userId]?.createdAt || nowIso()
@@ -3926,7 +3937,7 @@ if (url.pathname === "/auth/google") {
     if (!enforceRateLimit(req, res, "oauth-google", 20, 10 * 60 * 1000)) return;
     const session = getSession(req, res);
     const roomCode = normalizeRoomCode(url.searchParams.get("room") || session.lastRoomCode || "");
-    const calendarWrite = url.searchParams.get("calendarWrite") === "1";
+    const calendarWrite = url.searchParams.get("calendarWrite") !== "0";
     const authUrl = buildGoogleAuthUrl(session, roomCode || null, { calendarWrite });
     if (!authUrl) {
       sendRedirect(res, `${roomCode ? `/room/${roomCode}` : "/"}?error=missing_google_credentials`);
