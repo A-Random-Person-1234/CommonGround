@@ -157,6 +157,11 @@ try {
   assert.match(home.text, /class="ui-icon ui-icon-maximize" id="fullscreenIcon"/);
   assert.match(home.text, /composer-row-icon ui-icon ui-icon-clock/);
   assert.match(home.text, /button-with-icon[^>]*id="addEventButton"/);
+  assert.match(
+    home.text,
+    /<div class="calendar-wrap">\s*<div class="calendar-grid" id="calendarGrid"><\/div>\s*<footer class="legal-links calendar-legal-links"/,
+    "Legal links must stay in the calendar scroll flow"
+  );
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
   assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
   assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
@@ -183,6 +188,12 @@ try {
   assert.match(eventComposerStyles.text, /--ease-standard:\s*cubic-bezier\(0\.22, 1, 0\.36, 1\)/);
   assert.match(eventComposerStyles.text, /\.modal\.is-closing \.modal-card/);
   assert.match(eventComposerStyles.text, /\.calendar-grid\.is-view-entering/);
+  assert.match(eventComposerStyles.text, /\.calendar-legal-links\s*\{[^}]*position:\s*static[^}]*margin:\s*12px 12px 14px auto/s);
+  assert.match(eventComposerStyles.text, /\.calendar-wrap > \.calendar-grid\s*\{[^}]*min-height:\s*calc\(100% \+ 1px\)/s);
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(min-width: 900px\)[\s\S]*?\.calendar-grid\.week-view\s*\{[^}]*min-width:\s*0[^}]*minmax\(0, 1fr\)/
+  );
   assert.match(eventComposerStyles.text, /@media \(prefers-reduced-motion: reduce\)[\s\S]*transition-duration: 1ms !important/);
   assert.doesNotMatch(eventComposerStyles.text, /transition:\s*all\b/);
   for (const iconAsset of expectedIconAssets) {
@@ -208,22 +219,22 @@ try {
   const created = await host.request("/api/rooms", {
     method: "POST",
     expected: 201,
-    body: { name: "Decagon", emoji: "ðŸ§­", displayName: "Host" }
+    body: { name: "Decagon", emoji: "🧭", displayName: "Host" }
   });
   const firstCode = created.payload.room.code;
   assert.match(firstCode, /^[A-HJ-NP-Z2-9]{6}$/);
-  assert.equal(created.payload.room.emoji, "ðŸ§­");
+  assert.equal(created.payload.room.emoji, "🧭");
   assert.equal(created.payload.isHost, true);
 
   const secondRoom = await host.request("/api/rooms", {
     method: "POST",
     expected: 201,
-    body: { name: "Second room", emoji: "ðŸŽ’", displayName: "Host" }
+    body: { name: "Second room", emoji: "🎒", displayName: "Host" }
   });
   assert.notEqual(secondRoom.payload.room.code, firstCode);
   const memberships = await host.request("/api/my-rooms");
   assert.equal(memberships.payload.rooms.length, 2);
-  assert.ok(memberships.payload.rooms.some((room) => room.code === firstCode && room.emoji === "ðŸ§­"));
+  assert.ok(memberships.payload.rooms.some((room) => room.code === firstCode && room.emoji === "🧭"));
 
   const joined = await guest.request(`/api/rooms/${firstCode.toLowerCase()}/join`, {
     method: "POST",
