@@ -1604,8 +1604,17 @@ a:focus-visible {
   z-index: 35;
   display: flex;
   align-items: stretch;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-left: 0;
+  border-radius: 0 22px 22px 0;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.08)),
+    var(--surface);
+  box-shadow: var(--shadow);
   transform: translateX(calc(-100% + 42px));
   transition: transform var(--motion-slow) var(--ease-standard);
+  touch-action: pan-y;
   will-change: transform;
 }
 
@@ -1617,32 +1626,30 @@ a:focus-visible {
 }
 
 .participants-rail {
+  flex: 0 0 var(--members-rail-width);
   width: var(--members-rail-width);
-  appearance: none;
   display: grid;
   place-items: center;
   padding: 12px 0;
-  border: 1px solid var(--line);
-  border-left: 0;
-  border-radius: 0 12px 12px 0;
-  background: var(--surface);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   color: var(--muted);
-  cursor: pointer;
+  cursor: default;
   font: inherit;
   font-size: 11px;
   font-weight: 850;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  box-shadow: var(--shadow);
-  transition:
-    color var(--motion-standard) var(--ease-standard),
-    border-color var(--motion-standard) var(--ease-standard),
-    background-color var(--motion-standard) var(--ease-standard);
+  box-shadow: none;
+  user-select: none;
+  transition: color var(--motion-standard) var(--ease-standard);
 }
 
 .participants-rail span {
   writing-mode: vertical-rl;
   transform: rotate(180deg);
+  pointer-events: none;
 }
 
 .participants-sidebar:hover .participants-rail,
@@ -1650,20 +1657,16 @@ a:focus-visible {
 .participants-sidebar.is-open .participants-rail,
 .participants-sidebar[data-open="true"] .participants-rail {
   color: var(--brand);
-  border-color: color-mix(in srgb, var(--brand) 38%, var(--line));
-  background: color-mix(in srgb, var(--surface) 88%, var(--brand-soft) 12%);
-}
-
-.participants-rail:focus-visible {
-  outline: 2px solid color-mix(in srgb, var(--brand) 62%, transparent);
-  outline-offset: -4px;
 }
 
 .participants-card {
   width: min(320px, calc(100vw - 72px));
   min-width: 0;
   height: 100%;
-  border-radius: 0 22px 22px 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   overflow: auto;
 }
 
@@ -5928,7 +5931,7 @@ a:focus-visible {
 }
 
 :root:not([data-theme="dark"]) .panel,
-:root:not([data-theme="dark"]) .participants-card,
+:root:not([data-theme="dark"]) .participants-sidebar,
 :root:not([data-theme="dark"]) .host-panel,
 :root:not([data-theme="dark"]) .calendar-wrap,
 :root:not([data-theme="dark"]) .detail-panel {
@@ -5958,7 +5961,6 @@ a:focus-visible {
 :root:not([data-theme="dark"]) .view-switcher,
 :root:not([data-theme="dark"]) .theme-toggle,
 :root:not([data-theme="dark"]) .privacy-toggle,
-:root:not([data-theme="dark"]) .participants-rail,
 :root:not([data-theme="dark"]) .room-switch-tab,
 :root:not([data-theme="dark"]) .date-nav-button {
   background: color-mix(in srgb, var(--surface) 94%, var(--bg-soft) 6%);
@@ -6092,12 +6094,6 @@ a:focus-visible {
 }
 
 /* CommonGround handover alignment: final responsive and interaction contract. */
-.participants-rail[aria-expanded="true"] {
-  color: var(--brand-strong);
-  border-color: color-mix(in srgb, var(--brand) 42%, var(--line));
-  background: color-mix(in srgb, var(--surface) 84%, var(--brand-soft) 16%);
-}
-
 .modal[open] .modal-card {
   animation: modal-in var(--motion-standard) var(--ease-standard) both;
 }
@@ -6251,8 +6247,7 @@ a:focus-visible {
 
 :root.is-theme-switching body,
 :root.is-theme-switching .room-topbar,
-:root.is-theme-switching .participants-card,
-:root.is-theme-switching .participants-rail,
+:root.is-theme-switching .participants-sidebar,
 :root.is-theme-switching .host-panel,
 :root.is-theme-switching .calendar-wrap,
 :root.is-theme-switching .detail-panel,
