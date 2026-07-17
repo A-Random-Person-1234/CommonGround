@@ -159,8 +159,13 @@ try {
   assert.match(home.text, /button-with-icon[^>]*id="addEventButton"/);
   assert.match(
     home.text,
-    /<div class="calendar-wrap">\s*<div class="calendar-grid" id="calendarGrid"><\/div>\s*<footer class="legal-links calendar-legal-links"/,
-    "Legal links must stay in the calendar scroll flow"
+    /<div class="calendar-wrap">\s*<header class="room-topbar">/,
+    "Room controls must live inside the calendar scroll flow"
+  );
+  assert.match(
+    home.text,
+    /<header class="room-topbar">[\s\S]*?<div class="calendar-toolbar">[\s\S]*?<div class="empty-room hidden" id="emptyRoomState">[\s\S]*?<div class="calendar-grid" id="calendarGrid"><\/div>\s*<footer class="legal-links calendar-legal-links"/,
+    "Room controls, invite prompt, calendar, and legal links must share one scroll flow"
   );
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
   assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
@@ -195,6 +200,11 @@ try {
   assert.doesNotMatch(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow-y:\s*auto/s);
   assert.match(eventComposerStyles.text, /\.calendar-legal-links\s*\{[^}]*position:\s*static[^}]*margin:\s*12px 12px 14px auto/s);
   assert.match(eventComposerStyles.text, /\.calendar-wrap > \.calendar-grid\s*\{[^}]*min-height:\s*calc\(100% \+ 1px\)/s);
+  assert.match(eventComposerStyles.text, /\.room-page\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\)[^}]*overflow:\s*hidden/s);
+  assert.match(eventComposerStyles.text, /\.room-topbar\s*\{[^}]*position:\s*relative[^}]*top:\s*auto[^}]*margin-bottom:\s*8px/s);
+  assert.doesNotMatch(eventComposerStyles.text, /\.room-topbar\s*\{[^}]*position:\s*sticky/s);
+  assert.match(eventComposerStyles.text, /\.calendar-stage\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\)[^}]*overflow:\s*hidden/s);
+  assert.match(eventComposerStyles.text, /\.calendar-wrap\s*\{[^}]*grid-row:\s*1[^}]*overflow:\s*auto/s);
   assert.match(
     eventComposerStyles.text,
     /@media \(min-width: 900px\)[\s\S]*?\.calendar-grid\.week-view\s*\{[^}]*min-width:\s*0[^}]*minmax\(0, 1fr\)/
