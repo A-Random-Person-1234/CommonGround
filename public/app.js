@@ -13,18 +13,22 @@ const calendarEndHour = 24;
 const defaultRoomEmoji = "📅";
 const hours = Array.from({ length: calendarEndHour - calendarStartHour }, (_, index) => index + calendarStartHour);
 const participantPalette = [
-  { value: "#2F6F9F", name: "Marine" },
-  { value: "#9B3F35", name: "Redwood" },
-  { value: "#5F7A45", name: "Olive" },
-  { value: "#6D4A8E", name: "Aubergine" },
-  { value: "#B9822E", name: "Ochre" },
-  { value: "#2F7C78", name: "Teal" },
-  { value: "#B7653F", name: "Terracotta" },
-  { value: "#9A4D63", name: "Rosewood" },
-  { value: "#3F6F54", name: "Moss" },
-  { value: "#5C6773", name: "Slate" },
-  { value: "#76543E", name: "Cocoa" },
-  { value: "#465A96", name: "Indigo" }
+  { value: "#743F45", name: "Bordeaux" },
+  { value: "#6C4652", name: "Merlot" },
+  { value: "#A36F52", name: "Sienna" },
+  { value: "#A97952", name: "Cognac" },
+  { value: "#B39458", name: "Gilded" },
+  { value: "#777653", name: "Verdant" },
+  { value: "#83907B", name: "Cashmere" },
+  { value: "#536B5E", name: "Sylvan" },
+  { value: "#496B70", name: "Aegean" },
+  { value: "#65758A", name: "Sterling" },
+  { value: "#435267", name: "Nocturne" },
+  { value: "#80768E", name: "Amethyst" },
+  { value: "#665267", name: "Aubergine" },
+  { value: "#9A7275", name: "Roselle" },
+  { value: "#8D8174", name: "Truffle" },
+  { value: "#66635F", name: "Graphite" }
 ];
 
 const homePage = document.querySelector("#homePage");
