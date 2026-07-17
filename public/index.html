@@ -108,46 +108,6 @@
     </section>
 
     <section class="room-page hidden" id="roomPage">
-      <header class="room-topbar">
-        <div class="room-heading">
-          <div class="mark" aria-hidden="true">CG</div>
-          <div>
-            <p class="eyebrow">CommonGround</p>
-            <div class="room-title-row">
-              <h2 id="roomName">Room</h2>
-              <button class="room-code room-code-button" id="roomCode" type="button" aria-label="Copy room code" title="Copy room code">------</button>
-              <button class="icon-button room-copy-inline" id="copyInviteButton" type="button" title="Copy invite message" aria-label="Copy invite message">
-                <span class="ui-icon ui-icon-link" aria-hidden="true"></span>
-              </button>
-              <span class="host-pill hidden" id="hostPill">Host</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="room-actions">
-          <div class="topbar-identity" id="topbarIdentity"></div>
-          <div class="view-switcher" id="viewSwitcher" role="group" aria-label="Calendar view">
-            <button type="button" data-view="day" aria-label="Day view" title="Day view">D</button>
-            <button type="button" data-view="week" aria-label="Week view" title="Week view">W</button>
-            <button type="button" data-view="month" aria-label="Month view" title="Month view">M</button>
-            <button type="button" data-view="year" aria-label="Year view" title="Year view">Y</button>
-          </div>
-          <button class="icon-button" id="refreshButton" type="button" title="Refresh" aria-label="Refresh">
-            <span class="ui-icon ui-icon-refresh" aria-hidden="true"></span>
-          </button>
-          <button class="icon-button" id="fullscreenButton" type="button" title="Fullscreen" aria-label="Toggle fullscreen">
-            <span class="ui-icon ui-icon-maximize" id="fullscreenIcon" aria-hidden="true"></span>
-          </button>
-          <button class="icon-button" id="settingsButton" type="button" title="Settings" aria-label="Open settings">
-            <span class="ui-icon ui-icon-settings" aria-hidden="true"></span>
-          </button>
-          <button class="primary add-event-button button-with-icon" id="addEventButton" type="button">
-            <span class="ui-icon ui-icon-plus" aria-hidden="true"></span>
-            <span>Add group event</span>
-          </button>
-        </div>
-      </header>
-
       <aside class="participants-sidebar" id="participantsSidebar">
         <div class="participants-card" id="participantsPanel">
           <div class="participants-header">
@@ -260,33 +220,73 @@
 
       <section class="room-content">
         <main class="calendar-stage">
-          <div class="calendar-toolbar">
-            <div class="calendar-date-nav" aria-label="Calendar date navigation">
-              <button class="icon-button date-nav-button" id="prevPeriodButton" type="button" title="Previous period" aria-label="Previous period">
-                <span class="ui-icon ui-icon-circle-arrow-left" aria-hidden="true"></span>
-              </button>
-              <div class="calendar-period-label" id="calendarPeriodLabel">Today</div>
-              <button class="icon-button date-nav-button" id="nextPeriodButton" type="button" title="Next period" aria-label="Next period">
-                <span class="ui-icon ui-icon-circle-arrow-right" aria-hidden="true"></span>
-              </button>
-            </div>
-            <nav class="room-switcher hidden" id="roomSwitcher" aria-label="Your rooms"></nav>
-            <div class="inline-status" id="calendarStatus">Loading room…</div>
-          </div>
-          <div class="empty-room hidden" id="emptyRoomState">
-            <p>Invite people</p>
-            <div class="empty-room-actions">
-              <span class="room-code large" id="emptyRoomCode">------</span>
-              <button class="secondary button-with-icon" id="copyInviteButtonEmpty" type="button">
-                <span class="ui-icon ui-icon-link" aria-hidden="true"></span>
-                <span>Copy invite message</span>
-              </button>
-              <button class="icon-button empty-room-dismiss" id="dismissInviteButton" type="button" aria-label="Dismiss invite prompt">
-                <span class="ui-icon ui-icon-circle-x" aria-hidden="true"></span>
-              </button>
-            </div>
-          </div>
           <div class="calendar-wrap">
+            <header class="room-topbar">
+              <div class="room-heading">
+                <div class="mark" aria-hidden="true">CG</div>
+                <div>
+                  <p class="eyebrow">CommonGround</p>
+                  <div class="room-title-row">
+                    <h2 id="roomName">Room</h2>
+                    <button class="room-code room-code-button" id="roomCode" type="button" aria-label="Copy room code" title="Copy room code">------</button>
+                    <button class="icon-button room-copy-inline" id="copyInviteButton" type="button" title="Copy invite message" aria-label="Copy invite message">
+                      <span class="ui-icon ui-icon-link" aria-hidden="true"></span>
+                    </button>
+                    <span class="host-pill hidden" id="hostPill">Host</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="room-actions">
+                <div class="topbar-identity" id="topbarIdentity"></div>
+                <div class="view-switcher" id="viewSwitcher" role="group" aria-label="Calendar view">
+                  <button type="button" data-view="day" aria-label="Day view" title="Day view">D</button>
+                  <button type="button" data-view="week" aria-label="Week view" title="Week view">W</button>
+                  <button type="button" data-view="month" aria-label="Month view" title="Month view">M</button>
+                  <button type="button" data-view="year" aria-label="Year view" title="Year view">Y</button>
+                </div>
+                <button class="icon-button" id="refreshButton" type="button" title="Refresh" aria-label="Refresh">
+                  <span class="ui-icon ui-icon-refresh" aria-hidden="true"></span>
+                </button>
+                <button class="icon-button" id="fullscreenButton" type="button" title="Fullscreen" aria-label="Toggle fullscreen">
+                  <span class="ui-icon ui-icon-maximize" id="fullscreenIcon" aria-hidden="true"></span>
+                </button>
+                <button class="icon-button" id="settingsButton" type="button" title="Settings" aria-label="Open settings">
+                  <span class="ui-icon ui-icon-settings" aria-hidden="true"></span>
+                </button>
+                <button class="primary add-event-button button-with-icon" id="addEventButton" type="button">
+                  <span class="ui-icon ui-icon-plus" aria-hidden="true"></span>
+                  <span>Add group event</span>
+                </button>
+              </div>
+            </header>
+
+            <div class="calendar-toolbar">
+              <div class="calendar-date-nav" aria-label="Calendar date navigation">
+                <button class="icon-button date-nav-button" id="prevPeriodButton" type="button" title="Previous period" aria-label="Previous period">
+                  <span class="ui-icon ui-icon-circle-arrow-left" aria-hidden="true"></span>
+                </button>
+                <div class="calendar-period-label" id="calendarPeriodLabel">Today</div>
+                <button class="icon-button date-nav-button" id="nextPeriodButton" type="button" title="Next period" aria-label="Next period">
+                  <span class="ui-icon ui-icon-circle-arrow-right" aria-hidden="true"></span>
+                </button>
+              </div>
+              <nav class="room-switcher hidden" id="roomSwitcher" aria-label="Your rooms"></nav>
+              <div class="inline-status" id="calendarStatus">Loading room…</div>
+            </div>
+            <div class="empty-room hidden" id="emptyRoomState">
+              <p>Invite people</p>
+              <div class="empty-room-actions">
+                <span class="room-code large" id="emptyRoomCode">------</span>
+                <button class="secondary button-with-icon" id="copyInviteButtonEmpty" type="button">
+                  <span class="ui-icon ui-icon-link" aria-hidden="true"></span>
+                  <span>Copy invite message</span>
+                </button>
+                <button class="icon-button empty-room-dismiss" id="dismissInviteButton" type="button" aria-label="Dismiss invite prompt">
+                  <span class="ui-icon ui-icon-circle-x" aria-hidden="true"></span>
+                </button>
+              </div>
+            </div>
             <div class="calendar-grid" id="calendarGrid"></div>
             <footer class="legal-links calendar-legal-links" aria-label="Legal links">
               <a href="/privacy">Privacy Policy</a>
