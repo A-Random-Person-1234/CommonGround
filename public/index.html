@@ -387,7 +387,7 @@
     </section>
 
     <dialog class="modal" id="eventModal" aria-labelledby="eventComposerTitle">
-      <form class="modal-card event-composer" id="eventForm" method="dialog">
+      <form class="modal-card event-composer" id="eventForm">
         <h2 class="sr-only" id="eventComposerTitle">Create a group event</h2>
         <div class="event-composer-top">
           <span class="composer-handle" aria-hidden="true"></span>
@@ -451,6 +451,8 @@
           <span class="composer-row-icon icon-lines" aria-hidden="true"></span>
           <textarea id="eventDescriptionInput" rows="3" placeholder="Add description"></textarea>
         </div>
+
+        <p class="composer-feedback" id="eventFormFeedback" role="status" aria-live="polite"></p>
 
         <div class="modal-actions">
           <button class="secondary" id="cancelEventSecondary" type="button">Cancel</button>
