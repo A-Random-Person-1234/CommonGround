@@ -591,8 +591,13 @@ function calendarWriteReady() {
   return Boolean(sessionInfo?.user?.calendarWriteReady);
 }
 
+function calendarEventSyncPreferenceEnabled() {
+  const preference = sessionInfo?.user?.calendarEventSync?.enabled;
+  return typeof preference === "boolean" ? preference : true;
+}
+
 function calendarEventSyncEnabled() {
-  return Boolean(calendarWriteReady() && sessionInfo?.user?.calendarEventSync?.enabled);
+  return Boolean(calendarWriteReady() && calendarEventSyncPreferenceEnabled());
 }
 
 function activeEvent() {
@@ -900,9 +905,9 @@ function roomInviteLink() {
   return `${window.location.origin}/room/${currentRoom?.code || ""}`;
 }
 
-function googleAuthUrl(roomCodeValue, { calendarWrite = false } = {}) {
+function googleAuthUrl(roomCodeValue, { calendarWrite = true } = {}) {
   const params = new URLSearchParams({ room: normalizeRoomCodeInput(roomCodeValue) });
-  if (calendarWrite) params.set("calendarWrite", "1");
+  params.set("calendarWrite", calendarWrite ? "1" : "0");
   return `/auth/google?${params.toString()}`;
 }
 
@@ -1305,13 +1310,13 @@ function renderCalendarEventSyncControls() {
   const writeReady = calendarWriteReady();
   const enabled = calendarEventSyncEnabled();
 
-  googleEventSyncToggle.checked = enabled;
+  googleEventSyncToggle.checked = calendarEventSyncPreferenceEnabled();
   googleEventSyncToggle.disabled = !connected || !writeReady;
 
   if (!connected) {
-    googleEventSyncStatus.textContent = "Connect calendar to enable event sync.";
+    googleEventSyncStatus.textContent = "Connect calendar to activate event sync.";
   } else if (!writeReady) {
-    googleEventSyncStatus.textContent = "Enable Google event sync to grant event-only access.";
+    googleEventSyncStatus.textContent = "Reconnect Google Calendar to activate event sync.";
   } else if (enabled) {
     googleEventSyncStatus.textContent = "Adds created and invited events to Google Calendar.";
   } else {
@@ -1349,7 +1354,7 @@ function renderRoomMeta() {
   if (currentParticipantNeedsReconnect()) {
     connectGoogleButton.textContent = "Reconnect calendar";
     settingsReconnectButton.classList.remove("hidden");
-    settingsReconnectButton.dataset.calendarWrite = "false";
+    settingsReconnectButton.dataset.calendarWrite = "true";
     settingsReconnectButton.textContent = "Reconnect calendar";
     connectWidgetText.textContent = currentParticipant?.lastSyncError
       ? `Last sync issue: ${currentParticipant.lastSyncError}`
@@ -4344,7 +4349,7 @@ settingsReconnectButton.addEventListener("click", () => {
 googleEventSyncToggle?.addEventListener("change", async () => {
   const nextEnabled = Boolean(googleEventSyncToggle.checked);
   if (nextEnabled && !calendarWriteReady()) {
-    googleEventSyncToggle.checked = false;
+    googleEventSyncToggle.checked = calendarEventSyncPreferenceEnabled();
     googleEventSyncStatus.textContent = "Use Enable Google event sync in Settings to grant event-only access.";
     return;
   }
