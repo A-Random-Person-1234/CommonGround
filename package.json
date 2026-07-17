@@ -1,0 +1,16 @@
+{
+  "name": "commonground",
+  "version": "1.0.0",
+  "description": "A shared calendar room for comparing free/busy availability and planning group events.",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check public/app.js && node --check tests/smoke.mjs",
+    "test": "node tests/smoke.mjs"
+  },
+  "license": "UNLICENSED"
+}

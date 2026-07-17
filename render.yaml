@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: commonground
+    env: node
+    plan: free
+    buildCommand: "npm install --omit=dev"
+    startCommand: "npm start"
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: MICROSOFT_CLIENT_ID
+        sync: false
+      - key: MICROSOFT_CLIENT_SECRET
+        sync: false
+      - key: PUBLIC_BASE_URL
+        sync: false

@@ -1,0 +1,7 @@
+.env
+.commonground.db
+.commonground.db-*
+data/*.db
+data/*.db-*
+*.log
+node_modules/
