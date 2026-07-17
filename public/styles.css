@@ -50,6 +50,15 @@
   --calendar-block-lane-gap: 9px;
   --members-rail-width: 42px;
   --members-calendar-gap: 12px;
+  --motion-fast: 140ms;
+  --motion-standard: 220ms;
+  --motion-slow: 320ms;
+  --motion-shine: 860ms;
+  --motion-stagger: 18ms;
+  --motion-content-delay: 45ms;
+  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-soft: cubic-bezier(0.25, 0.8, 0.25, 1);
 }
 
 :root[data-theme="dark"] {
@@ -116,12 +125,20 @@ button {
   cursor: pointer;
   font-weight: 800;
   transition:
-    transform 160ms ease,
-    background 160ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease,
-    color 160ms ease,
-    opacity 160ms ease;
+    transform var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+}
+
+button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+
+button:not(:disabled):active {
+  transform: translateY(0) scale(0.985);
 }
 
 input,
@@ -133,6 +150,11 @@ textarea {
   min-height: 48px;
   background: color-mix(in srgb, var(--surface) 84%, white 16%);
   color: var(--ink);
+  transition:
+    background-color var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard);
 }
 
 textarea {
@@ -208,7 +230,7 @@ a:focus-visible {
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(18px);
   pointer-events: auto;
-  animation: notification-in 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: notification-in var(--motion-slow) var(--ease-standard) both;
 }
 
 .notification-card::before {
@@ -217,12 +239,12 @@ a:focus-visible {
   inset: -40% -80%;
   background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.18), transparent 62%);
   transform: translateX(-45%) rotate(8deg);
-  animation: notification-shine 1100ms cubic-bezier(0.22, 1, 0.36, 1) 120ms both;
+  animation: notification-shine var(--motion-shine) var(--ease-standard) var(--motion-fast) both;
   pointer-events: none;
 }
 
 .notification-card.is-leaving {
-  animation: notification-out 180ms ease both;
+  animation: notification-out var(--motion-standard) var(--ease-standard) both;
 }
 
 .notification-card.is-success {
@@ -319,10 +341,10 @@ a:focus-visible {
   opacity: 0;
   transform: translateY(4px);
   transition:
-    max-height 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 180ms ease,
-    transform 180ms ease,
-    margin-top 180ms ease;
+    max-height var(--motion-standard) var(--ease-in-out),
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-standard) var(--ease-standard),
+    margin-top var(--motion-standard) var(--ease-in-out);
 }
 
 .notification-card:hover .notification-actions,
@@ -359,18 +381,18 @@ a:focus-visible {
 @keyframes notification-in {
   from {
     opacity: 0;
-    transform: translateX(-16px) scale(0.98);
+    transform: translate3d(-10px, -6px, 0) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes notification-out {
   to {
     opacity: 0;
-    transform: translateX(-10px) scale(0.98);
+    transform: translate3d(-8px, -4px, 0) scale(0.98);
   }
 }
 
@@ -779,11 +801,15 @@ a:focus-visible {
   align-content: start;
   min-height: 204px;
   padding: 22px;
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    background-color var(--motion-standard) var(--ease-standard);
 }
 
 .choice-card:hover {
-  transform: translateY(-2px);
+  transform: translateY(-1px) scale(1.01);
   border-color: var(--border-strong);
 }
 
@@ -1180,12 +1206,12 @@ a:focus-visible {
   color: var(--ink);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition:
-    max-width 300ms cubic-bezier(0.22, 1, 0.36, 1),
-    padding 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 240ms ease,
-    background 240ms ease,
-    box-shadow 240ms ease,
-    transform 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    max-width var(--motion-slow) var(--ease-standard),
+    padding var(--motion-slow) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    background-color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    transform var(--motion-standard) var(--ease-standard);
 }
 
 .room-switch-tab::after {
@@ -1216,8 +1242,8 @@ a:focus-visible {
     transparent 100%
   );
   transition:
-    transform 520ms cubic-bezier(0.22, 1, 0.36, 1),
-    opacity 220ms ease;
+    transform var(--motion-slow) var(--ease-standard),
+    opacity var(--motion-standard) var(--ease-standard);
 }
 
 .room-switch-tab:hover,
@@ -1262,15 +1288,15 @@ a:focus-visible {
   font-weight: 850;
   line-height: 1;
   transition:
-    transform 280ms cubic-bezier(0.22, 1, 0.36, 1),
-    background 240ms ease,
-    box-shadow 240ms ease;
+    transform var(--motion-standard) var(--ease-standard),
+    background-color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard);
 }
 
 .room-switch-tab:hover .room-switch-mark,
 .room-switch-tab:focus-visible .room-switch-mark,
 .room-switch-tab.is-expanded .room-switch-mark {
-  transform: translateX(-1px) scale(1.04);
+  transform: translateX(-1px) scale(1.02);
   background: color-mix(in srgb, var(--brand) 12%, transparent);
   box-shadow: 0 8px 16px rgba(70, 45, 25, 0.08);
 }
@@ -1285,9 +1311,9 @@ a:focus-visible {
   text-overflow: ellipsis;
   transform: translateX(-8px);
   transition:
-    opacity 220ms ease 70ms,
-    transform 240ms cubic-bezier(0.22, 1, 0.36, 1) 70ms,
-    max-width 300ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity var(--motion-standard) var(--ease-standard) 60ms,
+    transform var(--motion-standard) var(--ease-standard) 60ms,
+    max-width var(--motion-slow) var(--ease-standard);
 }
 
 .room-switch-label {
@@ -1414,7 +1440,7 @@ a:focus-visible {
 
 .icon-button:hover .icon,
 .icon-button:hover .ui-icon {
-  transform: scale(1.06);
+  transform: scale(1.02);
 }
 
 .ui-icon {
@@ -1433,7 +1459,7 @@ a:focus-visible {
   -webkit-mask-size: contain;
   mask-size: contain;
   pointer-events: none;
-  transition: transform 160ms ease;
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
 
 .ui-icon-calendar-sync { --icon-url: url("/icons/calendar-sync.svg"); }
@@ -1504,7 +1530,7 @@ a:focus-visible {
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: none;
-  transition: transform 160ms ease;
+  transition: transform var(--motion-fast) var(--ease-standard);
 }
 
 .date-nav-button .icon,
@@ -1540,6 +1566,11 @@ a:focus-visible {
   border-radius: 999px;
   background: transparent;
   color: var(--muted);
+  transition:
+    background-color var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
 }
 
 .view-switcher button.active {
@@ -1561,7 +1592,8 @@ a:focus-visible {
   display: flex;
   align-items: stretch;
   transform: translateX(calc(-100% + 42px));
-  transition: transform 180ms ease;
+  transition: transform var(--motion-slow) var(--ease-standard);
+  will-change: transform;
 }
 
 .participants-sidebar:hover,
@@ -1590,9 +1622,9 @@ a:focus-visible {
   text-transform: uppercase;
   box-shadow: var(--shadow);
   transition:
-    color 180ms ease,
-    border-color 180ms ease,
-    background 180ms ease;
+    color var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    background-color var(--motion-standard) var(--ease-standard);
 }
 
 .participants-rail span {
@@ -1620,6 +1652,23 @@ a:focus-visible {
   height: 100%;
   border-radius: 0 22px 22px 0;
   overflow: auto;
+}
+
+.participants-card > * {
+  opacity: 0.46;
+  transform: translateX(-6px);
+  transition:
+    opacity var(--motion-standard) var(--ease-standard),
+    transform var(--motion-standard) var(--ease-standard);
+}
+
+.participants-sidebar:hover .participants-card > *,
+.participants-sidebar:focus-within .participants-card > *,
+.participants-sidebar.is-open .participants-card > *,
+.participants-sidebar[data-open="true"] .participants-card > * {
+  opacity: 1;
+  transform: translateX(0);
+  transition-delay: var(--motion-content-delay);
 }
 
 .participants-header {
@@ -1682,11 +1731,11 @@ a:focus-visible {
   white-space: nowrap;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition:
-    opacity 160ms ease,
-    transform 160ms ease,
-    background 160ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease;
+    opacity var(--motion-standard) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard);
 }
 
 .participant-chip[role="button"] {
@@ -1787,7 +1836,10 @@ a:focus-visible {
   opacity: 0;
   transform: scale(0.88);
   pointer-events: none;
-  transition: opacity 160ms ease, transform 160ms ease, background 160ms ease;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    background-color var(--motion-standard) var(--ease-standard);
 }
 
 .participant-chip:hover .chip-action,
@@ -1889,7 +1941,7 @@ a:focus-visible {
   box-shadow: var(--shadow);
   opacity: 0;
   transform: translateY(-4px);
-  animation: color-menu-in 160ms ease forwards;
+  animation: color-menu-in var(--motion-standard) var(--ease-standard) forwards;
 }
 
 @keyframes color-menu-in {
@@ -2021,7 +2073,10 @@ a:focus-visible {
   background: color-mix(in srgb, var(--line) 70%, transparent);
   border: 1px solid var(--line);
   position: relative;
-  transition: background 180ms ease, border-color 180ms ease;
+  transition:
+    background-color var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard);
 }
 
 .mini-toggle-ui::after {
@@ -2034,7 +2089,7 @@ a:focus-visible {
   border-radius: 999px;
   background: var(--surface);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  transition: transform 180ms ease;
+  transition: transform var(--motion-standard) var(--ease-standard);
 }
 
 .mini-toggle:has(input:checked) .mini-toggle-ui {
@@ -2276,7 +2331,7 @@ a:focus-visible {
   width: calc(50% - 4px);
   border-radius: 999px;
   background: var(--brand);
-  transition: transform 180ms ease;
+  transition: transform var(--motion-standard) var(--ease-in-out);
   z-index: -1;
 }
 
@@ -2899,9 +2954,9 @@ a:focus-visible {
   text-align: left;
   appearance: none;
   transition:
-    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 260ms cubic-bezier(0.22, 1, 0.36, 1),
-    border-color 260ms cubic-bezier(0.22, 1, 0.36, 1);
+    transform var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard);
   box-shadow:
     0 8px 16px rgba(36, 24, 17, 0.12),
     inset 0 0 0 1px rgba(255, 248, 238, 0.06);
@@ -3072,8 +3127,8 @@ a:focus-visible {
   transform-origin: top left;
   pointer-events: none;
   transition:
-    opacity 220ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    opacity var(--motion-standard) var(--ease-standard),
+    transform var(--motion-standard) var(--ease-standard);
   z-index: 40;
 }
 
@@ -3112,10 +3167,10 @@ a:focus-visible {
   opacity: 0;
   transform: translate3d(0, -8px, 0);
   transition:
-    opacity 200ms cubic-bezier(0.22, 1, 0.36, 1),
-    transform 200ms cubic-bezier(0.22, 1, 0.36, 1),
-    box-shadow 200ms cubic-bezier(0.22, 1, 0.36, 1);
-  transition-delay: calc(var(--stack-order) * 22ms);
+    opacity var(--motion-standard) var(--ease-standard),
+    transform var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard);
+  transition-delay: calc(var(--stack-order) * var(--motion-stagger));
   cursor: pointer;
 }
 
@@ -3509,7 +3564,9 @@ a:focus-visible {
   white-space: pre-line;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 140ms ease, transform 140ms ease;
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
   z-index: 40;
 }
 
@@ -3563,8 +3620,8 @@ a:focus-visible {
   cursor: pointer;
   overflow: hidden;
   transition:
-    background 150ms ease,
-    box-shadow 150ms ease;
+    background-color var(--motion-fast) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard);
 }
 
 .month-cell:hover,
@@ -4543,7 +4600,7 @@ a:focus-visible {
   border-right: 2px solid var(--text-muted);
   border-bottom: 2px solid var(--text-muted);
   transform: rotate(45deg);
-  transition: transform 180ms ease;
+  transition: transform var(--motion-standard) var(--ease-in-out);
 }
 
 .invite-dropdown[open] summary::after {
@@ -4557,10 +4614,10 @@ a:focus-visible {
   transform: translateY(-4px);
   overflow: hidden;
   transition:
-    grid-template-rows 220ms ease,
-    opacity 180ms ease,
-    transform 220ms ease,
-    margin-top 220ms ease;
+    grid-template-rows var(--motion-standard) var(--ease-in-out),
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-standard) var(--ease-standard),
+    margin-top var(--motion-standard) var(--ease-in-out);
 }
 
 .invite-dropdown[open] .invite-dropdown-panel {
@@ -5965,8 +6022,20 @@ a:focus-visible {
   background: color-mix(in srgb, var(--surface) 84%, var(--brand-soft) 16%);
 }
 
-.modal[open] {
-  animation: modal-in 180ms cubic-bezier(0.22, 1, 0.36, 1) both;
+.modal[open] .modal-card {
+  animation: modal-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.modal[open]::backdrop {
+  animation: backdrop-in var(--motion-standard) var(--ease-standard) both;
+}
+
+.modal.is-closing .modal-card {
+  animation: modal-out var(--motion-fast) var(--ease-standard) both;
+}
+
+.modal.is-closing::backdrop {
+  animation: backdrop-out var(--motion-fast) var(--ease-standard) both;
 }
 
 @keyframes modal-in {
@@ -5978,6 +6047,225 @@ a:focus-visible {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+@keyframes modal-out {
+  to {
+    opacity: 0;
+    transform: translateY(5px) scale(0.985);
+  }
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes backdrop-out {
+  to { opacity: 0; }
+}
+
+/* Shared motion choreography for stateful CommonGround surfaces. */
+.motion-page-enter {
+  animation: page-enter var(--motion-standard) var(--ease-standard) both;
+}
+
+.host-popover.is-entering,
+.empty-room.is-entering {
+  animation: panel-enter var(--motion-standard) var(--ease-standard) both;
+  transform-origin: top right;
+}
+
+.host-popover.is-closing,
+.empty-room.is-closing {
+  animation: panel-exit var(--motion-fast) var(--ease-standard) both;
+  pointer-events: none;
+}
+
+.detail-panel.is-entering {
+  animation: detail-panel-enter var(--motion-standard) var(--ease-standard) both;
+}
+
+.detail-panel.is-closing {
+  animation: detail-panel-exit var(--motion-fast) var(--ease-standard) both;
+  pointer-events: none;
+}
+
+.calendar-wrap,
+.calendar-grid {
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-standard) var(--ease-standard);
+}
+
+.calendar-grid {
+  transform-origin: 50% 0;
+}
+
+.calendar-grid.is-view-exiting {
+  opacity: 0.42;
+  transform: translateY(3px) scale(0.995);
+  pointer-events: none;
+}
+
+.calendar-grid.is-view-entering {
+  animation: calendar-view-enter var(--motion-standard) var(--ease-standard) both;
+}
+
+.room-page.is-room-switching .calendar-wrap {
+  opacity: 0.52;
+  transform: translateY(4px) scale(0.996);
+  pointer-events: none;
+}
+
+.room-page.is-room-entering .calendar-wrap {
+  animation: calendar-view-enter var(--motion-standard) var(--ease-standard) both;
+}
+
+.event-card,
+.busy-card,
+.free-glow-block {
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard),
+    filter var(--motion-standard) var(--ease-standard);
+}
+
+.event-card:hover,
+.event-card:focus-visible,
+.busy-card:hover,
+.busy-card:focus-visible,
+.free-glow-block:hover,
+.free-glow-block:focus-visible {
+  transform: translateY(-1px);
+  filter: saturate(1.04);
+}
+
+.event-card.is-selected {
+  border-color: color-mix(in srgb, var(--brand) 76%, white 24%);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--brand) 28%, transparent),
+    0 12px 28px rgba(20, 14, 10, 0.2);
+}
+
+.room-code.is-copied,
+.motion-feedback,
+.notification-card.is-success .notification-icon,
+#fullscreenButton.motion-state-change .ui-icon {
+  animation: feedback-pop var(--motion-standard) var(--ease-standard) both;
+}
+
+.composer-feedback {
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard);
+}
+
+.composer-feedback:empty {
+  opacity: 0;
+  transform: translateY(-3px);
+}
+
+.inline-status.is-loading,
+[aria-busy="true"] .primary {
+  animation: loading-pulse var(--motion-slow) var(--ease-soft) infinite alternate;
+}
+
+:root.is-theme-switching body,
+:root.is-theme-switching .room-topbar,
+:root.is-theme-switching .participants-card,
+:root.is-theme-switching .participants-rail,
+:root.is-theme-switching .host-panel,
+:root.is-theme-switching .calendar-wrap,
+:root.is-theme-switching .detail-panel,
+:root.is-theme-switching .modal-card,
+:root.is-theme-switching .panel,
+:root.is-theme-switching .event-card,
+:root.is-theme-switching .busy-card,
+:root.is-theme-switching .busy-stack-summary,
+:root.is-theme-switching input,
+:root.is-theme-switching textarea {
+  transition:
+    background-color var(--motion-standard) var(--ease-standard),
+    border-color var(--motion-standard) var(--ease-standard),
+    color var(--motion-standard) var(--ease-standard),
+    box-shadow var(--motion-standard) var(--ease-standard);
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panel-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes panel-exit {
+  to {
+    opacity: 0;
+    transform: translateY(5px) scale(0.985);
+  }
+}
+
+@keyframes detail-panel-enter {
+  from {
+    opacity: 0;
+    transform: translateX(8px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes detail-panel-exit {
+  to {
+    opacity: 0;
+    transform: translateX(6px) scale(0.99);
+  }
+}
+
+@keyframes calendar-view-enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.996);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes feedback-pop {
+  0% {
+    opacity: 0.72;
+    transform: scale(0.98);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes loading-pulse {
+  from { opacity: 0.62; }
+  to { opacity: 1; }
 }
 
 @media (max-width: 980px) {
