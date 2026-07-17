@@ -10,7 +10,7 @@ const dayNames = [
 
 const calendarStartHour = 0;
 const calendarEndHour = 24;
-const defaultRoomEmoji = "ðŸ“…";
+const defaultRoomEmoji = "📅";
 const hours = Array.from({ length: calendarEndHour - calendarStartHour }, (_, index) => index + calendarStartHour);
 const participantPalette = [
   { value: "#743F45", name: "Bordeaux" },
@@ -144,7 +144,6 @@ const emptyRoomState = document.querySelector("#emptyRoomState");
 const emptyRoomCode = document.querySelector("#emptyRoomCode");
 const quickRoomEmojiInput = document.querySelector("#quickRoomEmojiInput");
 const participantsSidebar = document.querySelector("#participantsSidebar");
-const participantsRail = document.querySelector("#participantsRail") || document.querySelector(".participants-rail");
 const roomLockIcon = document.querySelector("#roomLockIcon");
 
 let appConfig = null;
@@ -171,6 +170,7 @@ let dragCreateState = null;
 let dragPreviewNode = null;
 let dragPreviewFrame = 0;
 let suppressCalendarClickUntil = 0;
+let participantsDrawerGesture = null;
 
 function setButtonLabelWithIcon(button, label, iconClass) {
   if (!button) return;
@@ -656,7 +656,7 @@ function formatDateTimeRange(start, end) {
   const dayLabel = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric" }).format(startDate);
   const startTime = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", hour12: true }).format(startDate);
   const endTime = new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit", hour12: true }).format(endDate);
-  if (sameDay) return `${dayLabel} Â· ${startTime} - ${endTime}`;
+  if (sameDay) return `${dayLabel} · ${startTime} - ${endTime}`;
   const endLabel = new Intl.DateTimeFormat(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true }).format(endDate);
   return `${dayLabel} ${startTime} - ${endLabel}`;
 }
@@ -891,7 +891,7 @@ function renderRoomSwitcher() {
     button.type = "button";
     button.className = `room-switch-tab ${isActive ? "active" : ""}`.trim();
     button.dataset.roomCode = code;
-    button.title = `${room.name || "Room"} Â· ${code}`;
+    button.title = `${room.name || "Room"} · ${code}`;
     button.setAttribute("aria-current", isActive ? "page" : "false");
 
     const mark = document.createElement("span");
@@ -1432,11 +1432,10 @@ function renderParticipants() {
 }
 
 function setParticipantsPanelExpanded(expanded) {
-  if (!participantsSidebar || !participantsRail) return;
-  participantsSidebar.classList.toggle("is-open", Boolean(expanded));
-  participantsRail.setAttribute("aria-expanded", String(Boolean(expanded)));
-  participantsRail.setAttribute("aria-label", expanded ? "Close members panel" : "Open members panel");
-  participantsRail.title = expanded ? "Close members panel" : "Open members panel";
+  if (!participantsSidebar) return;
+  const isExpanded = Boolean(expanded);
+  participantsSidebar.classList.toggle("is-open", isExpanded);
+  participantsSidebar.dataset.open = String(isExpanded);
 }
 
 function renderJoinRequests() {
@@ -1459,7 +1458,7 @@ function renderJoinRequests() {
     row.innerHTML = `
       <div class="request-copy">
         <strong>${escapeHtml(request.displayName)}</strong>
-        <span>${request.source === "guest" ? "Guest" : sourceLabel}${requestedAt ? ` Â· ${requestedAt}` : ""}</span>
+        <span>${request.source === "guest" ? "Guest" : sourceLabel}${requestedAt ? ` · ${requestedAt}` : ""}</span>
       </div>
       <div class="request-actions">
         <button class="secondary strong" type="button" data-request-action="approved">Approve</button>
@@ -1520,7 +1519,7 @@ function renderRoomMeta() {
   hostSettings.classList.toggle("hidden", !currentIsHost);
 
   const connectedCount = (currentRoom?.participants || []).filter((participant) => participant.connected).length;
-  roomStatus.textContent = `${currentRoom?.participants?.length || 0} people Â· ${connectedCount} connected`;
+  roomStatus.textContent = `${currentRoom?.participants?.length || 0} people · ${connectedCount} connected`;
 
   const onlyOneParticipant = (currentRoom?.participants?.length || 0) <= 1;
   const inviteDismissed = Boolean(currentRoom?.code && dismissedInviteRoomCodes.has(currentRoom.code));
@@ -1563,8 +1562,8 @@ function refreshStatusLine() {
   const lastRefreshed = currentRoom ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date()) : "";
   const syncedAt = formatSyncStamp(currentParticipant?.lastSyncedAt || sessionInfo?.user?.sync?.lastSuccessAt);
   calendarStatus.textContent = currentRoom
-    ? `${connectedCount} connected${syncedAt ? ` Â· synced ${syncedAt}` : ""} Â· refreshed ${lastRefreshed}`
-    : "Loading roomâ€¦";
+    ? `${connectedCount} connected${syncedAt ? ` · synced ${syncedAt}` : ""} · refreshed ${lastRefreshed}`
+    : "Loading room…";
 }
 
 function buildSelfEditPanel() {
@@ -1849,7 +1848,7 @@ function openEventDetail(eventId) {
   detailLabel.textContent = "Group event";
   detailTitle.textContent = event.title || "Busy";
   detailTime.textContent = formatDateTimeRange(event.start, event.end);
-  responseSummary.textContent = `${event.responseSummary?.yes || 0} yes Â· ${event.responseSummary?.maybe || 0} maybe Â· ${event.responseSummary?.no || 0} no`;
+  responseSummary.textContent = `${event.responseSummary?.yes || 0} yes · ${event.responseSummary?.maybe || 0} maybe · ${event.responseSummary?.no || 0} no`;
   renderResponseGroups(event);
   renderComments(event);
   const currentResponse = event.responses?.[currentParticipant?.id] || "";
@@ -2267,7 +2266,7 @@ function eventBlocksForDate(date) {
       inviteeParticipantIds: (event.invitees || []).map((invitee) => invitee.participantId),
       startHour,
       endHour,
-      summary: `${event.responseSummary?.yes || 0} yes Â· ${event.responseSummary?.maybe || 0} maybe Â· ${event.responseSummary?.no || 0} no`,
+      summary: `${event.responseSummary?.yes || 0} yes · ${event.responseSummary?.maybe || 0} maybe · ${event.responseSummary?.no || 0} no`,
       isInvitee: isInvitee && !isCreator,
       isInvitedViewer: Boolean(event.isInvited),
       continuesBefore: start < dayStart,
@@ -2403,9 +2402,9 @@ function createSingleBusyCard(segment, dayIndex) {
   const coversVisibleDay = duration >= (calendarEndHour - calendarStartHour) - 0.001;
   const timeRange = coversVisibleDay ? "All day" : formatEventRange(segment.startHour, segment.endHour);
   const titleLabel = normalizedTextKey(visibilityLabel) === normalizedTextKey(ownerLabel) ? "" : visibilityLabel;
-  const compactLine = [ownerLabel, titleLabel].filter(Boolean).join(" Â· ");
-  const compactLineWithTime = [compactLine || ownerLabel, timeRange].filter(Boolean).join(" Â· ");
-  const tooltip = [ownerLabel, titleLabel || (isOwnBlock ? "No title" : "Busy"), timeRange].filter(Boolean).join(" Â· ");
+  const compactLine = [ownerLabel, titleLabel].filter(Boolean).join(" · ");
+  const compactLineWithTime = [compactLine || ownerLabel, timeRange].filter(Boolean).join(" · ");
+  const tooltip = [ownerLabel, titleLabel || (isOwnBlock ? "No title" : "Busy"), timeRange].filter(Boolean).join(" · ");
   block.dataset.tooltip = tooltip;
   block.title = tooltip;
 
@@ -2468,7 +2467,7 @@ function createBusyStack(segment, dayIndex) {
   summary.innerHTML = isFifteen
     ? `
       <div class="busy-stack-summary-body busy-stack-summary-body--single">
-        <strong class="busy-stack-summary-inline">${escapeHtml(countLabel)} Â· ${escapeHtml(formatTime(segment.startHour))} - ${escapeHtml(formatTime(segment.endHour))}</strong>
+        <strong class="busy-stack-summary-inline">${escapeHtml(countLabel)} · ${escapeHtml(formatTime(segment.startHour))} - ${escapeHtml(formatTime(segment.endHour))}</strong>
       </div>
       <div class="busy-stack-tabs"></div>
     `
@@ -2516,7 +2515,7 @@ function createBusyStack(segment, dayIndex) {
     card.style.setProperty("--stack-order", index);
     const itemTooltip = `${ownerLabel}\n${visibilityLabel}\n${participantTimeLabel}`;
     card.dataset.tooltip = itemTooltip;
-    card.title = itemTooltip.replace(/\n/g, " Â· ");
+    card.title = itemTooltip.replace(/\n/g, " · ");
     card.innerHTML = `
       <span class="busy-stack-item-accent" aria-hidden="true"></span>
       <div class="busy-stack-item-copy">
@@ -2603,7 +2602,7 @@ function createEventBlock(item, dayIndex) {
   block.title = tooltip;
   const titleText = item.title === "No title" ? "(No title)" : (item.title || "(No title)");
   const fifteenLine = [titleText, formatEventClock(item.startHour), item.location].filter(Boolean).join(", ");
-  const compactMeta = [timeRange, item.location].filter(Boolean).join(" Â· ");
+  const compactMeta = [timeRange, item.location].filter(Boolean).join(" · ");
 
   const appendLine = (className, text) => {
     if (!text) return;
@@ -3222,7 +3221,7 @@ function notificationIcon(type = "") {
   if (type === "event_cancelled") return "!";
   if (type === "event_comment") return "\"";
   if (type === "event_updated") return "~";
-  return "â€¢";
+  return "•";
 }
 
 function notificationTimeLabel(notification = {}) {
@@ -3287,7 +3286,7 @@ function setNotificationSuccess(notificationId, text) {
   const message = card.querySelector(".notification-message");
   const icon = card.querySelector(".notification-icon");
   if (message) message.textContent = text;
-  if (icon) icon.textContent = "âœ“";
+  if (icon) icon.textContent = "✓";
   card.classList.add("is-success");
 }
 
@@ -3423,7 +3422,7 @@ function createNotificationCard(notification) {
   dismissButton.className = "notification-dismiss";
   dismissButton.type = "button";
   dismissButton.setAttribute("aria-label", "Dismiss notification");
-  dismissButton.textContent = "Ã—";
+  dismissButton.textContent = "×";
   dismissButton.addEventListener("click", (event) => {
     event.stopPropagation();
     dismissNotification(notification.id);
@@ -4638,8 +4637,27 @@ settingsButton.addEventListener("click", () => {
   const shouldOpen = hostPopover.classList.contains("hidden") || hostPopover.classList.contains("is-closing");
   setPanelVisibility(hostPopover, shouldOpen);
 });
-participantsRail?.addEventListener("click", () => {
-  setParticipantsPanelExpanded(participantsRail.getAttribute("aria-expanded") !== "true");
+participantsSidebar?.addEventListener("pointerdown", (event) => {
+  if (event.pointerType === "mouse") return;
+  participantsDrawerGesture = {
+    pointerId: event.pointerId,
+    startX: event.clientX,
+    startY: event.clientY,
+  };
+});
+participantsSidebar?.addEventListener("pointerup", (event) => {
+  if (!participantsDrawerGesture || participantsDrawerGesture.pointerId !== event.pointerId) return;
+  const deltaX = event.clientX - participantsDrawerGesture.startX;
+  const deltaY = event.clientY - participantsDrawerGesture.startY;
+  if (Math.abs(deltaX) >= 32 && Math.abs(deltaX) > Math.abs(deltaY) * 1.2) {
+    setParticipantsPanelExpanded(deltaX > 0);
+  }
+  participantsDrawerGesture = null;
+});
+participantsSidebar?.addEventListener("pointercancel", (event) => {
+  if (participantsDrawerGesture?.pointerId === event.pointerId) {
+    participantsDrawerGesture = null;
+  }
 });
 fullscreenButton.addEventListener("click", async () => {
   await toggleFullscreenMode();
@@ -4652,6 +4670,7 @@ viewSwitcher.addEventListener("click", async (event) => {
 window.addEventListener("keydown", async (event) => {
   if (event.key === "Escape") {
     closeExpandedBusyStacks();
+    setParticipantsPanelExpanded(false);
   }
   if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "z") {
     if (shouldIgnoreUndoShortcut(event.target)) return;
