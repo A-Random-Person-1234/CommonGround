@@ -126,6 +126,15 @@ try {
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
   assert.match(home.text, /id="googleEventSyncToggle" type="checkbox" checked/);
+  assert.match(home.text, /id="eventForm"/);
+  assert.doesNotMatch(home.text, /id="eventForm" method="dialog"/);
+  assert.match(home.text, /id="eventFormFeedback" role="status" aria-live="polite"/);
+  const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
+  assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
+  assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
+  const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(eventComposerStyles.text, /grid-template-rows: auto auto minmax\(0, 1fr\) auto auto/);
+  assert.match(eventComposerStyles.text, /\.composer-body textarea\s*\{[^}]*min-height: 72px/s);
   const contentSecurityPolicy = home.response.headers.get("content-security-policy");
   assert.ok(contentSecurityPolicy, "CSP header is missing");
   assert.doesNotMatch(contentSecurityPolicy, /script-src[^;]*'unsafe-inline'/);
