@@ -167,6 +167,13 @@ try {
     /<header class="room-topbar">[\s\S]*?<div class="calendar-toolbar">[\s\S]*?<div class="empty-room hidden" id="emptyRoomState">[\s\S]*?<div class="calendar-grid" id="calendarGrid"><\/div>\s*<footer class="legal-links calendar-legal-links"/,
     "Room controls, invite prompt, calendar, and legal links must share one scroll flow"
   );
+  assert.match(
+    home.text,
+    /<div class="participants-rail" aria-hidden="true">\s*<span>Members<\/span>\s*<\/div>/,
+    "The Members rail label must remain passive text"
+  );
+  assert.doesNotMatch(home.text, /<button[^>]*class="participants-rail"/);
+  assert.doesNotMatch(home.text, /id="participantsRail"/);
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
   assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
   assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
@@ -176,6 +183,9 @@ try {
   assert.match(eventComposerScript.text, /function closeDialogWithMotion\(dialog, afterClose\)/);
   assert.match(eventComposerScript.text, /async function animateCalendarTransition\(renderAction\)/);
   assert.match(eventComposerScript.text, /function prefersReducedMotion\(\)/);
+  assert.match(eventComposerScript.text, /let participantsDrawerGesture = null/);
+  assert.match(eventComposerScript.text, /Math\.abs\(deltaX\) >= 32/);
+  assert.doesNotMatch(eventComposerScript.text, /participantsRail\?\.addEventListener\("click"/);
   for (const option of expectedParticipantPalette) {
     assert.ok(
       eventComposerScript.text.includes(`{ value: "${option.value}", name: "${option.name}" }`),
@@ -205,6 +215,24 @@ try {
   assert.doesNotMatch(eventComposerStyles.text, /\.room-topbar\s*\{[^}]*position:\s*sticky/s);
   assert.match(eventComposerStyles.text, /\.calendar-stage\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\)[^}]*overflow:\s*hidden/s);
   assert.match(eventComposerStyles.text, /\.calendar-wrap\s*\{[^}]*grid-row:\s*1[^}]*overflow:\s*auto/s);
+  assert.match(
+    eventComposerStyles.text,
+    /\.participants-sidebar\s*\{[^}]*overflow:\s*hidden[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:\s*0 22px 22px 0[^}]*box-shadow:\s*var\(--shadow\)[^}]*touch-action:\s*pan-y/s,
+    "The participants drawer must own one unified outer surface"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.participants-card\s*\{[^}]*border:\s*0[^}]*border-radius:\s*0[^}]*background:\s*transparent[^}]*box-shadow:\s*none/s,
+    "The participants card must not render a second surface"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.participants-rail\s*\{[^}]*border:\s*0[^}]*background:\s*transparent[^}]*cursor:\s*default[^}]*box-shadow:\s*none/s,
+    "The Members label must be visually fused and non-interactive"
+  );
+  assert.match(eventComposerStyles.text, /\.participants-rail span\s*\{[^}]*pointer-events:\s*none/s);
+  assert.doesNotMatch(eventComposerStyles.text, /\.participants-rail\[aria-expanded="true"\]/);
+  assert.doesNotMatch(eventComposerStyles.text, /\.participants-rail:focus-visible/);
   assert.match(
     eventComposerStyles.text,
     /@media \(min-width: 900px\)[\s\S]*?\.calendar-grid\.week-view\s*\{[^}]*min-width:\s*0[^}]*minmax\(0, 1fr\)/
