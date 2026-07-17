@@ -28,6 +28,13 @@ const expectedParticipantPalette = [
   { name: "Truffle", value: "#8D8174" },
   { name: "Graphite", value: "#66635F" }
 ];
+const expectedIconAssets = [
+  "calendar-sync.svg", "circle-arrow-left.svg", "circle-arrow-right.svg",
+  "circle-x.svg", "clock-4.svg", "link-2.svg", "lock-keyhole.svg",
+  "lock-keyhole-open.svg", "map-pin.svg", "maximize-2.svg", "minimize-2.svg",
+  "plus.svg", "refresh-cw.svg", "rotate-cw.svg", "settings.svg", "square.svg",
+  "trash-2.svg", "user-round-plus.svg", "x.svg"
+];
 
 const delay = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
@@ -147,9 +154,14 @@ try {
   assert.match(home.text, /id="eventForm"/);
   assert.doesNotMatch(home.text, /id="eventForm" method="dialog"/);
   assert.match(home.text, /id="eventFormFeedback" role="status" aria-live="polite"/);
+  assert.match(home.text, /class="ui-icon ui-icon-maximize" id="fullscreenIcon"/);
+  assert.match(home.text, /composer-row-icon ui-icon ui-icon-clock/);
+  assert.match(home.text, /button-with-icon[^>]*id="addEventButton"/);
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
   assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
   assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
+  assert.match(eventComposerScript.text, /function updateFullscreenControl\(\)/);
+  assert.match(eventComposerScript.text, /function setButtonLabelWithIcon\(button, label, iconClass\)/);
   for (const option of expectedParticipantPalette) {
     assert.ok(
       eventComposerScript.text.includes(`{ value: "${option.value}", name: "${option.name}" }`),
@@ -160,6 +172,11 @@ try {
   assert.match(eventComposerStyles.text, /grid-template-rows: auto auto minmax\(0, 1fr\) auto auto/);
   assert.match(eventComposerStyles.text, /\.composer-body textarea\s*\{[^}]*min-height: 72px/s);
   assert.match(eventComposerStyles.text, /\.color-option-list\s*\{[^}]*max-height: calc\(100dvh - 96px\)/s);
+  assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*width: 18px[^}]*height: 18px/s);
+  for (const iconAsset of expectedIconAssets) {
+    const icon = await publicSession.request(`/icons/${iconAsset}`, { accept: "image/svg+xml" });
+    assert.match(icon.text, /<svg[^>]*viewBox="0 0 24 24"/);
+  }
   const contentSecurityPolicy = home.response.headers.get("content-security-policy");
   assert.ok(contentSecurityPolicy, "CSP header is missing");
   assert.doesNotMatch(contentSecurityPolicy, /script-src[^;]*'unsafe-inline'/);
@@ -179,22 +196,22 @@ try {
   const created = await host.request("/api/rooms", {
     method: "POST",
     expected: 201,
-    body: { name: "Decagon", emoji: "🧭", displayName: "Host" }
+    body: { name: "Decagon", emoji: "ðŸ§­", displayName: "Host" }
   });
   const firstCode = created.payload.room.code;
   assert.match(firstCode, /^[A-HJ-NP-Z2-9]{6}$/);
-  assert.equal(created.payload.room.emoji, "🧭");
+  assert.equal(created.payload.room.emoji, "ðŸ§­");
   assert.equal(created.payload.isHost, true);
 
   const secondRoom = await host.request("/api/rooms", {
     method: "POST",
     expected: 201,
-    body: { name: "Second room", emoji: "🎒", displayName: "Host" }
+    body: { name: "Second room", emoji: "ðŸŽ’", displayName: "Host" }
   });
   assert.notEqual(secondRoom.payload.room.code, firstCode);
   const memberships = await host.request("/api/my-rooms");
   assert.equal(memberships.payload.rooms.length, 2);
-  assert.ok(memberships.payload.rooms.some((room) => room.code === firstCode && room.emoji === "🧭"));
+  assert.ok(memberships.payload.rooms.some((room) => room.code === firstCode && room.emoji === "ðŸ§­"));
 
   const joined = await guest.request(`/api/rooms/${firstCode.toLowerCase()}/join`, {
     method: "POST",
@@ -378,3 +395,4 @@ try {
   await stopServer(server);
   rmSync(runtimeDir, { recursive: true, force: true });
 }
+
