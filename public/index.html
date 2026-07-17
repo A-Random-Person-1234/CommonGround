@@ -271,7 +271,7 @@
               </button>
             </div>
             <nav class="room-switcher hidden" id="roomSwitcher" aria-label="Your rooms"></nav>
-            <div class="inline-status" id="calendarStatus">Loading roomâ€¦</div>
+            <div class="inline-status" id="calendarStatus">Loading room…</div>
           </div>
           <div class="empty-room hidden" id="emptyRoomState">
             <p>Invite people</p>
@@ -288,6 +288,11 @@
           </div>
           <div class="calendar-wrap">
             <div class="calendar-grid" id="calendarGrid"></div>
+            <footer class="legal-links calendar-legal-links" aria-label="Legal links">
+              <a href="/privacy">Privacy Policy</a>
+              <span aria-hidden="true">&middot;</span>
+              <a href="/terms">Terms &amp; Conditions</a>
+            </footer>
           </div>
         </main>
 
@@ -522,13 +527,6 @@
       <option value="&#127926;"></option>
     </datalist>
 
-    <footer class="legal-links" aria-label="Legal links">
-      <a href="/privacy">Privacy Policy</a>
-      <span aria-hidden="true">&middot;</span>
-      <a href="/terms">Terms &amp; Conditions</a>
-    </footer>
-
     <script src="/app.js"></script>
   </body>
 </html>
-
