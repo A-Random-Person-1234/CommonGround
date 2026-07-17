@@ -1814,8 +1814,12 @@ a:focus-visible {
   z-index: 15;
   min-width: 200px;
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 4px;
+  max-height: calc(100dvh - 96px);
+  padding: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--surface);
@@ -1840,8 +1844,8 @@ a:focus-visible {
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 40px;
-  padding: 0 12px;
+  min-height: 34px;
+  padding: 0 10px;
   border-radius: 10px;
   background: transparent;
   color: var(--ink);
