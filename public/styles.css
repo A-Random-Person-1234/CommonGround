@@ -964,8 +964,7 @@ a:focus-visible {
   height: 100dvh;
   min-height: 100vh;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
   padding: 8px 12px 12px calc(var(--members-rail-width) + var(--members-calendar-gap));
 }
@@ -975,10 +974,11 @@ a:focus-visible {
   gap: 12px;
   align-items: center;
   justify-content: space-between;
-  position: sticky;
-  top: 0;
+  position: relative;
+  top: auto;
   z-index: 40;
   min-height: 58px;
+  margin-bottom: 8px;
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 16px;
@@ -2195,8 +2195,7 @@ a:focus-visible {
 
 .calendar-stage {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
-  gap: 8px;
+  grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
 }
@@ -2257,13 +2256,18 @@ a:focus-visible {
 
 .calendar-wrap {
   position: relative;
-  grid-row: 3;
+  grid-row: 1;
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
   width: 100%;
   flex: 1 1 auto;
   border-radius: 22px;
+}
+
+.calendar-wrap > .calendar-toolbar,
+.calendar-wrap > .empty-room:not(.hidden) {
+  margin-bottom: 8px;
 }
 
 .calendar-grid {
