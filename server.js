@@ -20,6 +20,7 @@ const roomCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const defaultRoomEmoji = "📅";
 const oauthStateLifetimeMs = 10 * 60 * 1000;
 const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000;
+const sessionRotationAliasLifetimeMs = 60 * 1000;
 const configuredOutboundRequestTimeoutMs = Number(process.env.OUTBOUND_REQUEST_TIMEOUT_MS || 15_000);
 const outboundRequestTimeoutMs = Number.isFinite(configuredOutboundRequestTimeoutMs) && configuredOutboundRequestTimeoutMs >= 1_000
   ? configuredOutboundRequestTimeoutMs
@@ -270,6 +271,7 @@ const microsoftWriteScopes = microsoftBaseScopes.map((scope) => (
 
 const database = openDatabase();
 const oauthStates = new Map();
+const sessionRotationAliases = new Map();
 let store = loadStore();
 const sessions = new Map(Object.entries(store.sessions || {}));
 
@@ -728,6 +730,10 @@ function rotateSession(session, res) {
   };
   sessions.delete(oldId);
   sessions.set(newId, nextSession);
+  sessionRotationAliases.set(oldId, {
+    newId,
+    expiresAt: Date.now() + sessionRotationAliasLifetimeMs
+  });
   replaceSessionReference(oldId, newId);
   setSessionCookie(res, newId);
   return nextSession;
@@ -736,6 +742,16 @@ function rotateSession(session, res) {
 function getSession(req, res) {
   const cookies = parseCookies(req);
   let sid = cookies.cg_sid;
+  for (const [oldId, alias] of sessionRotationAliases.entries()) {
+    if (!alias?.expiresAt || alias.expiresAt <= Date.now() || !sessions.has(alias.newId)) {
+      sessionRotationAliases.delete(oldId);
+    }
+  }
+  const rotatedAlias = sid ? sessionRotationAliases.get(sid) : null;
+  if (rotatedAlias?.newId && sessions.has(rotatedAlias.newId)) {
+    sid = rotatedAlias.newId;
+    setSessionCookie(res, sid);
+  }
   const existing = sid ? sessions.get(sid) : null;
   if (existing && sessionIsExpired(existing)) {
     sessions.delete(sid);
@@ -774,7 +790,10 @@ function sendText(res, status, body, contentType = "text/plain; charset=utf-8") 
 
 function sendRedirect(res, location) {
   applySecurityHeaders(res);
-  res.writeHead(302, { Location: location });
+  res.writeHead(302, {
+    Location: location,
+    "Cache-Control": "no-store"
+  });
   res.end();
 }
 
@@ -2915,7 +2934,7 @@ function pruneOauthStates() {
   }
 }
 
-function buildGoogleAuthUrl(session, roomCode, { calendarWrite = false } = {}) {
+function buildGoogleAuthUrl(session, roomCode, { calendarWrite = false, requestId = null } = {}) {
   const credentials = loadGoogleCredentials();
   if (!credentials) return null;
 
@@ -2926,6 +2945,8 @@ function buildGoogleAuthUrl(session, roomCode, { calendarWrite = false } = {}) {
     sessionId: session.id,
     provider: "google",
     calendarWrite,
+    popup: Boolean(requestId),
+    requestId: requestId || null,
     expiresAt: Date.now() + oauthStateLifetimeMs
   });
 
@@ -2939,6 +2960,48 @@ function buildGoogleAuthUrl(session, roomCode, { calendarWrite = false } = {}) {
   url.searchParams.set("include_granted_scopes", "true");
   url.searchParams.set("state", state);
   return url.toString();
+}
+
+function validOauthPopupRequestId(value) {
+  return typeof value === "string" && /^[A-Za-z0-9_-]{32,128}$/.test(value);
+}
+
+function googleOauthPopupRelayLocation(stateData, {
+  status,
+  errorCode = null
+} = {}) {
+  if (
+    stateData?.provider !== "google" ||
+    stateData.popup !== true ||
+    !validOauthPopupRequestId(stateData.requestId)
+  ) {
+    return null;
+  }
+
+  const safeStatus = status === "success" ? "success" : "error";
+  const safeErrors = new Set([
+    "access_denied",
+    "provider_error",
+    "calendar_connection_failed"
+  ]);
+  const params = new URLSearchParams({
+    provider: "google",
+    status: safeStatus,
+    requestId: stateData.requestId
+  });
+  if (safeStatus === "error") {
+    params.set("errorCode", safeErrors.has(errorCode) ? errorCode : "calendar_connection_failed");
+  }
+  return `/oauth-popup.html#${params.toString()}`;
+}
+
+function sendGoogleOauthResult(res, stateData, {
+  fullPageLocation,
+  status,
+  errorCode = null
+}) {
+  const popupLocation = googleOauthPopupRelayLocation(stateData, { status, errorCode });
+  sendRedirect(res, popupLocation || fullPageLocation);
 }
 
 function buildMicrosoftAuthUrl(session, roomCode, { calendarWrite = false } = {}) {
@@ -3146,6 +3209,48 @@ const server = http.createServer(async (req, res) => {
       !isAllowedMutationOrigin(req)
     ) {
       sendJson(res, 403, { error: "Cross-site request blocked." });
+      return;
+    }
+
+    if (url.pathname === "/api/auth/google") {
+      if (req.method !== "GET") {
+        sendMethodNotAllowed(res, ["GET"]);
+        return;
+      }
+      if (!enforceRateLimit(req, res, "oauth-google", 20, 10 * 60 * 1000)) return;
+
+      const popupToken = url.searchParams.get("popupToken") || "";
+      const calendarWriteValue = url.searchParams.get("calendarWrite");
+      if (url.searchParams.get("popup") !== "1" || !validOauthPopupRequestId(popupToken)) {
+        sendJson(res, 400, { error: "A valid OAuth popup token is required." });
+        return;
+      }
+      if (calendarWriteValue !== null && calendarWriteValue !== "0" && calendarWriteValue !== "1") {
+        sendJson(res, 400, { error: "calendarWrite must be 1 or 0." });
+        return;
+      }
+
+      const session = getSession(req, res);
+      const roomCode = normalizeRoomCode(url.searchParams.get("room") || session.lastRoomCode || "");
+      const calendarWrite = calendarWriteValue !== "0";
+      const authorizationUrl = buildGoogleAuthUrl(session, roomCode || null, {
+        calendarWrite,
+        requestId: popupToken
+      });
+      if (!authorizationUrl) {
+        sendGoogleOauthResult(res, {
+          provider: "google",
+          popup: true,
+          requestId: popupToken
+        }, {
+          fullPageLocation: `${roomCode ? `/room/${roomCode}` : "/"}?error=missing_google_credentials`,
+          status: "error",
+          errorCode: "calendar_connection_failed"
+        });
+        return;
+      }
+
+      sendRedirect(res, authorizationUrl);
       return;
     }
 
@@ -4001,12 +4106,28 @@ if (url.pathname === "/auth/google") {
     const returnPath = stateData?.roomCode && findRoom(stateData.roomCode)
       ? `/room/${stateData.roomCode}`
       : "/";
-    if (!validState || (!code && !providerError)) {
-      sendRedirect(res, `${returnPath}?error=invalid_oauth_state`);
+    if (!validState) {
+      sendGoogleOauthResult(res, stateData, {
+        fullPageLocation: `${returnPath}?error=invalid_oauth_state`,
+        status: "error",
+        errorCode: "calendar_connection_failed"
+      });
+      return;
+    }
+    if (!code && !providerError) {
+      sendGoogleOauthResult(res, stateData, {
+        fullPageLocation: `${returnPath}?error=invalid_oauth_state`,
+        status: "error",
+        errorCode: "calendar_connection_failed"
+      });
       return;
     }
     if (providerError) {
-      sendRedirect(res, `${returnPath}?error=${encodeURIComponent(providerError)}`);
+      sendGoogleOauthResult(res, stateData, {
+        fullPageLocation: `${returnPath}?error=${encodeURIComponent(providerError)}`,
+        status: "error",
+        errorCode: providerError === "access_denied" ? "access_denied" : "provider_error"
+      });
       return;
     }
 
@@ -4033,7 +4154,10 @@ if (url.pathname === "/auth/google") {
           notifyHostsOfJoinRequest(room, request);
           room.updatedAt = nowIso();
           saveStore();
-          sendRedirect(res, `/room/${roomCode}?request=sent`);
+          sendGoogleOauthResult(res, stateData, {
+            fullPageLocation: `/room/${roomCode}?request=sent`,
+            status: "success"
+          });
           return;
         }
         const participant = ensureParticipant(room, session, userRecord, session.pendingDisplayName);
@@ -4041,17 +4165,24 @@ if (url.pathname === "/auth/google") {
         settleJoinRequestsForIdentity(room, session, userRecord);
         if (room.hostSessionId === session.id && !room.hostUserId) room.hostUserId = userId;
         saveStore();
-        sendRedirect(
-          res,
-          `/room/${roomCode}?connected=google${stateData.calendarWrite ? "&calendarWrite=1" : ""}`
-        );
+        sendGoogleOauthResult(res, stateData, {
+          fullPageLocation: `/room/${roomCode}?connected=google${stateData.calendarWrite ? "&calendarWrite=1" : ""}`,
+          status: "success"
+        });
         return;
       }
 
       saveStore();
-      sendRedirect(res, `/?connected=google${stateData.calendarWrite ? "&calendarWrite=1" : ""}`);
+      sendGoogleOauthResult(res, stateData, {
+        fullPageLocation: `/?connected=google${stateData.calendarWrite ? "&calendarWrite=1" : ""}`,
+        status: "success"
+      });
     } catch {
-      sendRedirect(res, `${returnPath}?error=calendar_connection_failed`);
+      sendGoogleOauthResult(res, stateData, {
+        fullPageLocation: `${returnPath}?error=calendar_connection_failed`,
+        status: "error",
+        errorCode: "calendar_connection_failed"
+      });
     }
     return;
   }

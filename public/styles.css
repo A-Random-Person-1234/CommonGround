@@ -6992,3 +6992,687 @@ button.identity-name-button:not(:disabled):active,
     0 0 18px rgba(196, 147, 82, 0.3),
     0 6px 14px rgba(0, 0, 0, 0.18);
 }
+
+/* Premium event composer: one compact hierarchy on an exact 8px rhythm. */
+#eventModal {
+  --composer-ink: var(--text);
+  --composer-muted: color-mix(in srgb, var(--text) 48%, transparent);
+  --composer-faint: color-mix(in srgb, var(--text) 8%, transparent);
+  --composer-field: color-mix(in srgb, var(--text) 3%, transparent);
+  --composer-accent: var(--brand);
+}
+
+:root[data-theme="dark"] #eventModal {
+  --composer-ink: #fff;
+  --composer-muted: rgba(255, 255, 255, 0.45);
+  --composer-faint: rgba(255, 255, 255, 0.08);
+  --composer-field: rgba(255, 255, 255, 0.03);
+}
+
+#eventModal[open] .event-composer {
+  animation: event-composer-premium-in 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: center center;
+  will-change: transform, opacity;
+}
+
+@keyframes event-composer-premium-in {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.95);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+#eventModal .event-composer,
+#eventModal.anchored-composer .modal-card,
+#eventModal.anchored-composer .event-composer {
+  width: min(560px, calc(100vw - 24px));
+  max-height: calc(100dvh - 16px);
+  overflow: visible;
+}
+
+#eventModal .event-composer {
+  display: grid;
+  grid-template-rows: auto auto auto auto auto;
+  gap: 20px;
+  padding: 24px;
+  border: 1px solid var(--composer-faint);
+  border-radius: 16px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
+    var(--surface);
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.32),
+    0 4px 16px rgba(0, 0, 0, 0.16);
+  color: var(--composer-ink);
+  font-family: Inter, "Geist Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+#eventModal.anchored-composer .modal-card {
+  left: var(--composer-left, 24px);
+  top: var(--composer-top, 24px);
+}
+
+#eventModal .composer-heading-section {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+#eventModal .event-composer-top {
+  min-height: 32px;
+  margin: 0;
+}
+
+#eventModal .composer-handle {
+  width: 20px;
+  height: 16px;
+  opacity: 0.45;
+}
+
+#eventModal .composer-handle::before,
+#eventModal .composer-handle::after {
+  width: 20px;
+  height: 1.5px;
+  background: var(--composer-muted);
+}
+
+#eventModal .composer-close {
+  width: 32px;
+  min-width: 32px;
+  height: 32px;
+  min-height: 32px;
+  border-radius: 8px;
+  color: var(--composer-muted);
+  background: transparent;
+}
+
+#eventModal .composer-close:hover {
+  transform: translate3d(0, 0, 0) scale(1.04);
+}
+
+#eventModal .composer-title {
+  width: 100%;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--composer-ink);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: -0.012em;
+}
+
+#eventModal .composer-title::placeholder {
+  color: var(--composer-muted);
+  opacity: 0.88;
+}
+
+#eventModal .composer-title:focus,
+#eventModal .composer-title:focus-visible {
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+#eventModal .composer-section {
+  min-width: 0;
+}
+
+#eventModal .composer-schedule-section,
+#eventModal .composer-field-row {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+}
+
+#eventModal .composer-schedule-section {
+  align-items: start;
+}
+
+#eventModal .composer-row-icon,
+#eventModal .composer-row-icon.ui-icon {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  margin: 12px 0 0;
+  color: var(--composer-muted);
+  opacity: 1;
+  flex: 0 0 16px;
+}
+
+#eventModal .composer-field-row > .composer-row-icon,
+#eventModal .composer-field-row > .composer-row-icon.ui-icon {
+  margin-top: 0;
+}
+
+#eventModal .icon-lines::before,
+#eventModal .icon-lines::after {
+  left: 0;
+  width: 16px;
+  height: 1.5px;
+  background: currentColor;
+}
+
+#eventModal .icon-lines::before {
+  top: 5px;
+}
+
+#eventModal .icon-lines::after {
+  top: 11px;
+  width: 11px;
+}
+
+#eventModal .composer-time-grid {
+  grid-column: auto;
+  display: grid;
+  grid-template-columns: minmax(132px, 1.25fr) minmax(88px, 0.8fr) auto minmax(88px, 0.8fr);
+  gap: 0;
+  align-items: center;
+  min-width: 0;
+  padding: 8px;
+  border: 1px solid var(--composer-faint);
+  border-radius: 8px;
+  background: var(--composer-field);
+}
+
+#eventModal.anchored-composer .composer-time-grid {
+  grid-template-columns: minmax(132px, 1.25fr) minmax(88px, 0.8fr) auto minmax(88px, 0.8fr);
+}
+
+#eventModal.anchored-composer .composer-date-field {
+  grid-column: auto;
+}
+
+#eventModal .composer-time-grid label {
+  min-width: 0;
+}
+
+#eventModal .composer-time-grid input {
+  min-height: 36px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  outline: 0;
+  background: transparent;
+  color: var(--composer-ink);
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  box-shadow: none;
+}
+
+#eventModal .composer-time-grid input:focus {
+  background: var(--composer-faint);
+  box-shadow: none;
+  transform: none;
+}
+
+#eventModal .composer-time-grid input::-webkit-calendar-picker-indicator {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  opacity: 0.52;
+}
+
+#eventModal .time-divider {
+  display: block;
+  padding: 0 4px;
+  color: var(--composer-muted);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+}
+
+#eventModal .all-day-toggle {
+  grid-column: 1 / -1;
+  min-height: 32px;
+  margin-top: 8px;
+  padding: 8px 8px 0;
+  border-top: 1px solid var(--composer-faint);
+  color: var(--composer-ink);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#eventModal .all-day-toggle input {
+  width: 16px;
+  height: 16px;
+  min-height: 0;
+  padding: 0;
+  border-radius: 4px;
+}
+
+#eventModal .composer-time-grid.is-all-day {
+  grid-template-columns: minmax(132px, 1fr) auto minmax(132px, 1fr);
+}
+
+#eventModal .composer-time-grid.is-all-day .composer-date-field,
+#eventModal .composer-time-grid.is-all-day .composer-end-date-field {
+  grid-row: 1;
+}
+
+#eventModal .composer-meta-section {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+#eventModal .composer-field-row {
+  position: relative;
+  min-height: 40px;
+  padding: 0 8px;
+  border-radius: 8px;
+  isolation: isolate;
+}
+
+#eventModal .composer-input-row::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.02);
+  opacity: 0;
+  transition: opacity 150ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: opacity;
+}
+
+#eventModal .composer-input-row:hover::before,
+#eventModal .composer-input-row:focus-within::before {
+  opacity: 1;
+}
+
+#eventModal .invite-dropdown,
+#eventModal .composer-sync-toggle,
+#eventModal .composer-field-row > input,
+#eventModal .composer-field-row > textarea {
+  grid-column: auto;
+  min-width: 0;
+}
+
+#eventModal .invite-dropdown summary {
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+#eventModal .invite-dropdown summary span,
+#eventModal .composer-sync-toggle strong {
+  color: var(--composer-ink);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+#eventModal .invite-dropdown summary small,
+#eventModal .composer-sync-toggle small {
+  color: var(--composer-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+#eventModal .invite-dropdown summary small {
+  margin-left: auto;
+}
+
+#eventModal .invite-dropdown summary::after {
+  margin: 0 4px 4px 8px;
+  border-color: var(--composer-muted);
+}
+
+#eventModal .invite-dropdown-panel {
+  top: calc(100% + 8px);
+  border-color: var(--composer-faint);
+  border-radius: 10px;
+}
+
+#eventModal .composer-sync-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 48px;
+  border-radius: 8px;
+}
+
+#eventModal .composer-sync-toggle[role="button"] {
+  cursor: pointer;
+}
+
+#eventModal .composer-sync-copy {
+  min-width: 0;
+}
+
+#eventModal .composer-sync-toggle small {
+  margin-top: 2px;
+}
+
+#eventModal .mini-toggle {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+#eventModal .mini-toggle-ui {
+  width: 40px;
+  height: 24px;
+  border: 1px solid var(--composer-faint);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+#eventModal .mini-toggle-ui::after {
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: color-mix(in srgb, var(--composer-ink) 78%, var(--surface));
+  transition:
+    transform 250ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 150ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform, opacity;
+}
+
+#eventModal .mini-toggle:has(input:checked) .mini-toggle-ui {
+  border-color: color-mix(in srgb, var(--composer-accent) 58%, transparent);
+  background: color-mix(in srgb, var(--composer-accent) 84%, var(--surface));
+}
+
+#eventModal .mini-toggle:has(input:checked) .mini-toggle-ui::after {
+  transform: translate3d(16px, 0, 0);
+}
+
+#eventModal .mini-toggle:has(input:disabled) .mini-toggle-ui {
+  opacity: 0.56;
+}
+
+#eventModal .oauth-spinner {
+  position: absolute;
+  inset: 3px;
+  display: none;
+  width: 18px;
+  height: 18px;
+  margin: auto;
+  border: 2px solid rgba(255, 255, 255, 0.22);
+  border-top-color: var(--composer-ink);
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+#eventModal .composer-sync-toggle.is-authorizing .mini-toggle-ui {
+  opacity: 0.28;
+}
+
+#eventModal .composer-sync-toggle.is-authorizing .oauth-spinner {
+  display: block;
+  animation: composer-oauth-spin 700ms cubic-bezier(0.32, 0.72, 0, 1) infinite;
+}
+
+#eventModal .composer-sync-toggle.is-connected {
+  animation: composer-sync-settle 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+#eventModal .composer-sync-toggle.is-error small {
+  color: var(--danger);
+}
+
+@keyframes composer-oauth-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes composer-sync-settle {
+  0% {
+    opacity: 0.72;
+    transform: scale(0.985);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+#eventModal .composer-field-row > input,
+#eventModal .composer-field-row > textarea {
+  min-height: 40px;
+  max-height: none;
+  padding: 8px 0;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--composer-ink);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  resize: none;
+}
+
+#eventModal .composer-description-row {
+  align-items: start;
+  min-height: 56px;
+}
+
+#eventModal .composer-description-row .composer-row-icon {
+  margin-top: 12px;
+}
+
+#eventModal .composer-field-row > input::placeholder,
+#eventModal .composer-field-row > textarea::placeholder {
+  color: var(--composer-muted);
+  opacity: 1;
+}
+
+#eventModal .composer-field-row > input:focus,
+#eventModal .composer-field-row > textarea:focus {
+  outline: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+#eventModal .composer-feedback {
+  min-height: 0;
+  margin: -8px 0 0;
+  color: var(--composer-muted);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+#eventModal .modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: 0;
+}
+
+#eventModal .modal-actions > button {
+  flex: 0 0 auto;
+  width: auto;
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+#eventModal #cancelEventSecondary {
+  border: 0;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--composer-ink);
+}
+
+#eventModal #saveEventButton {
+  border: 0;
+  background: var(--composer-accent);
+  color: #fff;
+  box-shadow: 0 8px 22px color-mix(in srgb, var(--composer-accent) 24%, transparent);
+}
+
+#eventModal .modal-actions > button:not(:disabled):hover {
+  transform: translate3d(0, -1px, 0) scale(1.01);
+}
+
+#eventModal .modal-actions > button:not(:disabled):active {
+  transition-duration: 100ms;
+  transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  transform: translate3d(0, 0, 0) scale(0.96);
+}
+
+@media (max-width: 620px) {
+  #eventModal .event-composer,
+  #eventModal.anchored-composer .modal-card,
+  #eventModal.anchored-composer .event-composer {
+    width: min(100vw - 16px, 560px);
+  }
+
+  #eventModal .event-composer {
+    padding: 20px;
+  }
+
+  #eventModal .composer-time-grid,
+  #eventModal.anchored-composer .composer-time-grid {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  }
+
+  #eventModal .composer-date-field,
+  #eventModal.anchored-composer .composer-date-field {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-height: 720px) {
+  #eventModal .event-composer {
+    gap: 12px;
+    padding: 16px 20px;
+  }
+
+  #eventModal .composer-heading-section {
+    gap: 4px;
+  }
+
+  #eventModal .event-composer-top {
+    min-height: 28px;
+  }
+
+  #eventModal .composer-title {
+    min-height: 28px;
+  }
+
+  #eventModal .composer-time-grid {
+    padding: 4px 8px;
+  }
+
+  #eventModal .composer-time-grid input {
+    min-height: 32px;
+  }
+
+  #eventModal .all-day-toggle {
+    min-height: 28px;
+    margin-top: 4px;
+    padding-top: 4px;
+  }
+
+  #eventModal .composer-meta-section {
+    gap: 4px;
+  }
+
+  #eventModal .composer-field-row,
+  #eventModal .invite-dropdown summary {
+    min-height: 36px;
+  }
+
+  #eventModal .composer-sync-toggle {
+    min-height: 44px;
+  }
+
+  #eventModal .composer-description-row {
+    min-height: 44px;
+  }
+
+  #eventModal .composer-field-row > input,
+  #eventModal .composer-field-row > textarea {
+    min-height: 36px;
+    padding-block: 6px;
+  }
+}
+
+@media (max-height: 560px) {
+  #eventModal .event-composer {
+    gap: 8px;
+    padding: 12px 16px;
+    border-radius: 12px;
+  }
+
+  #eventModal .composer-handle {
+    visibility: visible;
+  }
+
+  #eventModal .event-composer-top,
+  #eventModal .composer-title {
+    min-height: 24px;
+  }
+
+  #eventModal .composer-title {
+    font-size: 18px;
+  }
+
+  #eventModal .composer-time-grid input {
+    min-height: 28px;
+  }
+
+  #eventModal .all-day-toggle {
+    min-height: 24px;
+  }
+
+  #eventModal .composer-field-row,
+  #eventModal .invite-dropdown summary,
+  #eventModal .composer-sync-toggle {
+    min-height: 32px;
+  }
+
+  #eventModal .composer-sync-toggle small {
+    display: block;
+    font-size: 11px;
+  }
+
+  #eventModal .composer-description-row {
+    min-height: 36px;
+  }
+
+  #eventModal .composer-field-row > input,
+  #eventModal .composer-field-row > textarea {
+    min-height: 32px;
+    padding-block: 4px;
+  }
+
+  #eventModal .modal-actions > button {
+    min-height: 36px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #eventModal[open] .event-composer,
+  #eventModal .composer-sync-toggle.is-authorizing .oauth-spinner,
+  #eventModal .composer-sync-toggle.is-connected {
+    animation-duration: 1ms !important;
+  }
+}

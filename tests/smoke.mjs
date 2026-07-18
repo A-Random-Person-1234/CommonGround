@@ -96,6 +96,15 @@ function assertNoKeys(value, prohibitedKeys, trail = "response") {
   }
 }
 
+function assertInOrder(source, expectedFragments, message) {
+  let cursor = -1;
+  for (const fragment of expectedFragments) {
+    const nextIndex = source.indexOf(fragment, cursor + 1);
+    assert.ok(nextIndex > cursor, `${message}: expected ${fragment}`);
+    cursor = nextIndex;
+  }
+}
+
 function stripCssComments(css) {
   return css.replace(/\/\*[\s\S]*?\*\//g, "");
 }
@@ -194,6 +203,8 @@ async function startServer() {
       PUBLIC_BASE_URL: baseUrl,
       DATABASE_PATH: databasePath,
       DATA_DIR: runtimeDir,
+      GOOGLE_CLIENT_ID: "commonground-smoke-client",
+      GOOGLE_CLIENT_SECRET: "commonground-smoke-secret",
       NODE_ENV: "test"
     },
     stdio: ["ignore", "pipe", "pipe"],
@@ -236,17 +247,49 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260718-restore"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260718-restore"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260718-modal"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260718-modal"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
   assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
   assert.doesNotMatch(home.text, /Six-character room code/);
   assert.doesNotMatch(home.text, /Letters and numbers; uppercase or lowercase both work\./);
   assert.match(home.text, /id="googleEventSyncToggle" type="checkbox" checked/);
-  assert.match(home.text, /id="eventForm"/);
-  assert.doesNotMatch(home.text, /id="eventForm" method="dialog"/);
-  assert.match(home.text, /id="eventFormFeedback" role="status" aria-live="polite"/);
+  assert.match(home.text, /<dialog class="modal" id="eventModal" aria-labelledby="eventComposerTitle">/);
+  const eventModalStart = home.text.indexOf('<dialog class="modal" id="eventModal"');
+  const eventModalEnd = home.text.indexOf("</dialog>", eventModalStart);
+  assert.ok(eventModalStart >= 0 && eventModalEnd > eventModalStart, "Event composer dialog markup is incomplete");
+  const eventModalMarkup = home.text.slice(eventModalStart, eventModalEnd);
+  assert.match(eventModalMarkup, /<form class="modal-card event-composer" id="eventForm">/);
+  assert.doesNotMatch(eventModalMarkup, /<form[^>]*id="eventForm"[^>]*method="dialog"/);
+  assert.match(eventModalMarkup, /<h2 class="sr-only" id="eventComposerTitle">Create a group event<\/h2>/);
+  assert.match(eventModalMarkup, /<section class="composer-section composer-schedule-section" aria-label="Date and time">/);
+  assert.match(eventModalMarkup, /<section class="composer-section composer-meta-section" aria-label="Event options">/);
+  assert.match(eventModalMarkup, /<label class="mini-toggle" for="eventGoogleSyncInput" aria-label="Sync this event to Google Calendar">/);
+  assert.match(eventModalMarkup, /<span class="oauth-spinner" aria-hidden="true"><\/span>/);
+  assert.match(eventModalMarkup, /id="eventFormFeedback" role="status" aria-live="polite"/);
+  assert.match(eventModalMarkup, /<label class="composer-field-row composer-input-row" for="eventLocationInput">/);
+  assert.match(eventModalMarkup, /<label class="composer-field-row composer-input-row composer-description-row" for="eventDescriptionInput">/);
+  assert.doesNotMatch(eventModalMarkup, /class="composer-body"/);
+  assertInOrder(eventModalMarkup, [
+    'class="composer-heading-section"',
+    'id="eventTitleInput"',
+    'class="composer-section composer-schedule-section"',
+    'id="eventDateInput"',
+    'id="eventStartInput"',
+    'id="eventEndInput"',
+    'id="eventAllDayInput"',
+    'class="composer-section composer-meta-section"',
+    'class="composer-field-row composer-invite-row"',
+    'id="inviteePicker"',
+    'class="composer-field-row composer-sync-row"',
+    'id="eventGoogleSyncRow"',
+    'id="eventGoogleSyncInput"',
+    'id="eventLocationInput"',
+    'id="eventDescriptionInput"',
+    'id="eventFormFeedback"',
+    'id="saveEventButton"'
+  ], "Event composer sections must retain their accessible visual order");
   assert.match(home.text, /class="ui-icon ui-icon-maximize" id="fullscreenIcon"/);
   assert.match(home.text, /composer-row-icon ui-icon ui-icon-clock/);
   assert.match(home.text, /button-with-icon[^>]*id="addEventButton"/);
@@ -275,6 +318,74 @@ try {
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
   assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
   assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
+  assert.match(
+    eventComposerScript.text,
+    /function googleAuthUrl\([^)]*\)[\s\S]*?params\.set\("popup", "1"\);[\s\S]*?params\.set\("popupToken", popupToken\);[\s\S]*?return `\$\{popup \? "\/api\/auth\/google" : "\/auth\/google"\}\?\$\{params\.toString\(\)\}`;/,
+    "Only the event-composer flow should use the popup OAuth endpoint"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function createGoogleAuthPopupToken\(\)[\s\S]*?crypto\.randomUUID\(\)[\s\S]*?crypto\.getRandomValues\(new Uint8Array\(24\)\)/,
+    "Popup request IDs must come from a cryptographically secure browser source"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function openGoogleAuthPopup\(\)[\s\S]*?window\.open\(\s*googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true, popup: true, popupToken \}\),\s*"GoogleAuthPopup",[\s\S]*?width=\$\{width\},height=\$\{height\}/,
+    "Event sync authorization must open a bounded popup without navigating away from the draft"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function handleGoogleAuthPopupMessage\(event\) \{[\s\S]*?event\.origin !== window\.location\.origin[\s\S]*?event\.source !== googleAuthPopup[\s\S]*?message\.type !== "commonground:google-oauth"[\s\S]*?message\.provider !== "google"[\s\S]*?message\.requestId !== googleAuthPopupToken[\s\S]*?!\["success", "error"\]\.includes\(message\.status\)/,
+    "Popup results must be bound to the expected origin, window, provider, type, request, and status"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /if \(message\.status === "error"\) \{[\s\S]*?const safeErrors = \{[\s\S]*?access_denied:[\s\S]*?provider_error:[\s\S]*?calendar_connection_failed:[\s\S]*?safeErrors\[message\.errorCode\] \|\| safeErrors\.calendar_connection_failed/,
+    "Popup error codes must be mapped through trusted user-facing copy"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const refreshed = await refreshRoomData\(\);[\s\S]*?!calendarWriteReady\(\)[\s\S]*?eventGoogleSyncInput\.checked = true/,
+    "A successful popup must refresh server state before enabling event sync"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function activateEventGoogleSyncRow\(event\) \{[\s\S]*?event\.preventDefault\(\);[\s\S]*?openGoogleAuthPopup\(\);[\s\S]*?eventGoogleSyncRow\?\.addEventListener\("click", activateEventGoogleSyncRow\);[\s\S]*?event\.key !== "Enter" && event\.key !== " "[\s\S]*?activateEventGoogleSyncRow\(event\);/,
+    "The disconnected sync row must support pointer and keyboard popup activation"
+  );
+  assert.match(eventComposerScript.text, /window\.addEventListener\("message", handleGoogleAuthPopupMessage\);/);
+  const oauthPopupPage = await publicSession.request("/oauth-popup.html", { accept: "text/html" });
+  assert.match(oauthPopupPage.text, /<script src="\/oauth-popup\.js\?v=20260718-modal" defer><\/script>/);
+  assert.doesNotMatch(
+    oauthPopupPage.text,
+    /<script(?![^>]*\bsrc=)[^>]*>/i,
+    "The OAuth relay must not require an inline-script CSP exception"
+  );
+  assert.match(oauthPopupPage.text, /id="oauthPopupStatus" role="status" aria-live="polite"/);
+  assert.match(oauthPopupPage.text, /id="oauthPopupClose" type="button" hidden/);
+  const oauthPopupScript = await publicSession.request("/oauth-popup.js", { accept: "text/javascript" });
+  assert.match(
+    oauthPopupScript.text,
+    /new URLSearchParams\(window\.location\.hash\.slice\(1\)\)[\s\S]*?window\.history\.replaceState\(null, "", window\.location\.pathname\)/,
+    "The relay must read its result from the fragment and promptly remove it from browser history"
+  );
+  assert.match(
+    oauthPopupScript.text,
+    /provider !== "google"[\s\S]*?!validStatus[\s\S]*?!validRequestId[\s\S]*?!validError/,
+    "The relay must reject malformed or unrecognised OAuth results"
+  );
+  assert.match(
+    oauthPopupScript.text,
+    /const payload = \{\s*type: "commonground:google-oauth",\s*provider: "google",\s*status,\s*requestId\s*\};[\s\S]*?payload\.errorCode = error/,
+    "The relay payload must use the exact typed, request-bound opener contract"
+  );
+  assert.match(oauthPopupScript.text, /window\.opener\.postMessage\(payload, window\.location\.origin\)/);
+  assert.doesNotMatch(oauthPopupScript.text, /postMessage\([^,]+,\s*["']\*["']\s*\)/);
+  assert.match(
+    oauthPopupScript.text,
+    /if \(!window\.opener \|\| window\.opener\.closed\)[\s\S]*?showCloseButton\(\)[\s\S]*?window\.setTimeout\(\(\) => \{\s*window\.close\(\);/,
+    "The relay must remain understandable and closable when its opener is unavailable"
+  );
   assert.match(eventComposerScript.text, /function updateFullscreenControl\(\)/);
   assert.match(eventComposerScript.text, /function setButtonLabelWithIcon\(button, label, iconClass\)/);
   assert.match(eventComposerScript.text, /function setPanelVisibility\(panel, visible/);
@@ -440,7 +551,11 @@ try {
     /\.topbar-identity > input\.inline-name-input\s*\{[^}]*width:\s*clamp\([^}]*--inline-name-width/s,
     "Inline name editing must retain the name segment width"
   );
-  assert.match(eventComposerStyles.text, /\.composer-body textarea\s*\{[^}]*min-height: 48px[^}]*resize: none/s);
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-field-row > input,\s*#eventModal \.composer-field-row > textarea\s*\{[^}]*min-height: 40px[^}]*background: transparent[^}]*resize: none/s,
+    "The sectioned composer fields must remain flat, compact, and non-resizing"
+  );
   assert.match(eventComposerStyles.text, /\.color-option-list\s*\{[^}]*max-height: calc\(100dvh - 96px\)/s);
   assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*width: 18px[^}]*height: 18px/s);
   assert.match(eventComposerStyles.text, /--motion-press:\s*100ms;/);
@@ -451,6 +566,7 @@ try {
   assert.match(eventComposerStyles.text, /--ease-standard:\s*cubic-bezier\(0\.32, 0\.72, 0, 1\);/);
   assert.match(eventComposerStyles.text, /--ease-entrance:\s*cubic-bezier\(0\.25, 1, 0\.5, 1\);/);
   const approvedCurves = [
+    "cubic-bezier(0.16,1,0.3,1)",
     "cubic-bezier(0.25,1,0.5,1)",
     "cubic-bezier(0.32,0.72,0,1)"
   ];
@@ -459,7 +575,7 @@ try {
       .match(/cubic-bezier\([^)]*\)/g)
       ?.map((curve) => curve.replace(/\s+/g, "")) || []
   )].sort();
-  assert.deepEqual(usedCurves, approvedCurves, "Only the two approved motion curves may be used");
+  assert.deepEqual(usedCurves, approvedCurves, "Only the three approved motion curves may be used");
   assert.match(
     eventComposerStyles.text,
     /button:not\(:disabled\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(0\.96\)/s,
@@ -468,7 +584,17 @@ try {
   assert.match(
     eventComposerStyles.text,
     /@keyframes modal-in\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0[^}]*transform:\s*translate3d\(0, 10px, 0\) scale\(0\.9\)/,
-    "Modal entrance must begin at scale(.90)"
+    "Shared modal entrance must begin at scale(.90)"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal\[open\] \.event-composer\s*\{[^}]*animation:\s*event-composer-premium-in 350ms cubic-bezier\(0\.16, 1, 0\.3, 1\) both[^}]*will-change:\s*transform, opacity/s,
+    "The event composer must use its restrained 350ms entrance"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@keyframes event-composer-premium-in\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0[^}]*transform:\s*translate3d\(0, 8px, 0\) scale\(0\.95\)/,
+    "The event composer entrance must start close to its final size"
   );
   assert.match(eventComposerStyles.text, /\.drag-create-preview::before\s*\{[^}]*height:\s*var\(--preview-base-height[^}]*transform:\s*scaleY\(var\(--preview-scale/s);
   assert.match(eventComposerStyles.text, /\.drag-create-preview-cap\s*\{[^}]*transform:\s*translate3d\(0, var\(--preview-bottom-y, 0px\), 0\)/s);
@@ -517,12 +643,51 @@ try {
     /\.room-switch-tab(?::hover|:focus(?:-visible)?)[^{]*\{[^}]*(?:max-width|padding-right)\s*:/s,
     "Hover and focus must not resize room tiles"
   );
-  assert.match(eventComposerStyles.text, /\.event-composer\s*\{[^}]*max-height: calc\(100dvh - 12px\)[^}]*grid-template-rows: auto auto auto auto auto/s);
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.event-composer,\s*#eventModal\.anchored-composer \.modal-card,\s*#eventModal\.anchored-composer \.event-composer\s*\{[^}]*width: min\(560px, calc\(100vw - 24px\)\)[^}]*max-height: calc\(100dvh - 16px\)[^}]*overflow: visible/s,
+    "The composer must stay within the viewport without introducing an inner scroll region"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.event-composer\s*\{[^}]*grid-template-rows: auto auto auto auto auto[^}]*gap: 20px[^}]*padding: 24px[^}]*border-radius: 16px/s,
+    "The desktop composer must keep its compact five-row hierarchy and 8px rhythm"
+  );
   assert.match(eventComposerStyles.text, /#eventModal\s*\{[^}]*width: 100vw[^}]*height: 100dvh[^}]*max-width: none[^}]*overflow: visible/s);
-  assert.match(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow: visible/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-heading-section\s*\{[^}]*display: grid[^}]*gap: 8px[^}]*min-width: 0/s);
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-schedule-section,\s*#eventModal \.composer-field-row\s*\{[^}]*grid-template-columns: 16px minmax\(0, 1fr\)[^}]*gap: 16px[^}]*align-items: center/s,
+    "Schedule and option rows must share one aligned icon/content grid"
+  );
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-meta-section\s*\{[^}]*display: grid[^}]*gap: 8px/s);
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-time-grid\s*\{[^}]*padding: 8px[^}]*border: 1px solid var\(--composer-faint\)[^}]*border-radius: 8px[^}]*background: var\(--composer-field\)/s,
+    "Date and time controls must read as one restrained scheduling section"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-field-row\s*\{[^}]*min-height: 40px[^}]*padding: 0 8px[^}]*border-radius: 8px/s,
+    "Composer option rows must retain compact, consistent geometry"
+  );
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\s*\{[^}]*min-height: 48px[^}]*border-radius: 8px/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.mini-toggle-ui\s*\{[^}]*width: 40px[^}]*height: 24px/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.oauth-spinner\s*\{[^}]*display: none[^}]*width: 18px[^}]*height: 18px/s);
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-sync-toggle\.is-authorizing \.oauth-spinner\s*\{[^}]*display: block[^}]*animation: composer-oauth-spin 700ms cubic-bezier\(0\.32, 0\.72, 0, 1\) infinite/s,
+    "Popup authorization must expose a visible in-row progress state"
+  );
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\.is-connected\s*\{[^}]*animation: composer-sync-settle 350ms cubic-bezier\(0\.16, 1, 0\.3, 1\) both/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\.is-error small\s*\{[^}]*color: var\(--danger\)/s);
   assert.match(eventComposerStyles.text, /\.invite-dropdown-panel\s*\{[^}]*position: absolute[^}]*max-height: min\(220px, calc\(100dvh - 160px\)\)[^}]*overflow-y: auto/s);
-  assert.match(eventComposerStyles.text, /@media \(max-height: 560px\)[\s\S]*?\.composer-sync-toggle small\s*\{[^}]*display: none/);
+  assert.match(eventComposerStyles.text, /@media \(max-width: 620px\)[\s\S]*?#eventModal \.event-composer[\s\S]*?width: min\(100vw - 16px, 560px\)/);
+  assert.match(eventComposerStyles.text, /@media \(max-height: 720px\)[\s\S]*?#eventModal \.event-composer\s*\{[^}]*gap: 12px[^}]*padding: 16px 20px/s);
+  assert.match(eventComposerStyles.text, /@media \(max-height: 560px\)[\s\S]*?#eventModal \.composer-sync-toggle small\s*\{[^}]*display: block[^}]*font-size: 11px/s);
+  assert.match(eventComposerStyles.text, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?#eventModal\[open\] \.event-composer,[\s\S]*?animation-duration: 1ms !important/s);
   assert.doesNotMatch(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow-y:\s*auto/s);
+  assert.doesNotMatch(eventComposerStyles.text, /#eventModal \.event-composer\s*\{[^}]*overflow-y:\s*auto/s);
   assert.match(eventComposerStyles.text, /\.calendar-legal-links\s*\{[^}]*position:\s*static[^}]*margin:\s*12px 12px 14px auto/s);
   assert.match(eventComposerStyles.text, /\.calendar-wrap > \.calendar-grid\s*\{[^}]*min-height:\s*calc\(100% \+ 1px\)/s);
   assert.match(eventComposerStyles.text, /\.room-page\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\)[^}]*overflow:\s*hidden/s);
@@ -570,6 +735,80 @@ try {
   assert.ok(home.response.headers.get("referrer-policy"), "Referrer-Policy header is missing");
   await publicSession.request("/privacy", { accept: "text/html" });
   await publicSession.request("/terms", { accept: "text/html" });
+  await publicSession.request("/api/auth/google", { method: "POST", expected: 405 });
+  await publicSession.request("/api/auth/google?popup=1", { expected: 400 });
+  const popupRequestId = "a1B2_c3D4-e5F6_g7H8-i9J0_k1L2-m3N4";
+  await publicSession.request(
+    `/api/auth/google?popup=1&popupToken=${popupRequestId}&calendarWrite=maybe`,
+    { expected: 400 }
+  );
+
+  const popupAuthSession = new BrowserSession();
+  const popupAuthorization = await popupAuthSession.request(
+    `/api/auth/google?popup=1&popupToken=${popupRequestId}&calendarWrite=1`,
+    { expected: 302 }
+  );
+  const popupAuthorizationLocation = popupAuthorization.response.headers.get("location");
+  assert.ok(popupAuthorizationLocation, "Popup authorization redirect is missing");
+  const popupAuthorizationUrl = new URL(popupAuthorizationLocation);
+  assert.equal(popupAuthorizationUrl.origin, "https://accounts.google.com");
+  assert.equal(popupAuthorizationUrl.searchParams.get("client_id"), "commonground-smoke-client");
+  assert.equal(popupAuthorizationUrl.searchParams.get("redirect_uri"), `${baseUrl}/auth/google/callback`);
+  assert.equal(popupAuthorizationUrl.searchParams.get("include_granted_scopes"), "true");
+  assert.ok(
+    popupAuthorizationUrl.searchParams.get("scope")?.split(" ").includes("https://www.googleapis.com/auth/calendar.events"),
+    "The event-sync popup must request Google event-write permission"
+  );
+  const popupOauthState = popupAuthorizationUrl.searchParams.get("state");
+  assert.match(popupOauthState || "", /^[a-f0-9]{32}$/);
+
+  const popupDenied = await popupAuthSession.request(
+    `/auth/google/callback?state=${encodeURIComponent(popupOauthState)}&error=access_denied`,
+    { expected: 302 }
+  );
+  const popupRelayLocation = popupDenied.response.headers.get("location");
+  assert.ok(popupRelayLocation, "Popup callback relay redirect is missing");
+  const popupRelayUrl = new URL(popupRelayLocation, baseUrl);
+  assert.equal(popupRelayUrl.pathname, "/oauth-popup.html");
+  assert.equal(popupRelayUrl.search, "", "Popup result values must not be placed in the query string");
+  const popupRelayResult = new URLSearchParams(popupRelayUrl.hash.slice(1));
+  assert.deepEqual(Object.fromEntries(popupRelayResult), {
+    provider: "google",
+    status: "error",
+    requestId: popupRequestId,
+    errorCode: "access_denied"
+  });
+
+  const replayedPopupCallback = await popupAuthSession.request(
+    `/auth/google/callback?state=${encodeURIComponent(popupOauthState)}&error=access_denied`,
+    { expected: 302 }
+  );
+  assert.equal(
+    replayedPopupCallback.response.headers.get("location"),
+    "/?error=invalid_oauth_state",
+    "OAuth state must be single-use"
+  );
+
+  const fullPageAuthSession = new BrowserSession();
+  const fullPageAuthorization = await fullPageAuthSession.request(
+    "/auth/google?calendarWrite=0",
+    { expected: 302 }
+  );
+  const fullPageAuthorizationUrl = new URL(fullPageAuthorization.response.headers.get("location"));
+  assert.ok(
+    !fullPageAuthorizationUrl.searchParams.get("scope")?.split(" ").includes("https://www.googleapis.com/auth/calendar.events"),
+    "The base full-page OAuth flow must retain least-privilege calendar scopes"
+  );
+  const fullPageOauthState = fullPageAuthorizationUrl.searchParams.get("state");
+  const fullPageDenied = await fullPageAuthSession.request(
+    `/auth/google/callback?state=${encodeURIComponent(fullPageOauthState)}&error=access_denied`,
+    { expected: 302 }
+  );
+  assert.equal(
+    fullPageDenied.response.headers.get("location"),
+    "/?error=access_denied",
+    "Non-popup Google OAuth must retain its full-page return contract"
+  );
   await publicSession.request("/api/me", { method: "POST", expected: 405 });
 
   const host = new BrowserSession();

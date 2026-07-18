@@ -87,7 +87,7 @@ const busyDetailList = document.querySelector("#busyDetailList");
 const eventModal = document.querySelector("#eventModal");
 const eventForm = document.querySelector("#eventForm");
 const eventModalLabel = document.querySelector("#eventModalLabel");
-const eventModalTitle = document.querySelector("#eventModalTitle");
+const eventModalTitle = document.querySelector("#eventComposerTitle");
 const eventTitleInput = document.querySelector("#eventTitleInput");
 const eventDateInput = document.querySelector("#eventDateInput");
 const eventEndDateInput = document.querySelector("#eventEndDateInput");
@@ -96,6 +96,7 @@ const eventEndInput = document.querySelector("#eventEndInput");
 const eventAllDayInput = document.querySelector("#eventAllDayInput");
 const eventLocationInput = document.querySelector("#eventLocationInput");
 const eventDescriptionInput = document.querySelector("#eventDescriptionInput");
+const eventGoogleSyncRow = document.querySelector("#eventGoogleSyncRow");
 const eventGoogleSyncInput = document.querySelector("#eventGoogleSyncInput");
 const eventGoogleSyncStatus = document.querySelector("#eventGoogleSyncStatus");
 const eventFormFeedback = document.querySelector("#eventFormFeedback");
@@ -167,6 +168,10 @@ let pendingEventPrefill = null;
 let eventModalInitialState = "";
 let eventPanelInitialState = "";
 let eventModalAnchorRect = null;
+let googleAuthPopup = null;
+let googleAuthPopupToken = "";
+let googleAuthPopupPollTimer = null;
+let googleAuthPopupPending = false;
 let dragCreateState = null;
 let dragPreviewNode = null;
 let dragPreviewFrame = 0;
@@ -1180,10 +1185,152 @@ function roomInviteLink() {
   return `${window.location.origin}/room/${currentRoom?.code || ""}`;
 }
 
-function googleAuthUrl(roomCodeValue, { calendarWrite = true } = {}) {
+function googleAuthUrl(roomCodeValue, { calendarWrite = true, popup = false, popupToken = "" } = {}) {
   const params = new URLSearchParams({ room: normalizeRoomCodeInput(roomCodeValue) });
   params.set("calendarWrite", calendarWrite ? "1" : "0");
-  return `/auth/google?${params.toString()}`;
+  if (popup) {
+    params.set("popup", "1");
+    params.set("popupToken", popupToken);
+  }
+  return `${popup ? "/api/auth/google" : "/auth/google"}?${params.toString()}`;
+}
+
+function createGoogleAuthPopupToken() {
+  if (typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID().replaceAll("-", "");
+  }
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return [...bytes].map((value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+function stopGoogleAuthPopupWatcher() {
+  if (!googleAuthPopupPollTimer) return;
+  window.clearInterval(googleAuthPopupPollTimer);
+  googleAuthPopupPollTimer = null;
+}
+
+function pauseBackgroundPollingForGoogleAuth() {
+  window.clearInterval(refreshTimer);
+  refreshTimer = null;
+  window.clearInterval(notificationPollTimer);
+  notificationPollTimer = null;
+  abortRoomDataRequests();
+}
+
+function resumeBackgroundPollingAfterGoogleAuth() {
+  startAutoRefresh();
+  startNotificationPolling();
+}
+
+function resetGoogleAuthPopupState({ resumePolling = true } = {}) {
+  stopGoogleAuthPopupWatcher();
+  googleAuthPopup = null;
+  googleAuthPopupToken = "";
+  googleAuthPopupPending = false;
+  eventGoogleSyncRow?.classList.remove("is-authorizing");
+  eventGoogleSyncRow?.removeAttribute("aria-busy");
+  if (resumePolling) resumeBackgroundPollingAfterGoogleAuth();
+}
+
+function openGoogleAuthPopup() {
+  if (!currentRoom?.code || googleAuthPopupPending) return;
+
+  const width = 500;
+  const height = 650;
+  const screenLeft = Number.isFinite(window.screenLeft) ? window.screenLeft : window.screenX;
+  const screenTop = Number.isFinite(window.screenTop) ? window.screenTop : window.screenY;
+  const outerWidth = window.outerWidth || window.screen.availWidth;
+  const outerHeight = window.outerHeight || window.screen.availHeight;
+  const left = Math.round(screenLeft + Math.max(0, (outerWidth - width) / 2));
+  const top = Math.round(screenTop + Math.max(0, (outerHeight - height) / 2));
+  const popupToken = createGoogleAuthPopupToken();
+  const popup = window.open(
+    googleAuthUrl(currentRoom.code, { calendarWrite: true, popup: true, popupToken }),
+    "GoogleAuthPopup",
+    `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+  );
+
+  if (!popup) {
+    eventGoogleSyncStatus.textContent = "Popup blocked. Allow popups to connect Google Calendar.";
+    eventGoogleSyncRow?.classList.add("is-error");
+    return;
+  }
+
+  googleAuthPopup = popup;
+  googleAuthPopupToken = popupToken;
+  googleAuthPopupPending = true;
+  pauseBackgroundPollingForGoogleAuth();
+  eventGoogleSyncRow?.classList.remove("is-error");
+  updateEventGoogleSyncControl();
+  googleAuthPopupPollTimer = window.setInterval(() => {
+    if (!googleAuthPopup || !googleAuthPopup.closed) return;
+    resetGoogleAuthPopupState();
+    updateEventGoogleSyncControl();
+    if (!calendarWriteReady()) {
+      eventGoogleSyncStatus.textContent = "Connection cancelled. Try again when you're ready.";
+    }
+  }, 400);
+}
+
+async function handleGoogleAuthPopupMessage(event) {
+  if (
+    !googleAuthPopupPending ||
+    event.origin !== window.location.origin ||
+    event.source !== googleAuthPopup
+  ) {
+    return;
+  }
+
+  const message = event.data;
+  if (
+    !message ||
+    typeof message !== "object" ||
+    message.type !== "commonground:google-oauth" ||
+    message.provider !== "google" ||
+    message.requestId !== googleAuthPopupToken ||
+    !["success", "error"].includes(message.status)
+  ) {
+    return;
+  }
+
+  const completedPopup = googleAuthPopup;
+  resetGoogleAuthPopupState({ resumePolling: false });
+
+  if (message.status === "error") {
+    const safeErrors = {
+      access_denied: "Google Calendar connection was cancelled.",
+      provider_error: "Google could not authorize the connection. Please try again.",
+      calendar_connection_failed: "Google Calendar could not be connected. Please try again."
+    };
+    eventGoogleSyncRow?.classList.add("is-error");
+    eventGoogleSyncStatus.textContent = safeErrors[message.errorCode] || safeErrors.calendar_connection_failed;
+    completedPopup?.close();
+    resumeBackgroundPollingAfterGoogleAuth();
+    return;
+  }
+
+  eventGoogleSyncStatus.textContent = "Finishing Google Calendar connection…";
+  eventGoogleSyncRow?.classList.add("is-authorizing");
+  eventGoogleSyncRow?.setAttribute("aria-busy", "true");
+  try {
+    const refreshed = await refreshRoomData();
+    if (!refreshed || !calendarWriteReady()) {
+      throw new Error("Google Calendar permissions were not refreshed.");
+    }
+    eventGoogleSyncInput.checked = true;
+    eventGoogleSyncRow?.classList.remove("is-error");
+    eventGoogleSyncRow?.classList.add("is-connected");
+    updateEventGoogleSyncControl();
+    window.setTimeout(() => eventGoogleSyncRow?.classList.remove("is-connected"), 900);
+  } catch {
+    eventGoogleSyncRow?.classList.add("is-error");
+    eventGoogleSyncStatus.textContent = "Connected, but CommonGround could not refresh the calendar. Try again.";
+  } finally {
+    eventGoogleSyncRow?.classList.remove("is-authorizing");
+    eventGoogleSyncRow?.removeAttribute("aria-busy");
+    completedPopup?.close();
+    resumeBackgroundPollingAfterGoogleAuth();
+  }
 }
 
 function roomInviteMessage() {
@@ -2922,7 +3069,7 @@ function openDraggedEventComposer(anchorRect) {
     startTime: formatInputTime(selection.startHour),
     endTime: formatInputTime(selection.endHour),
     inviteeParticipantIds: defaultInviteeIds(),
-    title: "(No title)",
+    title: "",
     location: "",
     description: ""
   };
@@ -4246,7 +4393,7 @@ function positionEventModal() {
   const card = eventModal.querySelector(".modal-card");
   if (!card) return;
 
-  const width = Math.min(440, window.innerWidth - 20);
+  const width = Math.min(560, window.innerWidth - 24);
   const height = Math.min(card.offsetHeight || 520, window.innerHeight - 24);
   let left = eventModalAnchorRect.left;
   let top = eventModalAnchorRect.top;
@@ -4266,17 +4413,47 @@ function updateEventGoogleSyncControl() {
   if (!eventGoogleSyncInput || !eventGoogleSyncStatus) return;
   const connected = currentUserConnected() && currentParticipantConnected();
   const googleWriteReady = calendarWriteReady();
-  eventGoogleSyncInput.disabled = !connected || !googleWriteReady;
+  const needsAuthorization = !connected || !googleWriteReady;
+  const email = String(sessionInfo?.user?.email || "").trim();
 
-  if (!connected) {
+  eventGoogleSyncRow?.classList.toggle("is-unlinked", needsAuthorization && !googleAuthPopupPending);
+  eventGoogleSyncRow?.classList.toggle("is-authorizing", googleAuthPopupPending);
+  eventGoogleSyncRow?.classList.remove("is-error");
+  eventGoogleSyncInput.disabled = needsAuthorization || googleAuthPopupPending;
+
+  if (googleAuthPopupPending) {
+    eventGoogleSyncRow?.setAttribute("aria-busy", "true");
+    eventGoogleSyncRow?.setAttribute("role", "button");
+    eventGoogleSyncRow?.setAttribute("tabindex", "0");
+    eventGoogleSyncRow?.setAttribute("aria-label", "Connecting to Google Calendar");
+    eventGoogleSyncStatus.textContent = "Connecting to Google Calendar…";
+  } else if (needsAuthorization) {
+    eventGoogleSyncInput.checked = false;
+    eventGoogleSyncRow?.removeAttribute("aria-busy");
+    eventGoogleSyncRow?.setAttribute("role", "button");
+    eventGoogleSyncRow?.setAttribute("tabindex", "0");
+    eventGoogleSyncRow?.setAttribute("aria-label", "Connect Google Calendar to sync this event");
     eventGoogleSyncStatus.textContent = "Connect Google Calendar first.";
-  } else if (!googleWriteReady) {
-    eventGoogleSyncStatus.textContent = "Enable Google event sync in Settings to grant event-only access.";
   } else if (eventGoogleSyncInput.checked) {
-    eventGoogleSyncStatus.textContent = "Adds this event to your Google Calendar.";
+    eventGoogleSyncRow?.removeAttribute("role");
+    eventGoogleSyncRow?.removeAttribute("tabindex");
+    eventGoogleSyncRow?.removeAttribute("aria-label");
+    eventGoogleSyncRow?.removeAttribute("aria-busy");
+    eventGoogleSyncStatus.textContent = email ? `Synced to ${email}` : "Synced to Google Calendar.";
   } else {
-    eventGoogleSyncStatus.textContent = "Keeps this event in CommonGround only.";
+    eventGoogleSyncRow?.removeAttribute("role");
+    eventGoogleSyncRow?.removeAttribute("tabindex");
+    eventGoogleSyncRow?.removeAttribute("aria-label");
+    eventGoogleSyncRow?.removeAttribute("aria-busy");
+    eventGoogleSyncStatus.textContent = "This event will stay in CommonGround.";
   }
+}
+
+function activateEventGoogleSyncRow(event) {
+  if (calendarWriteReady() && currentUserConnected() && currentParticipantConnected()) return;
+  event.preventDefault();
+  event.stopPropagation();
+  openGoogleAuthPopup();
 }
 
 function attemptCloseEventModal() {
@@ -4321,7 +4498,7 @@ function openEventModal(mode = "create", options = {}) {
     setAllDayMode(false);
     if (eventGoogleSyncInput) eventGoogleSyncInput.checked = calendarEventSyncEnabled();
     if (pendingEventPrefill) {
-      eventTitleInput.value = pendingEventPrefill.title || "(No title)";
+      eventTitleInput.value = pendingEventPrefill.title || "";
       eventDateInput.value = pendingEventPrefill.date;
       eventEndDateInput.value = pendingEventPrefill.date;
       eventStartInput.value = pendingEventPrefill.startTime;
@@ -4337,7 +4514,7 @@ function openEventModal(mode = "create", options = {}) {
       nextHour.setHours(Math.max(calendarStartHour + 2, nextHour.getHours() + 1));
       const endHour = new Date(nextHour);
       endHour.setHours(nextHour.getHours() + 1);
-      eventTitleInput.value = "(No title)";
+      eventTitleInput.value = "";
       eventDateInput.value = dateKey(nextHour);
       eventEndDateInput.value = dateKey(nextHour);
       eventStartInput.value = formatInputTime(nextHour.getHours() + nextHour.getMinutes() / 60);
@@ -4352,7 +4529,11 @@ function openEventModal(mode = "create", options = {}) {
   prepareDialogForOpen(eventModal);
   eventModal.showModal();
   eventModalInitialState = eventFormStateSnapshot();
-  requestAnimationFrame(positionEventModal);
+  requestAnimationFrame(() => {
+    positionEventModal();
+    eventTitleInput.focus({ preventScroll: true });
+    if (mode === "create" && !eventTitleInput.value) eventTitleInput.select();
+  });
   pendingEventPrefill = null;
 }
 
@@ -4897,6 +5078,11 @@ detailGoogleSyncInput?.addEventListener("change", () => {
   updateEventPanelSaveState();
 });
 eventGoogleSyncInput?.addEventListener("change", updateEventGoogleSyncControl);
+eventGoogleSyncRow?.addEventListener("click", activateEventGoogleSyncRow);
+eventGoogleSyncRow?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  activateEventGoogleSyncRow(event);
+});
 eventAllDayInput?.addEventListener("change", () => setAllDayMode(eventAllDayInput.checked));
 eventDateInput?.addEventListener("change", () => {
   if (!eventAllDayInput?.checked || !eventEndDateInput) return;
@@ -4920,6 +5106,8 @@ window.addEventListener("popstate", async () => {
   window.clearInterval(refreshTimer);
   await boot();
 });
+
+window.addEventListener("message", handleGoogleAuthPopupMessage);
 
 document.addEventListener("click", (event) => {
   if (hostPopover && !hostPopover.classList.contains("hidden")) {

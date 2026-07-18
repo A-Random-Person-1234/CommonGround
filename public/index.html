@@ -11,7 +11,7 @@
       }
     </script>
     <title>CommonGround | Shared calendar rooms</title>
-    <link rel="stylesheet" href="/styles.css?v=20260718-restore" />
+    <link rel="stylesheet" href="/styles.css?v=20260718-modal" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -401,16 +401,18 @@
     <dialog class="modal" id="eventModal" aria-labelledby="eventComposerTitle">
       <form class="modal-card event-composer" id="eventForm">
         <h2 class="sr-only" id="eventComposerTitle">Create a group event</h2>
-        <div class="event-composer-top">
-          <span class="composer-handle" aria-hidden="true"></span>
-          <button class="icon-button composer-close" id="cancelEventButton" type="button" aria-label="Close">
-            <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
-          </button>
-        </div>
+        <header class="composer-heading-section">
+          <div class="event-composer-top">
+            <span class="composer-handle" aria-hidden="true"></span>
+            <button class="icon-button composer-close" id="cancelEventButton" type="button" aria-label="Close">
+              <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
+            </button>
+          </div>
 
-        <input class="composer-title" id="eventTitleInput" type="text" placeholder="Add title" autocomplete="off" />
+          <input class="composer-title" id="eventTitleInput" type="text" placeholder="Add title" aria-label="Event title" autocomplete="off" autofocus />
+        </header>
 
-        <div class="composer-body">
+        <section class="composer-section composer-schedule-section" aria-label="Date and time">
           <span class="composer-row-icon ui-icon ui-icon-clock" aria-hidden="true"></span>
           <div class="composer-time-grid">
             <label class="composer-date-field">
@@ -435,36 +437,47 @@
               <span>All day</span>
             </label>
           </div>
+        </section>
 
-          <span class="composer-row-icon ui-icon ui-icon-user-plus" aria-hidden="true"></span>
-          <details class="invite-dropdown">
-            <summary>
-              <span>Invite others</span>
-              <small id="inviteeCountText">Only you</small>
-            </summary>
-            <div class="invite-dropdown-panel">
-              <div class="invitee-picker" id="inviteePicker"></div>
-            </div>
-          </details>
+        <section class="composer-section composer-meta-section" aria-label="Event options">
+          <div class="composer-field-row composer-invite-row">
+            <span class="composer-row-icon ui-icon ui-icon-user-plus" aria-hidden="true"></span>
+            <details class="invite-dropdown">
+              <summary>
+                <span>Invite others</span>
+                <small id="inviteeCountText">Only you</small>
+              </summary>
+              <div class="invite-dropdown-panel">
+                <div class="invitee-picker" id="inviteePicker"></div>
+              </div>
+            </details>
+          </div>
 
-          <span class="composer-row-icon ui-icon ui-icon-calendar-sync" aria-hidden="true"></span>
-          <label class="composer-sync-toggle" for="eventGoogleSyncInput">
-            <div>
-              <strong>Sync to Google Calendar</strong>
-              <small id="eventGoogleSyncStatus">Adds this event to your Google Calendar if enabled.</small>
+          <div class="composer-field-row composer-sync-row">
+            <span class="composer-row-icon ui-icon ui-icon-calendar-sync" aria-hidden="true"></span>
+            <div class="composer-sync-toggle" id="eventGoogleSyncRow">
+              <div class="composer-sync-copy">
+                <strong>Sync to Google Calendar</strong>
+                <small id="eventGoogleSyncStatus">Connect Google Calendar first.</small>
+              </div>
+              <label class="mini-toggle" for="eventGoogleSyncInput" aria-label="Sync this event to Google Calendar">
+                <input id="eventGoogleSyncInput" type="checkbox" />
+                <span class="mini-toggle-ui"></span>
+                <span class="oauth-spinner" aria-hidden="true"></span>
+              </label>
             </div>
-            <span class="mini-toggle">
-              <input id="eventGoogleSyncInput" type="checkbox" />
-              <span class="mini-toggle-ui"></span>
-            </span>
+          </div>
+
+          <label class="composer-field-row composer-input-row" for="eventLocationInput">
+            <span class="composer-row-icon ui-icon ui-icon-map-pin" aria-hidden="true"></span>
+            <input id="eventLocationInput" type="text" placeholder="Add location" aria-label="Location" autocomplete="off" />
           </label>
 
-          <span class="composer-row-icon ui-icon ui-icon-map-pin" aria-hidden="true"></span>
-          <input id="eventLocationInput" type="text" placeholder="Add location" autocomplete="off" />
-
-          <span class="composer-row-icon icon-lines" aria-hidden="true"></span>
-          <textarea id="eventDescriptionInput" rows="3" placeholder="Add description"></textarea>
-        </div>
+          <label class="composer-field-row composer-input-row composer-description-row" for="eventDescriptionInput">
+            <span class="composer-row-icon icon-lines" aria-hidden="true"></span>
+            <textarea id="eventDescriptionInput" rows="2" placeholder="Add description" aria-label="Description"></textarea>
+          </label>
+        </section>
 
         <p class="composer-feedback" id="eventFormFeedback" role="status" aria-live="polite"></p>
 
@@ -519,6 +532,6 @@
       <option value="&#127926;"></option>
     </datalist>
 
-    <script src="/app.js?v=20260718-restore"></script>
+    <script src="/app.js?v=20260718-modal"></script>
   </body>
 </html>
