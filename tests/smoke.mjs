@@ -247,7 +247,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260718-flat-grid"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260719-motion-system"/);
   assert.match(home.text, /src="\/app\.js\?v=20260719-week-date"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
@@ -631,7 +631,7 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /\.emoji-picker-cell::before\s*\{[^}]*border-radius: 8px[^}]*background: rgba\(255, 255, 255, 0\.06\)[^}]*opacity: 0[^}]*transition: opacity 150ms cubic-bezier\(0\.32, 0\.72, 0, 1\)/s
+    /\.emoji-picker-cell::before\s*\{[^}]*border-radius: 8px[^}]*background: rgba\(255, 255, 255, 0\.06\)[^}]*opacity: 0[^}]*transition: opacity var\(--motion-fast\) var\(--ease-standard\)/s
   );
   assert.match(eventComposerStyles.text, /\.emoji-picker-empty\s*\{[^}]*font-size: 12px[^}]*text-align: center/s);
   assert.match(
@@ -692,10 +692,9 @@ try {
   assert.match(eventComposerStyles.text, /--motion-slow:\s*350ms;/);
   assert.match(eventComposerStyles.text, /--motion-page:\s*400ms;/);
   assert.match(eventComposerStyles.text, /--ease-standard:\s*cubic-bezier\(0\.32, 0\.72, 0, 1\);/);
-  assert.match(eventComposerStyles.text, /--ease-entrance:\s*cubic-bezier\(0\.25, 1, 0\.5, 1\);/);
+  assert.match(eventComposerStyles.text, /--ease-modal:\s*cubic-bezier\(0\.16, 1, 0\.3, 1\);/);
   const approvedCurves = [
     "cubic-bezier(0.16,1,0.3,1)",
-    "cubic-bezier(0.25,1,0.5,1)",
     "cubic-bezier(0.32,0.72,0,1)"
   ];
   const usedCurves = [...new Set(
@@ -703,20 +702,28 @@ try {
       .match(/cubic-bezier\([^)]*\)/g)
       ?.map((curve) => curve.replace(/\s+/g, "")) || []
   )].sort();
-  assert.deepEqual(usedCurves, approvedCurves, "Only the three approved motion curves may be used");
+  assert.deepEqual(usedCurves, approvedCurves, "Only the two approved motion curves may be used");
+  const motionShorthands = [...stripCssComments(eventComposerStyles.text).matchAll(/(?:^|[;{])\s*(?:transition|animation)\s*:\s*([^;{}]+)/gim)];
+  for (const [, shorthand] of motionShorthands) {
+    assert.doesNotMatch(
+      shorthand,
+      /(?:^|[\s,])(?:linear|ease|ease-in|ease-out|ease-in-out)(?=$|[\s,])/i,
+      `Motion shorthand must not use a generic timing keyword: ${shorthand.trim()}`
+    );
+  }
   assert.match(
     eventComposerStyles.text,
-    /button:not\(:disabled\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(0\.96\)/s,
+    /button:not\(:disabled\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*transition-timing-function:\s*var\(--ease-standard\)[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(0\.96\)/s,
     "Buttons must compress to scale(.96) on press"
   );
   assert.match(
     eventComposerStyles.text,
-    /@keyframes modal-in\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0[^}]*transform:\s*translate3d\(0, 10px, 0\) scale\(0\.9\)/,
-    "Shared modal entrance must begin at scale(.90)"
+    /\.modal\[open\] \.modal-card\s*\{[^}]*animation:\s*modal-in var\(--motion-slow\) var\(--ease-modal\) both[^}]*will-change:\s*transform, opacity[\s\S]*?@keyframes modal-in\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0[^}]*transform:\s*translate3d\(0, 8px, 0\) scale\(0\.95\)/,
+    "Shared modal entrances must use the restrained 350ms scale(.95) macro motion"
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal\[open\] \.event-composer\s*\{[^}]*animation:\s*event-composer-premium-in 350ms cubic-bezier\(0\.16, 1, 0\.3, 1\) both[^}]*will-change:\s*transform, opacity/s,
+    /#eventModal\[open\] \.event-composer\s*\{[^}]*animation:\s*event-composer-premium-in var\(--motion-slow\) var\(--ease-modal\) both[^}]*will-change:\s*transform, opacity/s,
     "The event composer must use its restrained 350ms entrance"
   );
   assert.match(
@@ -726,6 +733,41 @@ try {
   );
   assert.match(eventComposerStyles.text, /\.drag-create-preview::before\s*\{[^}]*height:\s*var\(--preview-base-height[^}]*transform:\s*scaleY\(var\(--preview-scale/s);
   assert.match(eventComposerStyles.text, /\.drag-create-preview-cap\s*\{[^}]*transform:\s*translate3d\(0, var\(--preview-bottom-y, 0px\), 0\)/s);
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /scale\(0\.9\)/,
+    "Macro entrances must not use the older, exaggerated scale(.90) start"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.color-option-list\s*\{[^}]*translate3d\(0, 8px, 0\) scale\(0\.95\)[^}]*animation:\s*color-menu-in var\(--motion-slow\) var\(--ease-modal\)/s,
+    "Colour popovers must use the shared macro entrance"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.busy-stack-popover\s*\{[^}]*translate3d\(0, 8px, 0\) scale\(0\.95\)[^}]*transform var\(--motion-slow\) var\(--ease-modal\)/s,
+    "Busy-stack popovers must use the shared macro entrance"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.invite-dropdown-panel\s*\{[^}]*translate3d\(0, 8px, 0\) scale\(0\.95\)[^}]*transform var\(--motion-slow\) var\(--ease-modal\)/s,
+    "Invite popovers must use the shared macro entrance"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.month-cell:active:not\(:has\(button:active\)\)\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(0\.96\)/s,
+    "Clickable month cells must provide tactile press feedback without compounding a child button press"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.detail-invitee-row:not\(\.is-readonly\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*scale\(0\.96\)/s,
+    "Interactive invitee rows must use the shared press response"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.topbar-identity:has\(> \.identity-name-button:active\),\s*\.topbar-identity:has\(> \.topbar-identity-menu > \.topbar-color-trigger:active\)\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*scale\(0\.96\)/s,
+    "The segmented identity control must press as one visual surface"
+  );
   assert.match(
     eventComposerStyles.text,
     /button\.free-glow-block:not\(:disabled\):active\s*\{[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(1\)[^}]*opacity:\s*0\.96/s,
@@ -733,6 +775,8 @@ try {
   );
   assertCompositorOnlyMotion(eventComposerStyles.text);
   assertTransformOpacityKeyframes(eventComposerStyles.text);
+  assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*will-change:\s*transform, opacity/s);
+  assert.match(eventComposerStyles.text, /\.icon\s*\{[^}]*will-change:\s*transform, opacity/s);
   assert.match(eventComposerStyles.text, /\.modal\.is-closing \.modal-card/);
   assert.match(
     eventComposerStyles.text,
@@ -804,10 +848,10 @@ try {
   assert.match(eventComposerStyles.text, /#eventModal \.oauth-spinner\s*\{[^}]*display: none[^}]*width: 18px[^}]*height: 18px/s);
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.composer-sync-toggle\.is-authorizing \.oauth-spinner\s*\{[^}]*display: block[^}]*animation: composer-oauth-spin 700ms cubic-bezier\(0\.32, 0\.72, 0, 1\) infinite/s,
+    /#eventModal \.composer-sync-toggle\.is-authorizing \.oauth-spinner\s*\{[^}]*display: block[^}]*animation: composer-oauth-spin 700ms var\(--ease-standard\) infinite/s,
     "Popup authorization must expose a visible in-row progress state"
   );
-  assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\.is-connected\s*\{[^}]*animation: composer-sync-settle 350ms cubic-bezier\(0\.16, 1, 0\.3, 1\) both/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\.is-connected\s*\{[^}]*animation: composer-sync-settle var\(--motion-slow\) var\(--ease-modal\) both[^}]*will-change: transform, opacity/s);
   assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\.is-error small\s*\{[^}]*color: var\(--danger\)/s);
   assert.match(eventComposerStyles.text, /\.invite-dropdown-panel\s*\{[^}]*position: absolute[^}]*max-height: min\(220px, calc\(100dvh - 160px\)\)[^}]*overflow-y: auto/s);
   assert.match(eventComposerStyles.text, /@media \(max-width: 620px\)[\s\S]*?#eventModal \.event-composer[\s\S]*?width: min\(100vw - 16px, 560px\)/);

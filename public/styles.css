@@ -59,7 +59,7 @@
   --motion-stagger: 25ms;
   --motion-content-delay: 50ms;
   --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
-  --ease-entrance: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-modal: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 :root[data-theme="dark"] {
@@ -140,7 +140,7 @@ button:not(:disabled):hover {
 
 button:not(:disabled):active {
   transition-duration: var(--motion-press);
-  transition-timing-function: var(--ease-entrance);
+  transition-timing-function: var(--ease-standard);
   transform: translate3d(0, 0, 0) scale(0.96);
 }
 
@@ -153,7 +153,7 @@ button:not(:disabled):active {
 
 :where(a, summary, [role="button"]):is(:active, .is-pressed) {
   transition-duration: var(--motion-press);
-  transition-timing-function: var(--ease-entrance);
+  transition-timing-function: var(--ease-standard);
   transform: translate3d(0, 0, 0) scale(0.96);
 }
 
@@ -250,7 +250,7 @@ a:focus-visible {
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(18px);
   pointer-events: auto;
-  animation: notification-in var(--motion-slow) var(--ease-entrance) both;
+  animation: notification-in var(--motion-slow) var(--ease-modal) both;
   will-change: transform, opacity;
 }
 
@@ -260,7 +260,8 @@ a:focus-visible {
   inset: -40% -80%;
   background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.18), transparent 62%);
   transform: translateX(-45%) rotate(8deg);
-  animation: notification-shine var(--motion-shine) var(--ease-entrance) var(--motion-fast) both;
+  animation: notification-shine var(--motion-shine) var(--ease-standard) var(--motion-fast) both;
+  will-change: transform, opacity;
   pointer-events: none;
 }
 
@@ -401,7 +402,7 @@ a:focus-visible {
 @keyframes notification-in {
   from {
     opacity: 0;
-    transform: translate3d(0, -10px, 0) scale(0.9);
+    transform: translate3d(0, -8px, 0) scale(0.95);
   }
   to {
     opacity: 1;
@@ -1287,7 +1288,7 @@ a:focus-visible {
 button.room-switch-tab:not(:disabled):active {
   opacity: 0.96;
   transition-duration: var(--motion-press);
-  transition-timing-function: var(--ease-entrance);
+  transition-timing-function: var(--ease-standard);
   transform: translate3d(0, 0, 0) scale(0.96);
 }
 
@@ -1475,6 +1476,7 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   transition:
     transform var(--motion-fast) var(--ease-standard),
     opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .ui-icon-calendar-sync { --icon-url: url("/icons/calendar-sync.svg"); }
@@ -1548,6 +1550,7 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   transition:
     transform var(--motion-fast) var(--ease-standard),
     opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .date-nav-button .icon,
@@ -1616,7 +1619,7 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   box-shadow: var(--shadow);
   transform: translateX(calc(-100% + 42px));
   transition:
-    transform var(--motion-slow) var(--ease-entrance),
+    transform var(--motion-slow) var(--ease-modal),
     opacity var(--motion-fast) var(--ease-standard);
   touch-action: pan-y;
   will-change: transform;
@@ -1958,15 +1961,15 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   background: var(--surface);
   box-shadow: var(--shadow);
   opacity: 0;
-  transform: translate3d(0, 10px, 0) scale(0.9);
-  animation: color-menu-in var(--motion-slow) var(--ease-entrance) forwards;
+  transform: translate3d(0, 8px, 0) scale(0.95);
+  animation: color-menu-in var(--motion-slow) var(--ease-modal) forwards;
   will-change: transform, opacity;
 }
 
 @keyframes color-menu-in {
   from {
     opacity: 0;
-    transform: translate3d(0, 10px, 0) scale(0.9);
+    transform: translate3d(0, 8px, 0) scale(0.95);
   }
   to {
     opacity: 1;
@@ -2116,7 +2119,7 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
 
 .mini-toggle:active .mini-toggle-ui {
   transition-duration: var(--motion-press);
-  transition-timing-function: var(--ease-entrance);
+  transition-timing-function: var(--ease-standard);
   transform: scale(0.96);
 }
 
@@ -2426,7 +2429,7 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
 
 .theme-toggle:active {
   transition-duration: var(--motion-press);
-  transition-timing-function: var(--ease-entrance);
+  transition-timing-function: var(--ease-standard);
   transform: scale(0.96);
 }
 
@@ -3296,12 +3299,12 @@ button.free-glow-block:not(:disabled):active {
   box-shadow: 0 20px 40px rgba(36, 24, 17, 0.2);
   backdrop-filter: blur(10px);
   opacity: 0;
-  transform: translate3d(0, 10px, 0) scale(0.9);
+  transform: translate3d(0, 8px, 0) scale(0.95);
   transform-origin: top left;
   pointer-events: none;
   transition:
     opacity var(--motion-fast) var(--ease-standard),
-    transform var(--motion-slow) var(--ease-entrance);
+    transform var(--motion-slow) var(--ease-modal);
   will-change: transform, opacity;
   z-index: 40;
 }
@@ -3309,7 +3312,7 @@ button.free-glow-block:not(:disabled):active {
 .busy-stack.opens-upward .busy-stack-popover {
   top: auto;
   bottom: calc(100% + 12px);
-  transform: translate3d(0, -10px, 0) scale(0.9);
+  transform: translate3d(0, -8px, 0) scale(0.95);
   transform-origin: bottom left;
 }
 
@@ -3741,6 +3744,7 @@ button.free-glow-block:not(:disabled):active {
   transition:
     opacity var(--motion-fast) var(--ease-standard),
     transform var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
   z-index: 40;
 }
 
@@ -3802,6 +3806,12 @@ button.free-glow-block:not(:disabled):active {
 .month-cell:hover {
   background: color-mix(in srgb, var(--brand) 6%, transparent);
   transform: translate3d(0, -1px, 0) scale(1.005);
+}
+
+.month-cell:active:not(:has(button:active)) {
+  transition-duration: var(--motion-press);
+  transition-timing-function: var(--ease-standard);
+  transform: translate3d(0, 0, 0) scale(0.96);
 }
 
 .month-date-number {
@@ -4247,6 +4257,15 @@ button.free-glow-block:not(:disabled):active {
   background: color-mix(in srgb, var(--surface) 88%, transparent);
   color: var(--ink);
   cursor: pointer;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
+}
+
+.detail-invitee-row:not(.is-readonly):active {
+  transition-duration: var(--motion-press);
+  transform: translate3d(0, 0, 0) scale(0.96);
 }
 
 .detail-invitee-row.is-not-invited {
@@ -4830,7 +4849,7 @@ button.free-glow-block:not(:disabled):active {
   overflow-y: auto;
   visibility: hidden;
   opacity: 0;
-  transform: translate3d(0, 10px, 0) scale(0.9);
+  transform: translate3d(0, 8px, 0) scale(0.95);
   transform-origin: top center;
   pointer-events: none;
   border: 1px solid var(--line);
@@ -4839,7 +4858,7 @@ button.free-glow-block:not(:disabled):active {
   box-shadow: var(--shadow);
   transition:
     opacity var(--motion-fast) var(--ease-standard),
-    transform var(--motion-slow) var(--ease-entrance);
+    transform var(--motion-slow) var(--ease-modal);
   will-change: transform, opacity;
 }
 
@@ -6245,6 +6264,10 @@ button.free-glow-block:not(:disabled):active {
   border-radius: 999px;
   background: color-mix(in srgb, var(--surface) 94%, var(--bg-soft) 6%);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .topbar-identity > .identity-name-button,
@@ -6322,6 +6345,12 @@ button.identity-name-button:not(:disabled):active,
   transform: none;
 }
 
+.topbar-identity:has(> .identity-name-button:active),
+.topbar-identity:has(> .topbar-identity-menu > .topbar-color-trigger:active) {
+  transition-duration: var(--motion-press);
+  transform: translate3d(0, 0, 0) scale(0.96);
+}
+
 .topbar-identity > .topbar-identity-menu[open] > .topbar-color-trigger {
   border-left-color: color-mix(in srgb, var(--brand) 36%, var(--line));
   background: color-mix(in srgb, var(--brand) 12%, var(--surface));
@@ -6360,12 +6389,12 @@ button.identity-name-button:not(:disabled):active,
 
 /* CommonGround handover alignment: final responsive and interaction contract. */
 .modal[open] .modal-card {
-  animation: modal-in var(--motion-slow) var(--ease-entrance) both;
+  animation: modal-in var(--motion-slow) var(--ease-modal) both;
   will-change: transform, opacity;
 }
 
 .modal[open]::backdrop {
-  animation: backdrop-in var(--motion-slow) var(--ease-entrance) both;
+  animation: backdrop-in var(--motion-slow) var(--ease-modal) both;
   will-change: opacity;
 }
 
@@ -6380,7 +6409,7 @@ button.identity-name-button:not(:disabled):active,
 @keyframes modal-in {
   from {
     opacity: 0;
-    transform: translate3d(0, 10px, 0) scale(0.9);
+    transform: translate3d(0, 8px, 0) scale(0.95);
   }
   to {
     opacity: 1;
@@ -6406,13 +6435,13 @@ button.identity-name-button:not(:disabled):active,
 
 /* Shared motion choreography for stateful CommonGround surfaces. */
 .motion-page-enter {
-  animation: page-enter var(--motion-page) var(--ease-entrance) both;
+  animation: page-enter var(--motion-page) var(--ease-modal) both;
   will-change: transform, opacity;
 }
 
 .host-popover.is-entering,
 .empty-room.is-entering {
-  animation: panel-enter var(--motion-slow) var(--ease-entrance) both;
+  animation: panel-enter var(--motion-slow) var(--ease-modal) both;
   transform-origin: top right;
   will-change: transform, opacity;
 }
@@ -6425,7 +6454,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 .detail-panel.is-entering {
-  animation: detail-panel-enter var(--motion-slow) var(--ease-entrance) both;
+  animation: detail-panel-enter var(--motion-slow) var(--ease-modal) both;
   will-change: transform, opacity;
 }
 
@@ -6439,6 +6468,7 @@ button.identity-name-button:not(:disabled):active,
   transition:
     opacity var(--motion-fast) var(--ease-standard),
     transform var(--motion-standard) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .calendar-grid {
@@ -6458,7 +6488,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 .room-page.is-room-entering .calendar-wrap {
-  animation: calendar-view-enter var(--motion-standard) var(--ease-entrance) both;
+  animation: calendar-view-enter var(--motion-standard) var(--ease-modal) both;
   will-change: transform, opacity;
 }
 
@@ -6468,6 +6498,7 @@ button.identity-name-button:not(:disabled):active,
   transition:
     transform var(--motion-fast) var(--ease-standard),
     opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .event-card:hover,
@@ -6538,7 +6569,7 @@ button.identity-name-button:not(:disabled):active,
 @keyframes panel-enter {
   from {
     opacity: 0;
-    transform: translate3d(0, 10px, 0) scale(0.9);
+    transform: translate3d(0, 8px, 0) scale(0.95);
   }
   to {
     opacity: 1;
@@ -6556,7 +6587,7 @@ button.identity-name-button:not(:disabled):active,
 @keyframes detail-panel-enter {
   from {
     opacity: 0;
-    transform: translate3d(10px, 0, 0) scale(0.9);
+    transform: translate3d(8px, 0, 0) scale(0.95);
   }
   to {
     opacity: 1;
@@ -7013,7 +7044,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal[open] .event-composer {
-  animation: event-composer-premium-in 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: event-composer-premium-in var(--motion-slow) var(--ease-modal) both;
   transform-origin: center center;
   will-change: transform, opacity;
 }
@@ -7288,7 +7319,7 @@ button.identity-name-button:not(:disabled):active,
   border-radius: inherit;
   background: rgba(255, 255, 255, 0.02);
   opacity: 0;
-  transition: opacity 150ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: opacity var(--motion-fast) var(--ease-standard);
   will-change: opacity;
 }
 
@@ -7385,8 +7416,8 @@ button.identity-name-button:not(:disabled):active,
   height: 16px;
   background: color-mix(in srgb, var(--composer-ink) 78%, var(--surface));
   transition:
-    transform 250ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 150ms cubic-bezier(0.32, 0.72, 0, 1);
+    transform var(--motion-standard) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
   will-change: transform, opacity;
 }
 
@@ -7423,11 +7454,12 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-sync-toggle.is-authorizing .oauth-spinner {
   display: block;
-  animation: composer-oauth-spin 700ms cubic-bezier(0.32, 0.72, 0, 1) infinite;
+  animation: composer-oauth-spin 700ms var(--ease-standard) infinite;
 }
 
 #eventModal .composer-sync-toggle.is-connected {
-  animation: composer-sync-settle 350ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: composer-sync-settle var(--motion-slow) var(--ease-modal) both;
+  will-change: transform, opacity;
 }
 
 #eventModal .composer-sync-toggle.is-error small {
@@ -7535,8 +7567,8 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .modal-actions > button:not(:disabled):active {
-  transition-duration: 100ms;
-  transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+  transition-duration: var(--motion-press);
+  transition-timing-function: var(--ease-standard);
   transform: translate3d(0, 0, 0) scale(0.96);
 }
 
@@ -7700,7 +7732,9 @@ button.identity-name-button:not(:disabled):active,
   font-size: 24px;
   line-height: 1;
   transform: translate3d(0, 0, 0);
-  transition: opacity 150ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
   will-change: transform, opacity;
 }
 
@@ -7712,7 +7746,7 @@ button.identity-name-button:not(:disabled):active,
   border-radius: 8px;
   background: color-mix(in srgb, var(--ink) 6%, transparent);
   opacity: 0;
-  transition: opacity 150ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: opacity var(--motion-fast) var(--ease-standard);
   will-change: opacity;
 }
 
@@ -7872,7 +7906,7 @@ button.identity-name-button:not(:disabled):active,
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.06);
   opacity: 0;
-  transition: opacity 150ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition: opacity var(--motion-fast) var(--ease-standard);
   will-change: opacity;
 }
 
