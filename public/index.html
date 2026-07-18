@@ -11,7 +11,7 @@
       }
     </script>
     <title>CommonGround | Shared calendar rooms</title>
-    <link rel="stylesheet" href="/styles.css?v=20260718-modal" />
+    <link rel="stylesheet" href="/styles.css?v=20260718-emoji" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -41,10 +41,14 @@
                 <span>Room name</span>
                 <input id="createRoomName" name="roomName" type="text" value="Untitled room" placeholder="Untitled room" autocomplete="off" maxlength="80" />
               </label>
-              <label class="field-label emoji-field" for="createRoomEmoji">
-                <span>Emoji</span>
-                <input class="emoji-input" id="createRoomEmoji" name="roomEmoji" type="text" value="&#128197;" aria-label="Room emoji" list="roomEmojiOptions" autocomplete="off" maxlength="4" />
-              </label>
+              <div class="field-label emoji-field">
+                <span id="createRoomEmojiLabel">Emoji</span>
+                <input id="createRoomEmoji" name="roomEmoji" type="hidden" value="&#128197;" />
+                <button class="emoji-trigger" id="createRoomEmojiTrigger" type="button" data-emoji-target="createRoomEmoji" aria-haspopup="dialog" aria-controls="emojiPickerPopover" aria-expanded="false" aria-label="Choose room emoji, current calendar">
+                  <span class="emoji-trigger-value" id="createRoomEmojiValue" aria-hidden="true">&#128197;</span>
+                  <span class="sr-only">Choose room emoji</span>
+                </button>
+              </div>
             </div>
             <button class="primary" type="submit">Create room</button>
           </form>
@@ -163,10 +167,14 @@
                 <span>Room name</span>
                 <input id="renameRoomInput" type="text" placeholder="Rename room" autocomplete="off" maxlength="80" />
               </label>
-              <label class="field-label emoji-field" for="renameRoomEmojiInput">
-                <span>Emoji</span>
-                <input class="emoji-input" id="renameRoomEmojiInput" type="text" placeholder="&#128197;" aria-label="Room emoji" list="roomEmojiOptions" autocomplete="off" maxlength="4" />
-              </label>
+              <div class="field-label emoji-field">
+                <span id="renameRoomEmojiLabel">Emoji</span>
+                <input id="renameRoomEmojiInput" type="hidden" value="&#128197;" />
+                <button class="emoji-trigger" id="renameRoomEmojiTrigger" type="button" data-emoji-target="renameRoomEmojiInput" aria-haspopup="dialog" aria-controls="emojiPickerPopover" aria-expanded="false" aria-label="Choose room emoji, current calendar">
+                  <span class="emoji-trigger-value" id="renameRoomEmojiValue" aria-hidden="true">&#128197;</span>
+                  <span class="sr-only">Choose room emoji</span>
+                </button>
+              </div>
             </div>
             <div class="host-row">
               <label class="field-label" for="customRoomCodeInput">
@@ -505,10 +513,14 @@
             <span>Room name</span>
             <input id="quickRoomNameInput" type="text" value="Untitled room" placeholder="Untitled room" autocomplete="off" maxlength="80" />
           </label>
-          <label class="field-label emoji-field" for="quickRoomEmojiInput">
-            <span>Emoji</span>
-            <input class="emoji-input" id="quickRoomEmojiInput" type="text" value="&#128197;" aria-label="Room emoji" list="roomEmojiOptions" autocomplete="off" maxlength="4" />
-          </label>
+          <div class="field-label emoji-field">
+            <span id="quickRoomEmojiLabel">Emoji</span>
+            <input id="quickRoomEmojiInput" type="hidden" value="&#128197;" />
+            <button class="emoji-trigger" id="quickRoomEmojiTrigger" type="button" data-emoji-target="quickRoomEmojiInput" aria-haspopup="dialog" aria-controls="emojiPickerPopover" aria-expanded="false" aria-label="Choose room emoji, current calendar">
+              <span class="emoji-trigger-value" id="quickRoomEmojiValue" aria-hidden="true">&#128197;</span>
+              <span class="sr-only">Choose room emoji</span>
+            </button>
+          </div>
         </div>
 
         <div class="modal-actions">
@@ -521,17 +533,15 @@
       </form>
     </dialog>
 
-    <datalist id="roomEmojiOptions">
-      <option value="&#128197;"></option>
-      <option value="&#127881;"></option>
-      <option value="&#127968;"></option>
-      <option value="&#127796;"></option>
-      <option value="&#9917;"></option>
-      <option value="&#127891;"></option>
-      <option value="&#128188;"></option>
-      <option value="&#127926;"></option>
-    </datalist>
+    <div class="emoji-picker-popover" id="emojiPickerPopover" popover="manual" role="dialog" aria-labelledby="emojiPickerTitle">
+      <h2 class="sr-only" id="emojiPickerTitle">Choose room emoji</h2>
+      <div class="emoji-picker-searchbar">
+        <input id="emojiPickerSearch" type="search" placeholder="Search emoji..." aria-label="Search emoji" aria-controls="emojiPickerGrid" aria-describedby="emojiPickerStatus" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="emoji-picker-grid" id="emojiPickerGrid" role="group" aria-label="Emoji results"></div>
+      <p class="sr-only" id="emojiPickerStatus" role="status" aria-live="polite"></p>
+    </div>
 
-    <script src="/app.js?v=20260718-modal"></script>
+    <script src="/app.js?v=20260718-emoji"></script>
   </body>
 </html>

@@ -12,5 +12,8 @@
     "check": "node --check server.js && node --check public/app.js && node --check tests/smoke.mjs",
     "test": "node tests/smoke.mjs"
   },
-  "license": "UNLICENSED"
+  "license": "UNLICENSED",
+  "dependencies": {
+    "emojilib": "3.0.11"
+  }
 }

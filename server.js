@@ -16,6 +16,10 @@ const configuredDataDir = String(process.env.DATA_DIR || "").trim();
 const databaseFile = configuredDatabasePath || path.join(configuredDataDir || __dirname, ".commonground.db");
 const legacyStoreFile = path.join(__dirname, ".room-store.json");
 const publicDir = path.join(__dirname, "public");
+const emojiKeywordDictionaryRoute = "/assets/emojilib/3.0.11/emoji-en-US.json";
+const emojiKeywordDictionaryPath = path.join(__dirname, "node_modules", "emojilib", "dist", "emoji-en-US.json");
+const emojiKeywordDictionary = fs.readFileSync(emojiKeywordDictionaryPath);
+const emojiKeywordDictionaryEtag = `"${crypto.createHash("sha256").update(emojiKeywordDictionary).digest("base64url")}"`;
 const roomCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const defaultRoomEmoji = "📅";
 const oauthStateLifetimeMs = 10 * 60 * 1000;
@@ -801,6 +805,33 @@ function sendMethodNotAllowed(res, allowed) {
   applySecurityHeaders(res);
   res.setHeader("Allow", allowed.join(", "));
   sendJson(res, 405, { error: "Method not allowed." });
+}
+
+function sendEmojiKeywordDictionary(req, res) {
+  if (!["GET", "HEAD"].includes(req.method || "GET")) {
+    sendMethodNotAllowed(res, ["GET", "HEAD"]);
+    return;
+  }
+  applySecurityHeaders(res);
+  if (req.headers["if-none-match"] === emojiKeywordDictionaryEtag) {
+    res.writeHead(304, {
+      ETag: emojiKeywordDictionaryEtag,
+      "Cache-Control": "public, max-age=31536000, immutable"
+    });
+    res.end();
+    return;
+  }
+  res.writeHead(200, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Content-Length": emojiKeywordDictionary.length,
+    "Cache-Control": "public, max-age=31536000, immutable",
+    ETag: emojiKeywordDictionaryEtag
+  });
+  if (req.method === "HEAD") {
+    res.end();
+    return;
+  }
+  res.end(emojiKeywordDictionary);
 }
 
 function readJsonBody(req) {
@@ -3209,6 +3240,11 @@ const server = http.createServer(async (req, res) => {
       !isAllowedMutationOrigin(req)
     ) {
       sendJson(res, 403, { error: "Cross-site request blocked." });
+      return;
+    }
+
+    if (url.pathname === emojiKeywordDictionaryRoute) {
+      sendEmojiKeywordDictionary(req, res);
       return;
     }
 

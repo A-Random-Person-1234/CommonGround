@@ -1,0 +1,22 @@
+lockfileVersion: '9.0'
+
+settings:
+  autoInstallPeers: true
+  excludeLinksFromLockfile: false
+
+importers:
+
+  .:
+    dependencies:
+      emojilib:
+        specifier: 3.0.11
+        version: 3.0.11
+
+packages:
+
+  emojilib@3.0.11:
+    resolution: {integrity: sha512-OuML9z640prB+0Rms1RgzJrBAqNC9mFdqT2HeFcXSGSGNEiZh9adsaPPxWbqRoMyJPzu+zNKPyGKv4/sPmJDyg==}
+
+snapshots:
+
+  emojilib@3.0.11: {}

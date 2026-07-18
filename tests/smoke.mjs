@@ -247,14 +247,31 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260718-modal"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260718-modal"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260718-emoji"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260718-emoji"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
   assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
   assert.doesNotMatch(home.text, /Six-character room code/);
   assert.doesNotMatch(home.text, /Letters and numbers; uppercase or lowercase both work\./);
   assert.match(home.text, /id="googleEventSyncToggle" type="checkbox" checked/);
+  assert.equal((home.text.match(/class="emoji-trigger"/g) || []).length, 3, "Every room emoji control needs a picker trigger");
+  for (const [inputId, triggerId] of [
+    ["createRoomEmoji", "createRoomEmojiTrigger"],
+    ["renameRoomEmojiInput", "renameRoomEmojiTrigger"],
+    ["quickRoomEmojiInput", "quickRoomEmojiTrigger"]
+  ]) {
+    assert.match(home.text, new RegExp(`id="${inputId}"[^>]*type="hidden"`));
+    assert.match(
+      home.text,
+      new RegExp(`id="${triggerId}"[^>]*type="button"[^>]*data-emoji-target="${inputId}"[^>]*aria-haspopup="dialog"[^>]*aria-controls="emojiPickerPopover"[^>]*aria-expanded="false"`)
+    );
+  }
+  assert.doesNotMatch(home.text, /id="roomEmojiOptions"|<datalist|\blist="roomEmojiOptions"/);
+  assert.match(home.text, /id="emojiPickerPopover" popover="manual" role="dialog" aria-labelledby="emojiPickerTitle"/);
+  assert.match(home.text, /id="emojiPickerSearch" type="search" placeholder="Search emoji\.\.\."[^>]*aria-controls="emojiPickerGrid"/);
+  assert.match(home.text, /id="emojiPickerGrid" role="group" aria-label="Emoji results"/);
+  assert.match(home.text, /id="emojiPickerStatus" role="status" aria-live="polite"/);
   assert.match(home.text, /<dialog class="modal" id="eventModal" aria-labelledby="eventComposerTitle">/);
   const eventModalStart = home.text.indexOf('<dialog class="modal" id="eventModal"');
   const eventModalEnd = home.text.indexOf("</dialog>", eventModalStart);
@@ -315,7 +332,57 @@ try {
     /<div class="topbar-identity" id="topbarIdentity" role="group" aria-label="Your room identity"><\/div>/,
     "The name and colour controls must share one labelled visual group"
   );
+  const emojiDictionaryResponse = await publicSession.request("/assets/emojilib/3.0.11/emoji-en-US.json", {
+    accept: "application/json"
+  });
+  assert.match(emojiDictionaryResponse.response.headers.get("content-type") || "", /^application\/json/);
+  assert.equal(Object.keys(emojiDictionaryResponse.payload).length, 1870);
+  assert.ok(emojiDictionaryResponse.payload["😀"].includes("smile"));
+  assert.ok(emojiDictionaryResponse.payload["👍"].includes("thumbs_up"));
+  assert.equal(
+    emojiDictionaryResponse.response.headers.get("cache-control"),
+    "public, max-age=31536000, immutable"
+  );
+  const emojiDictionaryEtag = emojiDictionaryResponse.response.headers.get("etag");
+  assert.ok(emojiDictionaryEtag);
+  await publicSession.request("/assets/emojilib/3.0.11/emoji-en-US.json", {
+    accept: "application/json",
+    headers: { "If-None-Match": emojiDictionaryEtag },
+    expected: 304
+  });
+  const emojiDictionaryHead = await publicSession.request("/assets/emojilib/3.0.11/emoji-en-US.json", {
+    method: "HEAD",
+    accept: "application/json"
+  });
+  assert.equal(emojiDictionaryHead.text, "");
+  assert.equal(Number(emojiDictionaryHead.response.headers.get("content-length")), Buffer.byteLength(emojiDictionaryResponse.text));
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
+  assert.match(eventComposerScript.text, /const emojiKeywordDictionaryUrl = "\/assets\/emojilib\/3\.0\.11\/emoji-en-US\.json";/);
+  assert.match(eventComposerScript.text, /const frequentRoomEmojis = Object\.freeze\(\[[\s\S]*?"🙏"[\s\S]*?\]\);/);
+  assert.match(eventComposerScript.text, /if \(results\.length === 60\) break;/);
+  assert.match(eventComposerScript.text, /message\.textContent = "No emojis found";/);
+  assert.match(eventComposerScript.text, /emojiPickerGrid\.replaceChildren\(fragment\);/);
+  assert.match(eventComposerScript.text, /new Intl\.Segmenter\(undefined, \{ granularity: "grapheme" \}\)/);
+  assert.match(
+    eventComposerScript.text,
+    /function setEmojiCellScale\(cell, targetScale\)[\s\S]*?stiffness: 400,[\s\S]*?damping: 30,[\s\S]*?mass: 1/,
+    "Emoji-cell hover motion must use the requested micro spring"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function openEmojiPicker\(trigger\)[\s\S]*?trigger\.closest\("dialog\[open\]"\)[\s\S]*?stiffness: 300,[\s\S]*?damping: 25,[\s\S]*?mass: 1/,
+    "The picker must remain modal-safe and use the requested macro spring"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function selectEmoji\(emoji\)[\s\S]*?input\.dispatchEvent\(new Event\("input", \{ bubbles: true \}\)\);[\s\S]*?input\.dispatchEvent\(new Event\("change", \{ bubbles: true \}\)\);[\s\S]*?closeEmojiPicker\(\{ restoreFocus: true \}\);/,
+    "Selection must preserve the existing input/change persistence contract and return focus"
+  );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /emojiPickerGrid\.innerHTML|emojiPickerPopover\.innerHTML/,
+    "Emoji data must be rendered with safe DOM APIs"
+  );
   assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
   assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
   assert.match(
@@ -506,6 +573,26 @@ try {
     );
   }
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerStyles.text,
+    /\.emoji-picker-popover\[popover\]\s*\{[^}]*width: 320px[^}]*height: 400px[^}]*border: 1px solid rgba\(255, 255, 255, 0\.08\)[^}]*border-radius: 12px[^}]*background: rgba\(22, 22, 23, 0\.8\)[^}]*backdrop-filter: blur\(20px\)[^}]*box-shadow: 0 12px 40px rgba\(0, 0, 0, 0\.5\)[^}]*will-change: transform, opacity/s,
+    "The emoji popover must retain the requested frosted-glass geometry"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.emoji-picker-grid\s*\{[^}]*grid-template-columns: repeat\(6, 1fr\)[^}]*gap: 8px[^}]*padding: 16px[^}]*overflow-y: auto/s,
+    "The picker must render a six-column, 8px-grid result surface"
+  );
+  assert.match(eventComposerStyles.text, /#emojiPickerSearch::placeholder\s*\{[^}]*color: rgba\(255, 255, 255, 0\.35\)/s);
+  assert.match(
+    eventComposerStyles.text,
+    /\.emoji-picker-cell\s*\{[^}]*font-size: 24px[^}]*transform: translate3d\(0, 0, 0\) scale\(1\)[^}]*will-change: transform, opacity/s
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.emoji-picker-cell::before\s*\{[^}]*border-radius: 8px[^}]*background: rgba\(255, 255, 255, 0\.06\)[^}]*opacity: 0[^}]*transition: opacity 150ms cubic-bezier\(0\.32, 0\.72, 0, 1\)/s
+  );
+  assert.match(eventComposerStyles.text, /\.emoji-picker-empty\s*\{[^}]*font-size: 12px[^}]*text-align: center/s);
   assert.match(
     eventComposerStyles.text,
     /\.home-grid\s*\{[^}]*grid-auto-rows:\s*1fr[^}]*align-items:\s*stretch/s,
