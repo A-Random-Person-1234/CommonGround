@@ -202,11 +202,16 @@ function updateRoomLockIcon(locked) {
   roomLockIcon?.classList.toggle("ui-icon-lock-open", !locked);
 }
 
-const motionFastMs = 140;
-const motionStandardMs = 220;
-const motionSlowMs = 320;
+const motionPressMs = 100;
+const motionFastMs = 150;
+const motionStandardMs = 250;
+const motionSlowMs = 350;
+const motionPageMs = 400;
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const panelMotionTimers = new WeakMap();
+const dialogMotionTimers = new WeakMap();
+const replayMotionStates = new WeakMap();
+const keyboardPressTimers = new WeakMap();
 let calendarMotionGeneration = 0;
 
 function prefersReducedMotion() {
@@ -217,13 +222,60 @@ function motionDelay(duration) {
   return prefersReducedMotion() ? 1 : duration;
 }
 
+function keyboardMotionTarget(target) {
+  if (!(target instanceof Element)) return null;
+  const motionTarget = target.closest("summary, [role='button']");
+  if (!motionTarget || motionTarget.matches(":disabled, [aria-disabled='true']")) return null;
+  return motionTarget;
+}
+
+function releaseKeyboardMotion(target) {
+  const motionTarget = keyboardMotionTarget(target);
+  if (!motionTarget) return;
+  const pendingTimer = keyboardPressTimers.get(motionTarget);
+  if (pendingTimer) window.clearTimeout(pendingTimer);
+  keyboardPressTimers.delete(motionTarget);
+  motionTarget.classList.remove("is-pressed");
+}
+
+function pressKeyboardMotion(target) {
+  const motionTarget = keyboardMotionTarget(target);
+  if (!motionTarget) return;
+  releaseKeyboardMotion(motionTarget);
+  motionTarget.classList.add("is-pressed");
+  const timer = window.setTimeout(() => {
+    if (keyboardPressTimers.get(motionTarget) !== timer) return;
+    keyboardPressTimers.delete(motionTarget);
+    motionTarget.classList.remove("is-pressed");
+  }, motionPressMs + 40);
+  keyboardPressTimers.set(motionTarget, timer);
+}
+
 function replayMotionClass(node, className, duration = motionStandardMs) {
   if (!node) return;
+  let nodeStates = replayMotionStates.get(node);
+  if (!nodeStates) {
+    nodeStates = new Map();
+    replayMotionStates.set(node, nodeStates);
+  }
+  const previousState = nodeStates.get(className);
+  if (previousState?.timer) window.clearTimeout(previousState.timer);
+  const token = Symbol(className);
+  const nextState = { token, timer: null };
+  nodeStates.set(className, nextState);
   node.classList.remove(className);
-  if (prefersReducedMotion()) return;
+  if (prefersReducedMotion()) {
+    nodeStates.delete(className);
+    return;
+  }
   requestAnimationFrame(() => {
+    if (nodeStates.get(className)?.token !== token) return;
     node.classList.add(className);
-    window.setTimeout(() => node.classList.remove(className), duration + 40);
+    nextState.timer = window.setTimeout(() => {
+      if (nodeStates.get(className)?.token !== token) return;
+      node.classList.remove(className);
+      nodeStates.delete(className);
+    }, duration + 40);
   });
 }
 
@@ -233,7 +285,7 @@ function showAppPage(targetPage) {
   for (const page of pages) {
     page.classList.toggle("hidden", page !== targetPage);
   }
-  if (wasHidden) replayMotionClass(targetPage, "motion-page-enter");
+  if (wasHidden) replayMotionClass(targetPage, "motion-page-enter", motionPageMs);
 }
 
 function setPanelVisibility(panel, visible, { afterHide } = {}) {
@@ -251,7 +303,7 @@ function setPanelVisibility(panel, visible, { afterHide } = {}) {
       const timer = window.setTimeout(() => {
         panel.classList.remove("is-entering");
         panelMotionTimers.delete(panel);
-      }, motionStandardMs + 40);
+      }, motionSlowMs + 40);
       panelMotionTimers.set(panel, timer);
     }
     return;
@@ -278,6 +330,14 @@ function setPanelVisibility(panel, visible, { afterHide } = {}) {
   panelMotionTimers.set(panel, timer);
 }
 
+function prepareDialogForOpen(dialog) {
+  if (!dialog) return;
+  const pendingTimer = dialogMotionTimers.get(dialog);
+  if (pendingTimer) window.clearTimeout(pendingTimer);
+  dialogMotionTimers.delete(dialog);
+  dialog.classList.remove("is-closing");
+}
+
 function closeDialogWithMotion(dialog, afterClose) {
   if (!dialog?.open) {
     afterClose?.();
@@ -285,16 +345,20 @@ function closeDialogWithMotion(dialog, afterClose) {
   }
   if (dialog.classList.contains("is-closing")) return;
   if (prefersReducedMotion()) {
+    prepareDialogForOpen(dialog);
     dialog.close();
     afterClose?.();
     return;
   }
   dialog.classList.add("is-closing");
-  window.setTimeout(() => {
+  const timer = window.setTimeout(() => {
+    if (dialogMotionTimers.get(dialog) !== timer || !dialog.classList.contains("is-closing")) return;
+    dialogMotionTimers.delete(dialog);
     if (dialog.open) dialog.close();
     dialog.classList.remove("is-closing");
     afterClose?.();
   }, motionFastMs + 40);
+  dialogMotionTimers.set(dialog, timer);
 }
 
 async function animateCalendarTransition(renderAction) {
@@ -305,7 +369,7 @@ async function animateCalendarTransition(renderAction) {
   const generation = ++calendarMotionGeneration;
   calendarGrid.classList.remove("is-view-entering");
   calendarGrid.classList.add("is-view-exiting");
-  await new Promise((resolve) => window.setTimeout(resolve, motionFastMs));
+  await new Promise((resolve) => window.setTimeout(resolve, motionStandardMs));
   if (generation !== calendarMotionGeneration) return;
   renderAction();
   calendarGrid.classList.remove("is-view-exiting");
@@ -2689,6 +2753,13 @@ function markCalendarClickSuppressed() {
   suppressCalendarClickUntil = Date.now() + 220;
 }
 
+function resolvedCalendarRowHeight() {
+  const renderedCellHeight = calendarGrid.querySelector(".calendar-cell")?.getBoundingClientRect().height;
+  if (Number.isFinite(renderedCellHeight) && renderedCellHeight > 0) return renderedCellHeight;
+  const configuredRowHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--row-height"));
+  return Number.isFinite(configuredRowHeight) && configuredRowHeight > 0 ? configuredRowHeight : 58;
+}
+
 function shouldSuppressCalendarClick(event) {
   if (Date.now() <= suppressCalendarClickUntil) {
     event?.preventDefault?.();
@@ -2702,7 +2773,7 @@ function hourFromPointer(clientY) {
   const eventsLayer = calendarGrid.querySelector(".events-layer");
   if (!eventsLayer) return calendarStartHour;
   const rect = eventsLayer.getBoundingClientRect();
-  const rowHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 58;
+  const rowHeight = resolvedCalendarRowHeight();
   const offset = Math.min(Math.max(clientY - rect.top, 0), rect.height);
   return clampVisibleHour(snapQuarterHour(calendarStartHour + offset / rowHeight));
 }
@@ -2736,7 +2807,7 @@ function dragSelectionRect() {
   const rect = eventsLayer.getBoundingClientRect();
   const dayCount = currentView === "day" ? 1 : 7;
   const dayWidth = rect.width / dayCount;
-  const rowHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 58;
+  const rowHeight = resolvedCalendarRowHeight();
   const left = rect.left + dayWidth * dragCreateState.dayIndex + 8;
   const top = rect.top + (selection.startHour - calendarStartHour) * rowHeight + 8;
   const width = Math.max(dayWidth - 16, 120);
@@ -2753,12 +2824,27 @@ function ensureDragPreview() {
     dragPreviewNode = document.createElement("div");
     dragPreviewNode.className = "drag-create-preview";
   }
+  const rootStyles = getComputedStyle(document.documentElement);
+  const rowHeight = resolvedCalendarRowHeight();
+  const blockGap = parseFloat(rootStyles.getPropertyValue("--calendar-block-gap")) || 6;
+  const halfGap = parseFloat(rootStyles.getPropertyValue("--calendar-block-half-gap")) || 3;
+  const startRows = selection.startHour - calendarStartHour;
+  const durationRows = selection.endHour - selection.startHour;
+  const previewHeight = Math.max(18, durationRows * rowHeight - blockGap);
+  const previewScale = previewHeight / rowHeight;
   dragPreviewNode.style.setProperty("--day-index", dragCreateState.dayIndex);
-  dragPreviewNode.style.setProperty("--start", selection.startHour - calendarStartHour);
-  dragPreviewNode.style.setProperty("--duration", selection.endHour - selection.startHour);
+  dragPreviewNode.style.setProperty("--preview-y", `${startRows * rowHeight + halfGap}px`);
+  dragPreviewNode.style.setProperty("--preview-height", `${previewHeight}px`);
+  dragPreviewNode.style.setProperty("--preview-base-height", `${rowHeight}px`);
+  dragPreviewNode.style.setProperty("--preview-scale", String(previewScale));
+  dragPreviewNode.style.setProperty("--preview-radius-y", `${10 / previewScale}px`);
+  dragPreviewNode.style.setProperty("--preview-bottom-y", `${Math.max(0, previewHeight - 10)}px`);
   dragPreviewNode.innerHTML = `
-    <strong>${formatTime(selection.startHour)} - ${formatTime(selection.endHour)}</strong>
-    <span>Create group event</span>
+    <div class="drag-create-preview-copy">
+      <strong>${formatTime(selection.startHour)} - ${formatTime(selection.endHour)}</strong>
+      <span>Create group event</span>
+    </div>
+    <span class="drag-create-preview-cap" aria-hidden="true"></span>
   `;
   if (!dragPreviewNode.isConnected) {
     eventsLayer.appendChild(dragPreviewNode);
@@ -3257,7 +3343,7 @@ function removeNotificationCard(notificationId) {
   card.classList.add("is-leaving");
   window.setTimeout(() => {
     card.remove();
-  }, motionDelay(motionStandardMs));
+  }, motionDelay(motionFastMs));
 }
 
 async function patchNotification(notificationId, action) {
@@ -3787,7 +3873,7 @@ async function openRoomEntryPage() {
 function openCreateRoomModal() {
   if (!createRoomModal) return;
   createRoomModalForm?.reset();
-  createRoomModal.classList.remove("is-closing");
+  prepareDialogForOpen(createRoomModal);
   createRoomModal.showModal();
   quickRoomNameInput?.focus();
 }
@@ -4214,7 +4300,7 @@ function openEventModal(mode = "create", options = {}) {
   }
 
   updateEventGoogleSyncControl();
-  eventModal.classList.remove("is-closing");
+  prepareDialogForOpen(eventModal);
   eventModal.showModal();
   eventModalInitialState = eventFormStateSnapshot();
   requestAnimationFrame(positionEventModal);
@@ -4666,6 +4752,17 @@ viewSwitcher.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-view]");
   if (!button) return;
   await setCurrentView(button.dataset.view);
+});
+document.addEventListener("keydown", (event) => {
+  if (event.repeat || (event.key !== "Enter" && event.key !== " ")) return;
+  pressKeyboardMotion(event.target);
+});
+document.addEventListener("keyup", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  releaseKeyboardMotion(event.target);
+});
+document.addEventListener("focusout", (event) => {
+  releaseKeyboardMotion(event.target);
 });
 window.addEventListener("keydown", async (event) => {
   if (event.key === "Escape") {

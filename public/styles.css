@@ -50,15 +50,16 @@
   --calendar-block-lane-gap: 9px;
   --members-rail-width: 42px;
   --members-calendar-gap: 12px;
-  --motion-fast: 140ms;
-  --motion-standard: 220ms;
-  --motion-slow: 320ms;
-  --motion-shine: 860ms;
-  --motion-stagger: 18ms;
-  --motion-content-delay: 45ms;
-  --ease-standard: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-soft: cubic-bezier(0.25, 0.8, 0.25, 1);
+  --motion-press: 100ms;
+  --motion-fast: 150ms;
+  --motion-standard: 250ms;
+  --motion-slow: 350ms;
+  --motion-page: 400ms;
+  --motion-shine: 400ms;
+  --motion-stagger: 25ms;
+  --motion-content-delay: 50ms;
+  --ease-standard: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-entrance: cubic-bezier(0.25, 1, 0.5, 1);
 }
 
 :root[data-theme="dark"] {
@@ -126,19 +127,31 @@ button {
   font-weight: 800;
   transition:
     transform var(--motion-fast) var(--ease-standard),
-    background-color var(--motion-standard) var(--ease-standard),
-    border-color var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard),
-    color var(--motion-standard) var(--ease-standard),
     opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 button:not(:disabled):hover {
-  transform: translateY(-1px);
+  transform: translate3d(0, -1px, 0) scale(1.01);
 }
 
 button:not(:disabled):active {
-  transform: translateY(0) scale(0.985);
+  transition-duration: var(--motion-press);
+  transition-timing-function: var(--ease-entrance);
+  transform: translate3d(0, 0, 0) scale(0.96);
+}
+
+:where(a, summary, [role="button"]) {
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
+}
+
+:where(a, summary, [role="button"]):is(:active, .is-pressed) {
+  transition-duration: var(--motion-press);
+  transition-timing-function: var(--ease-entrance);
+  transform: translate3d(0, 0, 0) scale(0.96);
 }
 
 input,
@@ -151,10 +164,14 @@ textarea {
   background: color-mix(in srgb, var(--surface) 84%, white 16%);
   color: var(--ink);
   transition:
-    background-color var(--motion-standard) var(--ease-standard),
-    border-color var(--motion-standard) var(--ease-standard),
-    color var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard);
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
+}
+
+input:not([type="checkbox"]):not([type="radio"]):focus,
+textarea:focus {
+  transform: translateZ(0) scale(1.002);
 }
 
 textarea {
@@ -230,7 +247,8 @@ a:focus-visible {
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(18px);
   pointer-events: auto;
-  animation: notification-in var(--motion-slow) var(--ease-standard) both;
+  animation: notification-in var(--motion-slow) var(--ease-entrance) both;
+  will-change: transform, opacity;
 }
 
 .notification-card::before {
@@ -239,12 +257,12 @@ a:focus-visible {
   inset: -40% -80%;
   background: linear-gradient(110deg, transparent 35%, rgba(255, 255, 255, 0.18), transparent 62%);
   transform: translateX(-45%) rotate(8deg);
-  animation: notification-shine var(--motion-shine) var(--ease-standard) var(--motion-fast) both;
+  animation: notification-shine var(--motion-shine) var(--ease-entrance) var(--motion-fast) both;
   pointer-events: none;
 }
 
 .notification-card.is-leaving {
-  animation: notification-out var(--motion-standard) var(--ease-standard) both;
+  animation: notification-out var(--motion-fast) var(--ease-standard) both;
 }
 
 .notification-card.is-success {
@@ -341,10 +359,9 @@ a:focus-visible {
   opacity: 0;
   transform: translateY(4px);
   transition:
-    max-height var(--motion-standard) var(--ease-in-out),
     opacity var(--motion-fast) var(--ease-standard),
-    transform var(--motion-standard) var(--ease-standard),
-    margin-top var(--motion-standard) var(--ease-in-out);
+    transform var(--motion-standard) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .notification-card:hover .notification-actions,
@@ -381,7 +398,7 @@ a:focus-visible {
 @keyframes notification-in {
   from {
     opacity: 0;
-    transform: translate3d(-10px, -6px, 0) scale(0.98);
+    transform: translate3d(0, -10px, 0) scale(0.9);
   }
   to {
     opacity: 1;
@@ -392,7 +409,7 @@ a:focus-visible {
 @keyframes notification-out {
   to {
     opacity: 0;
-    transform: translate3d(-8px, -4px, 0) scale(0.98);
+    transform: translate3d(0, -6px, 0) scale(0.96);
   }
 }
 
@@ -816,9 +833,8 @@ a:focus-visible {
   padding: 22px;
   transition:
     transform var(--motion-fast) var(--ease-standard),
-    border-color var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard),
-    background-color var(--motion-standard) var(--ease-standard);
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .choice-card:hover {
@@ -1219,12 +1235,9 @@ a:focus-visible {
   color: var(--ink);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   transition:
-    max-width var(--motion-slow) var(--ease-standard),
-    padding var(--motion-slow) var(--ease-standard),
-    border-color var(--motion-standard) var(--ease-standard),
-    background-color var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard),
-    transform var(--motion-standard) var(--ease-standard);
+    transform var(--motion-standard) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .room-switch-tab::after {
@@ -1255,8 +1268,9 @@ a:focus-visible {
     transparent 100%
   );
   transition:
-    transform var(--motion-slow) var(--ease-standard),
-    opacity var(--motion-standard) var(--ease-standard);
+    transform var(--motion-shine) var(--ease-entrance),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .room-switch-tab:hover,
@@ -1302,8 +1316,8 @@ a:focus-visible {
   line-height: 1;
   transition:
     transform var(--motion-standard) var(--ease-standard),
-    background-color var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard);
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .room-switch-tab:hover .room-switch-mark,
@@ -1324,9 +1338,9 @@ a:focus-visible {
   text-overflow: ellipsis;
   transform: translateX(-8px);
   transition:
-    opacity var(--motion-standard) var(--ease-standard) 60ms,
-    transform var(--motion-standard) var(--ease-standard) 60ms,
-    max-width var(--motion-slow) var(--ease-standard);
+    opacity var(--motion-standard) var(--ease-standard) var(--motion-content-delay),
+    transform var(--motion-standard) var(--ease-standard) var(--motion-content-delay);
+  will-change: transform, opacity;
 }
 
 .room-switch-label {
@@ -1472,7 +1486,9 @@ a:focus-visible {
   -webkit-mask-size: contain;
   mask-size: contain;
   pointer-events: none;
-  transition: transform var(--motion-fast) var(--ease-standard);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
 }
 
 .ui-icon-calendar-sync { --icon-url: url("/icons/calendar-sync.svg"); }
@@ -1543,7 +1559,9 @@ a:focus-visible {
   stroke-linecap: round;
   stroke-linejoin: round;
   pointer-events: none;
-  transition: transform var(--motion-fast) var(--ease-standard);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
 }
 
 .date-nav-button .icon,
@@ -1580,10 +1598,8 @@ a:focus-visible {
   background: transparent;
   color: var(--muted);
   transition:
-    background-color var(--motion-standard) var(--ease-standard),
-    color var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard),
-    transform var(--motion-fast) var(--ease-standard);
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
 }
 
 .view-switcher button.active {
@@ -1613,7 +1629,9 @@ a:focus-visible {
     var(--surface);
   box-shadow: var(--shadow);
   transform: translateX(calc(-100% + 42px));
-  transition: transform var(--motion-slow) var(--ease-standard);
+  transition:
+    transform var(--motion-slow) var(--ease-entrance),
+    opacity var(--motion-fast) var(--ease-standard);
   touch-action: pan-y;
   will-change: transform;
 }
@@ -1643,7 +1661,6 @@ a:focus-visible {
   text-transform: uppercase;
   box-shadow: none;
   user-select: none;
-  transition: color var(--motion-standard) var(--ease-standard);
 }
 
 .participants-rail span {
@@ -1676,6 +1693,7 @@ a:focus-visible {
   transition:
     opacity var(--motion-standard) var(--ease-standard),
     transform var(--motion-standard) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .participants-sidebar:hover .participants-card > *,
@@ -1748,10 +1766,8 @@ a:focus-visible {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
   transition:
     opacity var(--motion-standard) var(--ease-standard),
-    transform var(--motion-fast) var(--ease-standard),
-    background-color var(--motion-standard) var(--ease-standard),
-    border-color var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard);
+    transform var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .participant-chip[role="button"] {
@@ -1854,8 +1870,8 @@ a:focus-visible {
   pointer-events: none;
   transition:
     opacity var(--motion-fast) var(--ease-standard),
-    transform var(--motion-fast) var(--ease-standard),
-    background-color var(--motion-standard) var(--ease-standard);
+    transform var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .participant-chip:hover .chip-action,
@@ -1956,18 +1972,19 @@ a:focus-visible {
   background: var(--surface);
   box-shadow: var(--shadow);
   opacity: 0;
-  transform: translateY(-4px);
-  animation: color-menu-in var(--motion-standard) var(--ease-standard) forwards;
+  transform: translate3d(0, 10px, 0) scale(0.9);
+  animation: color-menu-in var(--motion-slow) var(--ease-entrance) forwards;
+  will-change: transform, opacity;
 }
 
 @keyframes color-menu-in {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translate3d(0, 10px, 0) scale(0.9);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
@@ -2090,9 +2107,9 @@ a:focus-visible {
   border: 1px solid var(--line);
   position: relative;
   transition:
-    background-color var(--motion-standard) var(--ease-standard),
-    border-color var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard);
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .mini-toggle-ui::after {
@@ -2105,7 +2122,16 @@ a:focus-visible {
   border-radius: 999px;
   background: var(--surface);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
-  transition: transform var(--motion-standard) var(--ease-standard);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
+}
+
+.mini-toggle:active .mini-toggle-ui {
+  transition-duration: var(--motion-press);
+  transition-timing-function: var(--ease-entrance);
+  transform: scale(0.96);
 }
 
 .mini-toggle:has(input:checked) .mini-toggle-ui {
@@ -2367,6 +2393,10 @@ a:focus-visible {
   cursor: pointer;
   position: relative;
   isolation: isolate;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .theme-toggle::before {
@@ -2376,8 +2406,17 @@ a:focus-visible {
   width: calc(50% - 4px);
   border-radius: 999px;
   background: var(--brand);
-  transition: transform var(--motion-standard) var(--ease-in-out);
+  transition:
+    transform var(--motion-standard) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
   z-index: -1;
+}
+
+.theme-toggle:active {
+  transition-duration: var(--motion-press);
+  transition-timing-function: var(--ease-entrance);
+  transform: scale(0.96);
 }
 
 .theme-toggle:has(input:checked)::before {
@@ -2672,22 +2711,67 @@ a:focus-visible {
   position: absolute;
   left: calc((100% / var(--day-count)) * var(--day-index) + var(--calendar-block-gap));
   width: calc((100% / var(--day-count)) - var(--calendar-block-double-gap));
-  top: calc(var(--start) * var(--row-height) + var(--calendar-block-half-gap));
-  height: max(18px, calc(var(--duration) * var(--row-height) - var(--calendar-block-gap)));
+  top: 0;
+  height: 0;
+  padding: 0;
+  transform: translate3d(0, var(--preview-y, 0px), 0);
+  opacity: 1;
+  pointer-events: none;
+  z-index: 9;
+  will-change: transform, opacity;
+}
+
+.drag-create-preview::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: var(--preview-base-height, var(--row-height));
+  transform: scaleY(var(--preview-scale, 1));
+  transform-origin: 50% 0;
+  clip-path: inset(0 round 10px / var(--preview-radius-y, 10px));
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--brand) 22%, transparent), color-mix(in srgb, var(--brand) 10%, transparent));
+  box-shadow:
+    inset 1px 0 0 color-mix(in srgb, var(--brand) 52%, transparent),
+    inset -1px 0 0 color-mix(in srgb, var(--brand) 52%, transparent);
+  will-change: transform, opacity;
+}
+
+.drag-create-preview::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 10px;
+  border: 1px solid color-mix(in srgb, var(--brand) 52%, transparent);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--brand) 16%, transparent);
+}
+
+.drag-create-preview-cap {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 10px;
+  transform: translate3d(0, var(--preview-bottom-y, 0px), 0);
+  border: 1px solid color-mix(in srgb, var(--brand) 52%, transparent);
+  border-top: 0;
+  border-radius: 0 0 10px 10px;
+  box-shadow:
+    inset 0 -1px 0 color-mix(in srgb, var(--brand) 16%, transparent),
+    0 12px 24px rgba(124, 84, 44, 0.14);
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.drag-create-preview-copy {
+  position: relative;
+  z-index: 2;
   display: grid;
   align-content: start;
   gap: 6px;
   padding: 8px 10px 10px;
-  border-radius: 10px;
-  border: 1px solid color-mix(in srgb, var(--brand) 52%, transparent);
-  background:
-    linear-gradient(180deg, color-mix(in srgb, var(--brand) 22%, transparent), color-mix(in srgb, var(--brand) 10%, transparent));
-  box-shadow:
-    inset 0 0 0 1px color-mix(in srgb, var(--brand) 16%, transparent),
-    0 12px 24px rgba(124, 84, 44, 0.14);
-  pointer-events: none;
-  z-index: 9;
-  will-change: top, height;
 }
 
 .drag-create-preview strong,
@@ -3000,8 +3084,8 @@ a:focus-visible {
   appearance: none;
   transition:
     transform var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard),
-    border-color var(--motion-standard) var(--ease-standard);
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
   box-shadow:
     0 8px 16px rgba(36, 24, 17, 0.12),
     inset 0 0 0 1px rgba(255, 248, 238, 0.06);
@@ -3168,19 +3252,20 @@ a:focus-visible {
   box-shadow: 0 20px 40px rgba(36, 24, 17, 0.2);
   backdrop-filter: blur(10px);
   opacity: 0;
-  transform: translateY(-6px) scale(0.985);
+  transform: translate3d(0, 10px, 0) scale(0.9);
   transform-origin: top left;
   pointer-events: none;
   transition:
-    opacity var(--motion-standard) var(--ease-standard),
-    transform var(--motion-standard) var(--ease-standard);
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-slow) var(--ease-entrance);
+  will-change: transform, opacity;
   z-index: 40;
 }
 
 .busy-stack.opens-upward .busy-stack-popover {
   top: auto;
   bottom: calc(100% + 12px);
-  transform: translateY(6px) scale(0.985);
+  transform: translate3d(0, -10px, 0) scale(0.9);
   transform-origin: bottom left;
 }
 
@@ -3188,7 +3273,7 @@ a:focus-visible {
 .busy-stack:hover .busy-stack-popover,
 .busy-stack:focus-within .busy-stack-popover {
   opacity: 1;
-  transform: translateY(0) scale(1);
+  transform: translate3d(0, 0, 0) scale(1);
   pointer-events: auto;
 }
 
@@ -3213,9 +3298,9 @@ a:focus-visible {
   transform: translate3d(0, -8px, 0);
   transition:
     opacity var(--motion-standard) var(--ease-standard),
-    transform var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard);
+    transform var(--motion-standard) var(--ease-standard);
   transition-delay: calc(var(--stack-order) * var(--motion-stagger));
+  will-change: transform, opacity;
   cursor: pointer;
 }
 
@@ -3665,13 +3750,15 @@ a:focus-visible {
   cursor: pointer;
   overflow: hidden;
   transition:
-    background-color var(--motion-fast) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard);
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .month-cell:hover,
 .month-cell:focus-visible {
   background: color-mix(in srgb, var(--brand) 6%, transparent);
+  transform: translate3d(0, -1px, 0) scale(1.005);
 }
 
 .month-date-number {
@@ -4659,7 +4746,10 @@ a:focus-visible {
   border-right: 2px solid var(--text-muted);
   border-bottom: 2px solid var(--text-muted);
   transform: rotate(45deg);
-  transition: transform var(--motion-standard) var(--ease-in-out);
+  transition:
+    transform var(--motion-standard) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .invite-dropdown[open] summary::after {
@@ -4679,7 +4769,7 @@ a:focus-visible {
   overflow-y: auto;
   visibility: hidden;
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translate3d(0, 10px, 0) scale(0.9);
   transform-origin: top center;
   pointer-events: none;
   border: 1px solid var(--line);
@@ -4688,16 +4778,15 @@ a:focus-visible {
   box-shadow: var(--shadow);
   transition:
     opacity var(--motion-fast) var(--ease-standard),
-    transform var(--motion-standard) var(--ease-standard),
-    visibility 0s linear var(--motion-standard);
+    transform var(--motion-slow) var(--ease-entrance);
+  will-change: transform, opacity;
 }
 
 .invite-dropdown[open] .invite-dropdown-panel {
   visibility: visible;
   opacity: 1;
-  transform: translateY(0);
+  transform: translate3d(0, 0, 0) scale(1);
   pointer-events: auto;
-  transition-delay: 0s;
 }
 
 .composer-sync-toggle {
@@ -6095,11 +6184,13 @@ a:focus-visible {
 
 /* CommonGround handover alignment: final responsive and interaction contract. */
 .modal[open] .modal-card {
-  animation: modal-in var(--motion-standard) var(--ease-standard) both;
+  animation: modal-in var(--motion-slow) var(--ease-entrance) both;
+  will-change: transform, opacity;
 }
 
 .modal[open]::backdrop {
-  animation: backdrop-in var(--motion-standard) var(--ease-standard) both;
+  animation: backdrop-in var(--motion-slow) var(--ease-entrance) both;
+  will-change: opacity;
 }
 
 .modal.is-closing .modal-card {
@@ -6113,18 +6204,18 @@ a:focus-visible {
 @keyframes modal-in {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.99);
+    transform: translate3d(0, 10px, 0) scale(0.9);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes modal-out {
   to {
     opacity: 0;
-    transform: translateY(5px) scale(0.985);
+    transform: translate3d(0, 6px, 0) scale(0.96);
   }
 }
 
@@ -6139,28 +6230,33 @@ a:focus-visible {
 
 /* Shared motion choreography for stateful CommonGround surfaces. */
 .motion-page-enter {
-  animation: page-enter var(--motion-standard) var(--ease-standard) both;
+  animation: page-enter var(--motion-page) var(--ease-entrance) both;
+  will-change: transform, opacity;
 }
 
 .host-popover.is-entering,
 .empty-room.is-entering {
-  animation: panel-enter var(--motion-standard) var(--ease-standard) both;
+  animation: panel-enter var(--motion-slow) var(--ease-entrance) both;
   transform-origin: top right;
+  will-change: transform, opacity;
 }
 
 .host-popover.is-closing,
 .empty-room.is-closing {
   animation: panel-exit var(--motion-fast) var(--ease-standard) both;
   pointer-events: none;
+  will-change: transform, opacity;
 }
 
 .detail-panel.is-entering {
-  animation: detail-panel-enter var(--motion-standard) var(--ease-standard) both;
+  animation: detail-panel-enter var(--motion-slow) var(--ease-entrance) both;
+  will-change: transform, opacity;
 }
 
 .detail-panel.is-closing {
   animation: detail-panel-exit var(--motion-fast) var(--ease-standard) both;
   pointer-events: none;
+  will-change: transform, opacity;
 }
 
 .calendar-wrap,
@@ -6178,20 +6274,24 @@ a:focus-visible {
   opacity: 0.42;
   transform: translateY(3px) scale(0.995);
   pointer-events: none;
+  will-change: transform, opacity;
 }
 
 .calendar-grid.is-view-entering {
-  animation: calendar-view-enter var(--motion-standard) var(--ease-standard) both;
+  animation: calendar-view-enter var(--motion-standard) var(--ease-entrance) both;
+  will-change: transform, opacity;
 }
 
 .room-page.is-room-switching .calendar-wrap {
   opacity: 0.52;
   transform: translateY(4px) scale(0.996);
   pointer-events: none;
+  will-change: transform, opacity;
 }
 
 .room-page.is-room-entering .calendar-wrap {
-  animation: calendar-view-enter var(--motion-standard) var(--ease-standard) both;
+  animation: calendar-view-enter var(--motion-standard) var(--ease-entrance) both;
+  will-change: transform, opacity;
 }
 
 .event-card,
@@ -6199,9 +6299,7 @@ a:focus-visible {
 .free-glow-block {
   transition:
     transform var(--motion-fast) var(--ease-standard),
-    border-color var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard),
-    filter var(--motion-standard) var(--ease-standard);
+    opacity var(--motion-fast) var(--ease-standard);
 }
 
 .event-card:hover,
@@ -6211,7 +6309,7 @@ a:focus-visible {
 .free-glow-block:hover,
 .free-glow-block:focus-visible {
   transform: translateY(-1px);
-  filter: saturate(1.04);
+  opacity: 0.98;
 }
 
 .event-card.is-selected {
@@ -6225,14 +6323,15 @@ a:focus-visible {
 .motion-feedback,
 .notification-card.is-success .notification-icon,
 #fullscreenButton.motion-state-change .ui-icon {
-  animation: feedback-pop var(--motion-standard) var(--ease-standard) both;
+  animation: feedback-pop var(--motion-fast) var(--ease-standard) both;
+  will-change: transform, opacity;
 }
 
 .composer-feedback {
   transition:
     opacity var(--motion-fast) var(--ease-standard),
-    transform var(--motion-fast) var(--ease-standard),
-    color var(--motion-standard) var(--ease-standard);
+    transform var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 .composer-feedback:empty {
@@ -6242,73 +6341,65 @@ a:focus-visible {
 
 .inline-status.is-loading,
 [aria-busy="true"] .primary {
-  animation: loading-pulse var(--motion-slow) var(--ease-soft) infinite alternate;
+  animation: loading-pulse var(--motion-slow) var(--ease-standard) infinite alternate;
+  will-change: opacity;
 }
 
-:root.is-theme-switching body,
-:root.is-theme-switching .room-topbar,
-:root.is-theme-switching .participants-sidebar,
-:root.is-theme-switching .host-panel,
-:root.is-theme-switching .calendar-wrap,
-:root.is-theme-switching .detail-panel,
-:root.is-theme-switching .modal-card,
-:root.is-theme-switching .panel,
-:root.is-theme-switching .event-card,
-:root.is-theme-switching .busy-card,
-:root.is-theme-switching .busy-stack-summary,
-:root.is-theme-switching input,
-:root.is-theme-switching textarea {
-  transition:
-    background-color var(--motion-standard) var(--ease-standard),
-    border-color var(--motion-standard) var(--ease-standard),
-    color var(--motion-standard) var(--ease-standard),
-    box-shadow var(--motion-standard) var(--ease-standard);
+:root.is-theme-switching body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  background: var(--paper);
+  pointer-events: none;
+  animation: theme-settle var(--motion-standard) var(--ease-standard) both;
+  will-change: transform, opacity;
 }
 
 @keyframes page-enter {
   from {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translate3d(0, 10px, 0) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes panel-enter {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.98);
+    transform: translate3d(0, 10px, 0) scale(0.9);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes panel-exit {
   to {
     opacity: 0;
-    transform: translateY(5px) scale(0.985);
+    transform: translate3d(0, 6px, 0) scale(0.96);
   }
 }
 
 @keyframes detail-panel-enter {
   from {
     opacity: 0;
-    transform: translateX(8px) scale(0.985);
+    transform: translate3d(10px, 0, 0) scale(0.9);
   }
   to {
     opacity: 1;
-    transform: translateX(0) scale(1);
+    transform: translate3d(0, 0, 0) scale(1);
   }
 }
 
 @keyframes detail-panel-exit {
   to {
     opacity: 0;
-    transform: translateX(6px) scale(0.99);
+    transform: translate3d(6px, 0, 0) scale(0.96);
   }
 }
 
@@ -6320,6 +6411,17 @@ a:focus-visible {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes theme-settle {
+  from {
+    opacity: 0.2;
+    transform: scale(1.002);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1);
   }
 }
 
@@ -6715,6 +6817,7 @@ a:focus-visible {
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     transition-delay: 0ms !important;
+    will-change: auto !important;
   }
 }
 

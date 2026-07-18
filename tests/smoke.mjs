@@ -96,6 +96,92 @@ function assertNoKeys(value, prohibitedKeys, trail = "response") {
   }
 }
 
+function stripCssComments(css) {
+  return css.replace(/\/\*[\s\S]*?\*\//g, "");
+}
+
+function splitCssList(value) {
+  const entries = [];
+  let depth = 0;
+  let start = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (character === "(") depth += 1;
+    if (character === ")") depth = Math.max(0, depth - 1);
+    if (character === "," && depth === 0) {
+      entries.push(value.slice(start, index).trim());
+      start = index + 1;
+    }
+  }
+  entries.push(value.slice(start).trim());
+  return entries.filter(Boolean);
+}
+
+function assertCompositorOnlyMotion(css) {
+  const source = stripCssComments(css);
+  const transitions = [...source.matchAll(/(?:^|[;{])\s*(transition(?:-property)?)\s*:\s*([^;{}]+)/gim)];
+  assert.ok(transitions.length > 0, "Expected at least one CSS transition declaration");
+  for (const [, declaration, rawValue] of transitions) {
+    const value = rawValue.replace(/\s*!important\s*$/i, "").trim();
+    if (value === "none") continue;
+    for (const entry of splitCssList(value)) {
+      const property = entry.match(/^([\w-]+)/)?.[1];
+      assert.ok(
+        property === "transform" || property === "opacity",
+        `${declaration} must animate only transform/opacity, received: ${rawValue.trim()}`
+      );
+    }
+  }
+
+  const willChangeDeclarations = [...source.matchAll(/(?:^|[;{])\s*will-change\s*:\s*([^;{}]+)/gim)];
+  assert.ok(willChangeDeclarations.length > 0, "Expected compositor will-change declarations");
+  for (const [, rawValue] of willChangeDeclarations) {
+    const values = splitCssList(rawValue.replace(/\s*!important\s*$/i, "").trim());
+    assert.ok(values.length > 0, "will-change must name a compositor property or reset to auto");
+    for (const property of values) {
+      assert.ok(
+        property === "transform" || property === "opacity" || property === "auto",
+        `will-change may only use transform, opacity, or auto; received: ${rawValue.trim()}`
+      );
+    }
+  }
+}
+
+function keyframeBlocks(css) {
+  const source = stripCssComments(css);
+  const blocks = [];
+  const keyframePattern = /@(?:-webkit-)?keyframes\s+([\w-]+)\s*\{/g;
+  let match;
+  while ((match = keyframePattern.exec(source))) {
+    let depth = 1;
+    let cursor = keyframePattern.lastIndex;
+    while (cursor < source.length && depth > 0) {
+      if (source[cursor] === "{") depth += 1;
+      if (source[cursor] === "}") depth -= 1;
+      cursor += 1;
+    }
+    assert.equal(depth, 0, `Unclosed @keyframes ${match[1]}`);
+    blocks.push({ name: match[1], body: source.slice(keyframePattern.lastIndex, cursor - 1) });
+    keyframePattern.lastIndex = cursor;
+  }
+  return blocks;
+}
+
+function assertTransformOpacityKeyframes(css) {
+  const blocks = keyframeBlocks(css);
+  assert.ok(blocks.length > 0, "Expected motion keyframes in the stylesheet");
+  for (const block of blocks) {
+    const declarations = [...block.body.matchAll(/(?:^|[;{])\s*([\w-]+)\s*:\s*([^;{}]+)/gm)];
+    assert.ok(declarations.length > 0, `@keyframes ${block.name} has no declarations`);
+    for (const [, property] of declarations) {
+      assert.ok(
+        property === "transform" || property === "opacity",
+        `@keyframes ${block.name} may only animate transform/opacity, received: ${property}`
+      );
+    }
+  }
+}
+
 async function startServer() {
   let stdout = "";
   let stderr = "";
@@ -183,6 +269,42 @@ try {
   assert.match(eventComposerScript.text, /function closeDialogWithMotion\(dialog, afterClose\)/);
   assert.match(eventComposerScript.text, /async function animateCalendarTransition\(renderAction\)/);
   assert.match(eventComposerScript.text, /function prefersReducedMotion\(\)/);
+  assert.match(eventComposerScript.text, /const motionPressMs = 100;/);
+  assert.match(eventComposerScript.text, /const motionFastMs = 150;/);
+  assert.match(eventComposerScript.text, /const motionStandardMs = 250;/);
+  assert.match(eventComposerScript.text, /const motionSlowMs = 350;/);
+  assert.match(eventComposerScript.text, /const motionPageMs = 400;/);
+  assert.match(eventComposerScript.text, /const panelMotionTimers = new WeakMap\(\);/);
+  assert.match(eventComposerScript.text, /const dialogMotionTimers = new WeakMap\(\);/);
+  assert.match(eventComposerScript.text, /const replayMotionStates = new WeakMap\(\);/);
+  assert.match(
+    eventComposerScript.text,
+    /function resolvedCalendarRowHeight\(\) \{[\s\S]*?querySelector\("\.calendar-cell"\)\?\.getBoundingClientRect\(\)\.height[\s\S]*?Number\.isFinite\(renderedCellHeight\)/,
+    "Drag-create geometry must use the rendered row height, including fullscreen calc/min tracks"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const previousState = nodeStates\.get\(className\);[\s\S]*?if \(previousState\?\.timer\) window\.clearTimeout\(previousState\.timer\);[\s\S]*?const token = Symbol\(className\);[\s\S]*?if \(nodeStates\.get\(className\)\?\.token !== token\) return;/,
+    "Replayed motion must cancel stale timers and reject stale animation frames"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function prepareDialogForOpen\(dialog\) \{[\s\S]*?dialogMotionTimers\.get\(dialog\)[\s\S]*?window\.clearTimeout\(pendingTimer\)[\s\S]*?dialog\.classList\.remove\("is-closing"\)/,
+    "Opening a dialog must cancel any pending close timer"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function closeDialogWithMotion\(dialog, afterClose\) \{[\s\S]*?dialogMotionTimers\.get\(dialog\) !== timer \|\| !dialog\.classList\.contains\("is-closing"\)[\s\S]*?dialogMotionTimers\.set\(dialog, timer\);/,
+    "Dialog close completion must verify timer ownership and closing state"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function openCreateRoomModal\(\) \{[\s\S]*?prepareDialogForOpen\(createRoomModal\);[\s\S]*?createRoomModal\.showModal\(\);/
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function openEventModal\([^)]*\) \{[\s\S]*?prepareDialogForOpen\(eventModal\);[\s\S]*?eventModal\.showModal\(\);/
+  );
   assert.match(eventComposerScript.text, /let participantsDrawerGesture = null/);
   assert.match(eventComposerScript.text, /Math\.abs\(deltaX\) >= 32/);
   assert.doesNotMatch(eventComposerScript.text, /participantsRail\?\.addEventListener\("click"/);
@@ -196,10 +318,37 @@ try {
   assert.match(eventComposerStyles.text, /\.composer-body textarea\s*\{[^}]*min-height: 48px[^}]*resize: none/s);
   assert.match(eventComposerStyles.text, /\.color-option-list\s*\{[^}]*max-height: calc\(100dvh - 96px\)/s);
   assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*width: 18px[^}]*height: 18px/s);
-  assert.match(eventComposerStyles.text, /--motion-fast:\s*140ms/);
-  assert.match(eventComposerStyles.text, /--motion-standard:\s*220ms/);
-  assert.match(eventComposerStyles.text, /--motion-slow:\s*320ms/);
-  assert.match(eventComposerStyles.text, /--ease-standard:\s*cubic-bezier\(0\.22, 1, 0\.36, 1\)/);
+  assert.match(eventComposerStyles.text, /--motion-press:\s*100ms;/);
+  assert.match(eventComposerStyles.text, /--motion-fast:\s*150ms;/);
+  assert.match(eventComposerStyles.text, /--motion-standard:\s*250ms;/);
+  assert.match(eventComposerStyles.text, /--motion-slow:\s*350ms;/);
+  assert.match(eventComposerStyles.text, /--motion-page:\s*400ms;/);
+  assert.match(eventComposerStyles.text, /--ease-standard:\s*cubic-bezier\(0\.32, 0\.72, 0, 1\);/);
+  assert.match(eventComposerStyles.text, /--ease-entrance:\s*cubic-bezier\(0\.25, 1, 0\.5, 1\);/);
+  const approvedCurves = [
+    "cubic-bezier(0.25,1,0.5,1)",
+    "cubic-bezier(0.32,0.72,0,1)"
+  ];
+  const usedCurves = [...new Set(
+    stripCssComments(eventComposerStyles.text)
+      .match(/cubic-bezier\([^)]*\)/g)
+      ?.map((curve) => curve.replace(/\s+/g, "")) || []
+  )].sort();
+  assert.deepEqual(usedCurves, approvedCurves, "Only the two approved motion curves may be used");
+  assert.match(
+    eventComposerStyles.text,
+    /button:not\(:disabled\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(0\.96\)/s,
+    "Buttons must compress to scale(.96) on press"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@keyframes modal-in\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0[^}]*transform:\s*translate3d\(0, 10px, 0\) scale\(0\.9\)/,
+    "Modal entrance must begin at scale(.90)"
+  );
+  assert.match(eventComposerStyles.text, /\.drag-create-preview::before\s*\{[^}]*height:\s*var\(--preview-base-height[^}]*transform:\s*scaleY\(var\(--preview-scale/s);
+  assert.match(eventComposerStyles.text, /\.drag-create-preview-cap\s*\{[^}]*transform:\s*translate3d\(0, var\(--preview-bottom-y, 0px\), 0\)/s);
+  assertCompositorOnlyMotion(eventComposerStyles.text);
+  assertTransformOpacityKeyframes(eventComposerStyles.text);
   assert.match(eventComposerStyles.text, /\.modal\.is-closing \.modal-card/);
   assert.match(eventComposerStyles.text, /\.calendar-grid\.is-view-entering/);
   assert.match(eventComposerStyles.text, /\.event-composer\s*\{[^}]*max-height: calc\(100dvh - 12px\)[^}]*grid-template-rows: auto auto auto auto auto/s);
