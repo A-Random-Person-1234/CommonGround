@@ -1343,10 +1343,12 @@ function wireInlineNameEditor(target, getCurrentName, onSave, triggerEventName =
     const targetTag = target.tagName.toLowerCase();
     const targetId = target.id;
     const targetClassName = target.className;
+    const targetWidth = target.getBoundingClientRect().width;
     const input = document.createElement("input");
     input.type = "text";
     input.className = "inline-name-input";
     input.value = currentName;
+    if (targetWidth > 0) input.style.setProperty("--inline-name-width", `${targetWidth}px`);
     target.replaceWith(input);
     input.focus();
     input.select();
@@ -1427,7 +1429,7 @@ function renderTopbarIdentity() {
   topbarIdentity.innerHTML = `
     <button class="identity-name-button" id="topbarIdentityName" type="button">${escapeHtml(currentParticipant.displayName)}</button>
     <details class="color-picker-menu topbar-identity-menu">
-      <summary class="color-picker-trigger topbar-color-trigger" aria-label="Choose your color">
+      <summary class="color-picker-trigger topbar-color-trigger" aria-label="Choose your color, current ${escapeAttribute(currentColorOption.name)}">
         <span class="current-color-dot" style="--swatch-color: ${escapeAttribute(currentColorOption.value)}"></span>
       </summary>
       <div class="color-option-list">

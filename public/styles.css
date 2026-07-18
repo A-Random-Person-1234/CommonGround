@@ -6188,6 +6188,138 @@ button.free-glow-block:not(:disabled):active {
   box-shadow: 0 18px 34px rgba(36, 24, 17, 0.14);
 }
 
+/* Treat the participant name and colour as one segmented visual control while
+   preserving their separate button and disclosure hit targets. This override
+   intentionally follows the generic colour-picker rules. */
+.topbar-identity {
+  --identity-control-height: 36px;
+  --identity-name-min: 104px;
+  --identity-name-max: 174px;
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  width: auto;
+  height: var(--identity-control-height);
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--bg-soft) 6%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.topbar-identity > .identity-name-button,
+.topbar-identity > input.inline-name-input {
+  flex: 0 1 auto;
+  min-width: var(--identity-name-min);
+  max-width: var(--identity-name-max);
+  height: calc(var(--identity-control-height) - 2px);
+  min-height: calc(var(--identity-control-height) - 2px);
+  margin: 0;
+  padding: 0 11px 0 12px;
+  border: 0;
+  border-radius: 999px 0 0 999px;
+  background: transparent;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: none;
+  transform: none;
+}
+
+.topbar-identity > .identity-name-button {
+  width: auto;
+}
+
+.topbar-identity > input.inline-name-input {
+  width: clamp(
+    var(--identity-name-min),
+    var(--inline-name-width, var(--identity-name-min)),
+    var(--identity-name-max)
+  );
+}
+
+.topbar-identity > .topbar-identity-menu {
+  position: relative;
+  z-index: 12;
+  display: flex;
+  align-items: stretch;
+  flex: 0 0 36px;
+  width: 36px;
+  min-width: 36px;
+  height: calc(var(--identity-control-height) - 2px);
+}
+
+.topbar-identity > .topbar-identity-menu > .topbar-color-trigger {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: calc(var(--identity-control-height) - 2px);
+  min-height: calc(var(--identity-control-height) - 2px);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-left: 1px solid var(--line);
+  border-radius: 0 999px 999px 0;
+  background: transparent;
+  color: var(--ink);
+  transform: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  button.identity-name-button:not(:disabled):hover,
+  .topbar-identity > .topbar-identity-menu > .topbar-color-trigger:hover {
+    background: color-mix(in srgb, var(--brand) 9%, var(--surface));
+    opacity: 1;
+    transform: none;
+  }
+}
+
+button.identity-name-button:not(:disabled):active,
+.topbar-identity > .topbar-identity-menu > .topbar-color-trigger:active {
+  opacity: 0.86;
+  transform: none;
+}
+
+.topbar-identity > .topbar-identity-menu[open] > .topbar-color-trigger {
+  border-left-color: color-mix(in srgb, var(--brand) 36%, var(--line));
+  background: color-mix(in srgb, var(--brand) 12%, var(--surface));
+  transform: none;
+}
+
+.topbar-identity:focus-within {
+  border-color: color-mix(in srgb, var(--brand) 62%, var(--line));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    0 0 0 3px color-mix(in srgb, var(--brand) 20%, transparent);
+}
+
+.topbar-identity > .identity-name-button:focus-visible,
+.topbar-identity > input.inline-name-input:focus-visible,
+.topbar-identity > .topbar-identity-menu > .topbar-color-trigger:focus-visible {
+  position: relative;
+  z-index: 2;
+  outline: none;
+  border-color: transparent;
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--brand) 72%, transparent);
+  transform: none;
+}
+
+.topbar-identity > input.inline-name-input:focus {
+  transform: none;
+}
+
+.topbar-identity > .topbar-identity-menu > .color-option-list {
+  top: calc(100% + 8px);
+  right: 0;
+  left: auto;
+  width: min(220px, calc(100vw - 16px));
+  min-width: min(200px, calc(100vw - 16px));
+}
+
 /* CommonGround handover alignment: final responsive and interaction contract. */
 .modal[open] .modal-card {
   animation: modal-in var(--motion-slow) var(--ease-entrance) both;
@@ -6529,6 +6661,11 @@ button.free-glow-block:not(:disabled):active {
 
   .room-actions {
     gap: 6px;
+  }
+
+  .topbar-identity {
+    --identity-name-min: 92px;
+    --identity-name-max: 116px;
   }
 
   .topbar-identity,

@@ -260,6 +260,11 @@ try {
   );
   assert.doesNotMatch(home.text, /<button[^>]*class="participants-rail"/);
   assert.doesNotMatch(home.text, /id="participantsRail"/);
+  assert.match(
+    home.text,
+    /<div class="topbar-identity" id="topbarIdentity" role="group" aria-label="Your room identity"><\/div>/,
+    "The name and colour controls must share one labelled visual group"
+  );
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
   assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
   assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
@@ -267,6 +272,12 @@ try {
   assert.match(eventComposerScript.text, /function setButtonLabelWithIcon\(button, label, iconClass\)/);
   assert.match(eventComposerScript.text, /function setPanelVisibility\(panel, visible/);
   assert.match(eventComposerScript.text, /function closeDialogWithMotion\(dialog, afterClose\)/);
+  assert.match(eventComposerScript.text, /input\.style\.setProperty\("--inline-name-width", `\$\{targetWidth\}px`\)/);
+  assert.match(
+    eventComposerScript.text,
+    /<button class="identity-name-button"[^>]*>[\s\S]*?<\/button>\s*<details class="color-picker-menu topbar-identity-menu">\s*<summary class="color-picker-trigger topbar-color-trigger" aria-label="Choose your color, current \$\{escapeAttribute\(currentColorOption\.name\)\}">/,
+    "The segmented identity must retain separate name and colour controls"
+  );
   assert.match(eventComposerScript.text, /let roomSwitcherRenderSignature = "";/);
   assert.match(
     eventComposerScript.text,
@@ -355,6 +366,21 @@ try {
     );
   }
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerStyles.text,
+    /\.topbar-identity\s*\{[^}]*--identity-control-height:\s*36px[^}]*display:\s*inline-flex[^}]*gap:\s*0[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:\s*999px/s,
+    "The identity controls must render inside one outer pill"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.topbar-identity > \.topbar-identity-menu > \.topbar-color-trigger\s*\{[^}]*width:\s*36px[^}]*border:\s*0[^}]*border-left:\s*1px solid var\(--line\)[^}]*border-radius:\s*0 999px 999px 0/s,
+    "The colour control must remain an independent right-hand segment"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.topbar-identity > input\.inline-name-input\s*\{[^}]*width:\s*clamp\([^}]*--inline-name-width/s,
+    "Inline name editing must retain the name segment width"
+  );
   assert.match(eventComposerStyles.text, /\.composer-body textarea\s*\{[^}]*min-height: 48px[^}]*resize: none/s);
   assert.match(eventComposerStyles.text, /\.color-option-list\s*\{[^}]*max-height: calc\(100dvh - 96px\)/s);
   assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*width: 18px[^}]*height: 18px/s);
