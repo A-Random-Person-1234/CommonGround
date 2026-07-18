@@ -247,7 +247,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260718-emoji"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260718-flat-grid"/);
   assert.match(home.text, /src="\/app\.js\?v=20260718-emoji"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
@@ -572,7 +572,43 @@ try {
       `${option.name} is missing from the participant colour picker`
     );
   }
+  assert.match(
+    eventComposerScript.text,
+    /for \(const segment of freeSegmentsForDate\([\s\S]*?eventsLayer\.appendChild\(createFreeGlowBlock\([\s\S]*?for \(const eventBlock of dayEventBlocks\) \{\s*eventsLayer\.appendChild\(createEventBlock\(/,
+    "Free availability and scheduled events must remain separate sibling elements"
+  );
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerStyles.text,
+    /:root\[data-theme="dark"\]\s*\{[^}]*--calendar-bg:\s*#121212;[^}]*--calendar-line:\s*rgba\(255, 255, 255, 0\.05\);/s,
+    "Dark calendar canvases must use the flat #121212 surface and crisp grid line token"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.calendar-wrap\s*\{[^}]*background-color:\s*var\(--calendar-bg\);[^}]*background-image:\s*none;[^}]*box-shadow:\s*none;[^}]*filter:\s*none;[^}]*backdrop-filter:\s*none;/s,
+    "The calendar wrapper must not retain gradient, shadow, filter, or blur effects"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.calendar-grid\s*\{[^}]*background-color:\s*var\(--calendar-bg\);[^}]*background-image:\s*none;[^}]*box-shadow:\s*none;[^}]*filter:\s*none;[^}]*backdrop-filter:\s*none;/s,
+    "The calendar grid must be an opaque flat surface"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.free-glow-block\s*\{[^}]*border:\s*1px solid rgba\(218, 165, 32, 0\.3\);[^}]*border-radius:\s*8px;[^}]*background:\s*linear-gradient\(180deg, rgba\(218, 165, 32, 0\.05\) 0%, rgba\(218, 165, 32, 0\.02\) 100%\);[^}]*0 0 16px rgba\(218, 165, 32, 0\.12\),[^}]*inset 0 0 24px rgba\(218, 165, 32, 0\.08\);[^}]*mix-blend-mode:\s*normal;/s,
+    "Only Free blocks may own the exact isolated golden glow"
+  );
+  assert.match(eventComposerStyles.text, /\.free-glow-block::before\s*\{\s*content:\s*none;\s*\}/s);
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /\.free-glow-block::before\s*\{[^}]*radial-gradient/s,
+    "Free blocks must not use an oversized radial pseudo-element glow"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.busy-card,\s*\.busy-stack,\s*\.event-card\s*\{[^}]*filter:\s*none;[^}]*backdrop-filter:\s*none;[^}]*mix-blend-mode:\s*normal;/s,
+    "Scheduled and imported calendar blocks must use normal alpha compositing"
+  );
   assert.match(
     eventComposerStyles.text,
     /\.emoji-picker-popover\[popover\]\s*\{[^}]*width: 320px[^}]*height: 400px[^}]*border: 1px solid rgba\(255, 255, 255, 0\.08\)[^}]*border-radius: 12px[^}]*background: rgba\(22, 22, 23, 0\.8\)[^}]*backdrop-filter: blur\(20px\)[^}]*box-shadow: 0 12px 40px rgba\(0, 0, 0, 0\.5\)[^}]*will-change: transform, opacity/s,

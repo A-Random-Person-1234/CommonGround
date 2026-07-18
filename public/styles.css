@@ -91,6 +91,9 @@
   --overlap-surface-strong: rgba(219, 188, 147, 0.18);
   --overlap-border: rgba(216, 171, 104, 0.34);
   --overlap-border-strong: rgba(216, 171, 104, 0.52);
+  --calendar-bg: #121212;
+  --calendar-line: rgba(255, 255, 255, 0.05);
+  --calendar-line-strong: rgba(255, 255, 255, 0.08);
 }
 
 * {
@@ -735,7 +738,6 @@ a:focus-visible {
 .panel,
 .participants-card,
 .host-panel,
-.calendar-wrap,
 .detail-panel {
   border: 1px solid var(--line);
   border-radius: 18px;
@@ -2204,6 +2206,12 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   display: grid;
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
+  background-color: var(--calendar-bg);
+  background-image: none;
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .calendar-stage {
@@ -2211,6 +2219,12 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   grid-template-rows: minmax(0, 1fr);
   min-height: 0;
   overflow: hidden;
+  background-color: var(--calendar-bg);
+  background-image: none;
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .calendar-toolbar {
@@ -2275,7 +2289,14 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   overscroll-behavior: contain;
   width: 100%;
   flex: 1 1 auto;
+  border: 1px solid var(--calendar-line-strong);
   border-radius: 22px;
+  background-color: var(--calendar-bg);
+  background-image: none;
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .calendar-wrap > .calendar-toolbar,
@@ -2292,6 +2313,12 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   grid-template-rows: var(--calendar-header-height) repeat(var(--hour-count), var(--row-height));
   min-width: var(--calendar-min);
   min-height: 100%;
+  background-color: var(--calendar-bg);
+  background-image: none;
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* The legal links sit after the calendar content, so they only enter the
@@ -2593,8 +2620,8 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
 .day-header,
 .time-cell,
 .calendar-cell {
-  border-bottom: 1px solid var(--soft-line);
-  border-right: 1px solid var(--soft-line);
+  border-bottom: 1px solid var(--calendar-line);
+  border-right: 1px solid var(--calendar-line);
 }
 
 .calendar-corner,
@@ -2602,9 +2629,13 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   position: sticky;
   top: 0;
   z-index: 30;
-  background: var(--surface);
+  background-color: var(--calendar-bg);
+  background-image: none;
   background-clip: padding-box;
-  box-shadow: 0 9px 18px rgba(10, 8, 6, 0.14);
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .calendar-corner {
@@ -2673,9 +2704,8 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
 
 .day-header.selected {
   background: color-mix(in srgb, var(--brand) 9%, var(--surface));
-  box-shadow:
-    0 9px 18px rgba(10, 8, 6, 0.14),
-    inset 0 -3px 0 color-mix(in srgb, var(--brand) 82%, transparent);
+  border-bottom: 3px solid color-mix(in srgb, var(--brand) 82%, transparent);
+  box-shadow: none;
 }
 
 .day-header.selected .day-header-date {
@@ -2684,14 +2714,15 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
 
 .day-header.today.selected .day-header-date {
   color: #fff;
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 24%, transparent);
+  box-shadow: none;
 }
 
 .time-cell {
   position: sticky;
   left: 0;
   z-index: 3;
-  background: var(--surface);
+  background-color: var(--calendar-bg);
+  background-image: none;
   color: var(--muted);
   font-size: 12px;
   padding: 10px 12px 0 0;
@@ -2699,8 +2730,21 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
 }
 
 .calendar-cell {
+  background-color: var(--calendar-bg);
   background:
-    linear-gradient(to bottom, transparent 0, transparent calc(50% - 1px), var(--soft-line) calc(50% - 1px), transparent 50%);
+    linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent calc(50% - 1px),
+      var(--calendar-line) calc(50% - 1px),
+      var(--calendar-line) 50%,
+      transparent 50%
+    ),
+    var(--calendar-bg);
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 .calendar-grid.day-view .calendar-cell,
@@ -2718,6 +2762,12 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   inset: var(--calendar-header-height) 0 0 var(--time-width);
   pointer-events: none;
   z-index: 2;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  mix-blend-mode: normal;
 }
 
 .drag-create-preview {
@@ -2813,7 +2863,7 @@ button.free-glow-block:not(:disabled):active {
 }
 
 .free-glow-block {
-  --free-radius: 14px;
+  --free-radius: 8px;
   position: absolute;
   left: calc((100% / var(--day-count)) * var(--day-index) + var(--calendar-block-gap));
   width: calc((100% / var(--day-count)) - var(--calendar-block-double-gap));
@@ -2824,41 +2874,28 @@ button.free-glow-block:not(:disabled):active {
   justify-items: start;
   gap: 4px;
   padding: 16px 14px 12px;
-  border-radius: var(--free-radius);
-  border: 1px solid rgba(196, 147, 82, 0.78);
-  background-clip: padding-box;
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(218, 165, 32, 0.05) 0%, rgba(218, 165, 32, 0.02) 100%);
   box-shadow:
-    inset 0 0 0 1px rgba(255, 221, 128, 0.34),
-    0 0 18px rgba(196, 147, 82, 0.18),
-    0 14px 28px rgba(70, 45, 25, 0.08);
-  background:
-    linear-gradient(180deg, rgba(255, 249, 241, 0.12), rgba(196, 147, 82, 0.05)),
-    rgba(196, 147, 82, 0.07);
+    0 0 16px rgba(218, 165, 32, 0.12),
+    inset 0 0 24px rgba(218, 165, 32, 0.08);
   pointer-events: auto;
   text-align: left;
   overflow: hidden;
   isolation: isolate;
   z-index: 1;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  mix-blend-mode: normal;
 }
 
 .free-glow-block::before {
-  content: "";
-  position: absolute;
-  inset: 1px;
-  border-radius: calc(var(--free-radius) - 1px);
-  background:
-    radial-gradient(circle at 50% 12%, rgba(255, 226, 155, 0.22), transparent 58%),
-    linear-gradient(180deg, rgba(255, 231, 170, 0.12), rgba(196, 147, 82, 0));
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 231, 170, 0.28),
-    0 0 22px rgba(222, 178, 97, 0.24),
-    0 0 40px rgba(222, 178, 97, 0.16);
-  pointer-events: none;
-  z-index: 0;
+  content: none;
 }
 
 .free-glow-block.free-15 {
-  --free-radius: 8px;
   top: calc(var(--start) * var(--row-height) + 1px);
   height: max(9px, calc(var(--duration) * var(--row-height) - 2px));
   padding: 0;
@@ -2866,14 +2903,12 @@ button.free-glow-block:not(:disabled):active {
 }
 
 .free-glow-block.free-30 {
-  --free-radius: 10px;
   top: calc(var(--start) * var(--row-height) + var(--calendar-block-half-gap));
   height: max(16px, calc(var(--duration) * var(--row-height) - var(--calendar-block-gap)));
   padding: 4px 8px;
 }
 
 .free-glow-block.free-45 {
-  --free-radius: 12px;
   top: calc(var(--start) * var(--row-height) + 3px);
   height: max(24px, calc(var(--duration) * var(--row-height) - 6px));
   padding: 6px 10px;
@@ -2883,31 +2918,14 @@ button.free-glow-block:not(:disabled):active {
   padding: 9px 12px;
 }
 
-.free-glow-block {
-  border-color: rgba(214, 168, 90, 0.88);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 229, 164, 0.38),
-    0 0 24px rgba(214, 168, 90, 0.28),
-    0 0 42px rgba(214, 168, 90, 0.18),
-    0 14px 28px rgba(70, 45, 25, 0.1);
-  background:
-    linear-gradient(180deg, rgba(255, 250, 242, 0.16), rgba(214, 168, 90, 0.07)),
-    rgba(214, 168, 90, 0.08);
-}
-
 .free-glow-block:hover,
 .free-glow-block:focus-visible {
-  border-radius: var(--free-radius);
+  border-radius: 8px;
 }
 
 .free-glow-block:focus-visible {
-  outline: none;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 229, 164, 0.42),
-    0 0 0 2px color-mix(in srgb, var(--warning) 38%, transparent),
-    0 0 24px rgba(214, 168, 90, 0.3),
-    0 0 42px rgba(214, 168, 90, 0.2),
-    0 14px 28px rgba(70, 45, 25, 0.1);
+  outline: 2px solid rgba(218, 165, 32, 0.65);
+  outline-offset: 2px;
 }
 
 .free-glow-block strong,
@@ -2965,6 +2983,16 @@ button.free-glow-block:not(:disabled):active {
   padding: 8px 10px;
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
   pointer-events: auto;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  mix-blend-mode: normal;
+}
+
+.busy-stack-summary,
+.busy-stack-item {
+  filter: none;
+  mix-blend-mode: normal;
 }
 
 .busy-card {
@@ -2974,10 +3002,7 @@ button.free-glow-block:not(:disabled):active {
 }
 
 .busy-stack-item.invited-overlap {
-  box-shadow:
-    0 0 0 2px rgba(196, 147, 82, 0.8),
-    0 0 18px rgba(196, 147, 82, 0.28),
-    0 6px 14px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
 }
 
 .event-card {
@@ -2995,9 +3020,7 @@ button.free-glow-block:not(:disabled):active {
 .event-card.invitee {
   background: color-mix(in srgb, var(--brand) 78%, #20252d);
   border: 1px solid color-mix(in srgb, var(--brand) 72%, #111827);
-  box-shadow:
-    0 6px 14px rgba(15, 23, 42, 0.16),
-    inset 0 0 0 1px color-mix(in srgb, var(--brand) 18%, rgba(255, 255, 255, 0.16));
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
 }
 
 .busy-card {
@@ -6060,7 +6083,6 @@ button.free-glow-block:not(:disabled):active {
 :root:not([data-theme="dark"]) .panel,
 :root:not([data-theme="dark"]) .participants-sidebar,
 :root:not([data-theme="dark"]) .host-panel,
-:root:not([data-theme="dark"]) .calendar-wrap,
 :root:not([data-theme="dark"]) .detail-panel {
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(255, 252, 247, 0.52)),
@@ -6095,17 +6117,22 @@ button.free-glow-block:not(:disabled):active {
 }
 
 :root:not([data-theme="dark"]) .calendar-wrap {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.54), rgba(251, 247, 241, 0.88)),
-    var(--calendar-bg);
+  background-color: var(--calendar-bg);
+  background-image: none;
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 :root:not([data-theme="dark"]) .calendar-corner,
 :root:not([data-theme="dark"]) .day-header,
 :root:not([data-theme="dark"]) .time-cell {
-  background: color-mix(in srgb, var(--surface) 96%, var(--bg-soft) 4%);
+  background-color: var(--calendar-bg);
+  background-image: none;
   border-bottom-color: var(--calendar-line-strong);
   border-right-color: var(--calendar-line);
+  box-shadow: none;
 }
 
 :root:not([data-theme="dark"]) .calendar-cell {
@@ -6117,34 +6144,15 @@ button.free-glow-block:not(:disabled):active {
       transparent 0,
       transparent calc(50% - 1px),
       var(--calendar-line) calc(50% - 1px),
+      var(--calendar-line) 50%,
       transparent 50%
     ),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(243, 237, 229, 0.12));
+    var(--calendar-bg);
 }
 
 :root:not([data-theme="dark"]) .day-header.today .day-header-date {
   background: color-mix(in srgb, var(--brand) 88%, #8b613f);
-  box-shadow: 0 8px 18px rgba(168, 117, 72, 0.16);
-}
-
-:root:not([data-theme="dark"]) .free-glow-block {
-  border-color: var(--free-border);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.76), rgba(245, 239, 232, 0.46)),
-    var(--free-bg);
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.34),
-    0 8px 18px rgba(55, 38, 24, 0.06),
-    0 0 0 1px rgba(168, 117, 72, 0.07);
-}
-
-:root:not([data-theme="dark"]) .free-glow-block::before {
-  background:
-    radial-gradient(circle at 50% 14%, rgba(255, 244, 225, 0.3), transparent 58%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.2), rgba(168, 117, 72, 0.02));
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 247, 236, 0.24),
-    0 0 20px rgba(168, 117, 72, 0.09);
+  box-shadow: none;
 }
 
 :root:not([data-theme="dark"]) .free-glow-block strong,
@@ -6179,9 +6187,7 @@ button.free-glow-block:not(:disabled):active {
     color-mix(in srgb, var(--brand) 68%, #36281f)
   );
   border-color: color-mix(in srgb, var(--brand) 54%, rgba(36, 26, 20, 0.52));
-  box-shadow:
-    0 10px 22px rgba(39, 27, 18, 0.12),
-    inset 0 0 0 1px rgba(255, 248, 238, 0.1);
+  box-shadow: var(--event-shadow);
 }
 
 :root:not([data-theme="dark"]) .busy-stack-summary {
@@ -6475,10 +6481,10 @@ button.identity-name-button:not(:disabled):active,
 }
 
 .event-card.is-selected {
-  border-color: color-mix(in srgb, var(--brand) 76%, white 24%);
-  box-shadow:
-    0 0 0 2px color-mix(in srgb, var(--brand) 28%, transparent),
-    0 12px 28px rgba(20, 14, 10, 0.2);
+  border-color: rgba(255, 255, 255, 0.34);
+  outline: 2px solid rgba(255, 255, 255, 0.18);
+  outline-offset: 1px;
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
 }
 
 .room-code.is-copied,
@@ -6986,11 +6992,8 @@ button.identity-name-button:not(:disabled):active,
    collapsed single-busy and stacked-busy surfaces. */
 .busy-card.invited-overlap,
 .busy-stack.invited-overlap > .busy-stack-summary {
-  border-color: color-mix(in srgb, #c49352 88%, var(--line));
-  box-shadow:
-    0 0 0 2px rgba(196, 147, 82, 0.84),
-    0 0 18px rgba(196, 147, 82, 0.3),
-    0 6px 14px rgba(0, 0, 0, 0.18);
+  border-color: color-mix(in srgb, var(--line) 74%, var(--overlap-border) 26%);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
 }
 
 /* Premium event composer: one compact hierarchy on an exact 8px rhythm. */
