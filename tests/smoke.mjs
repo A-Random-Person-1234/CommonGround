@@ -387,6 +387,11 @@ try {
   );
   assert.match(eventComposerStyles.text, /\.drag-create-preview::before\s*\{[^}]*height:\s*var\(--preview-base-height[^}]*transform:\s*scaleY\(var\(--preview-scale/s);
   assert.match(eventComposerStyles.text, /\.drag-create-preview-cap\s*\{[^}]*transform:\s*translate3d\(0, var\(--preview-bottom-y, 0px\), 0\)/s);
+  assert.match(
+    eventComposerStyles.text,
+    /button\.free-glow-block:not\(:disabled\):active\s*\{[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(1\)[^}]*opacity:\s*0\.96/s,
+    "An active Free card must retain its true column bounds beneath the drag preview"
+  );
   assertCompositorOnlyMotion(eventComposerStyles.text);
   assertTransformOpacityKeyframes(eventComposerStyles.text);
   assert.match(eventComposerStyles.text, /\.modal\.is-closing \.modal-card/);

@@ -2719,6 +2719,14 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   will-change: transform, opacity;
 }
 
+/* Availability cards can also be drag surfaces. Preserve their true column
+   bounds while pressed so the full-width drag preview stays aligned, while
+   opacity still provides immediate press feedback. */
+button.free-glow-block:not(:disabled):active {
+  transform: translate3d(0, 0, 0) scale(1);
+  opacity: 0.96;
+}
+
 .drag-create-preview::before {
   content: "";
   position: absolute;
