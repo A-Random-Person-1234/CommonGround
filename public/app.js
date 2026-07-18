@@ -150,6 +150,7 @@ let appConfig = null;
 let sessionInfo = null;
 let currentRoom = null;
 let myRooms = [];
+let roomSwitcherRenderSignature = "";
 let currentParticipant = null;
 let currentIsHost = false;
 let googleBusy = [];
@@ -941,11 +942,35 @@ function switcherRooms() {
 function renderRoomSwitcher() {
   if (!roomSwitcher) return;
   const rooms = switcherRooms();
-  roomSwitcher.innerHTML = "";
-  roomSwitcher.classList.toggle("hidden", rooms.length === 0);
-  if (!rooms.length) return;
-
   const selectedCode = currentRoom?.code || normalizeRoomCodeInput(sessionInfo?.roomCode || "");
+  const renderSignature = JSON.stringify({
+    selectedCode,
+    rooms: rooms.map((room) => [
+      normalizeRoomCodeInput(room.code),
+      room.name || "Room",
+      room.emoji || defaultRoomEmoji,
+      Boolean(room.isHost),
+      room.participantCount || 0,
+      room.connectedCount || 0
+    ])
+  });
+
+  roomSwitcher.classList.toggle("hidden", rooms.length === 0);
+  if (!rooms.length) {
+    roomSwitcherRenderSignature = renderSignature;
+    if (roomSwitcher.childElementCount) roomSwitcher.innerHTML = "";
+    return;
+  }
+
+  const expectedChildCount = rooms.length + 1;
+  if (
+    renderSignature === roomSwitcherRenderSignature
+    && roomSwitcher.childElementCount === expectedChildCount
+  ) return;
+
+  roomSwitcherRenderSignature = renderSignature;
+  roomSwitcher.innerHTML = "";
+
   for (const room of rooms) {
     const code = normalizeRoomCodeInput(room.code);
     const item = document.createElement("div");
@@ -958,10 +983,12 @@ function renderRoomSwitcher() {
     button.dataset.roomCode = code;
     button.title = `${room.name || "Room"} · ${code}`;
     button.setAttribute("aria-current", isActive ? "page" : "false");
+    button.setAttribute("aria-label", `${room.name || "Room"}, ${room.isHost ? "Host" : "Member"}`);
 
     const mark = document.createElement("span");
     mark.className = "room-switch-mark";
     mark.textContent = room.emoji || roomInitials(room);
+    mark.setAttribute("aria-hidden", "true");
 
     const label = document.createElement("span");
     label.className = "room-switch-label";
@@ -988,7 +1015,9 @@ function renderRoomSwitcher() {
   addButton.title = "Create or join another room";
   addButton.setAttribute("aria-label", "Create or join another room");
   addButton.innerHTML = `
-    <span class="room-switch-mark ui-icon ui-icon-plus" aria-hidden="true"></span>
+    <span class="room-switch-mark" aria-hidden="true">
+      <span class="ui-icon ui-icon-plus"></span>
+    </span>
     <span class="room-switch-label">New room</span>
     <span class="room-switch-meta">Join</span>
   `;

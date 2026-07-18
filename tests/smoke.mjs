@@ -267,6 +267,17 @@ try {
   assert.match(eventComposerScript.text, /function setButtonLabelWithIcon\(button, label, iconClass\)/);
   assert.match(eventComposerScript.text, /function setPanelVisibility\(panel, visible/);
   assert.match(eventComposerScript.text, /function closeDialogWithMotion\(dialog, afterClose\)/);
+  assert.match(eventComposerScript.text, /let roomSwitcherRenderSignature = "";/);
+  assert.match(
+    eventComposerScript.text,
+    /const renderSignature = JSON\.stringify\(\{[\s\S]*?rooms: rooms\.map[\s\S]*?const expectedChildCount = rooms\.length \+ 1;[\s\S]*?renderSignature === roomSwitcherRenderSignature[\s\S]*?roomSwitcher\.childElementCount === expectedChildCount/,
+    "Unchanged room tiles must keep their DOM and in-progress hover state"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /<span class="room-switch-mark" aria-hidden="true">\s*<span class="ui-icon ui-icon-plus"><\/span>\s*<\/span>/,
+    "The add-room icon must use the same 22px mark container as room icons"
+  );
   assert.match(
     eventComposerScript.text,
     /function animateCalendarTransition\(renderAction\) \{\s*renderAction\(\);[\s\S]*?replayMotionClass\(calendarGrid, "is-view-entering", motionFastMs\);\s*\}/,
@@ -389,6 +400,32 @@ try {
     eventComposerStyles.text,
     /@keyframes calendar-view-enter\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0\.82[^}]*translateY\(2px\) scale\(0\.998\)/,
     "Calendar entrance must remain readable from its first painted frame"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.room-switch-tab\s*\{[^}]*width:\s*36px[^}]*max-width:\s*36px[^}]*transform var\(--motion-fast\) var\(--ease-standard\)[^}]*opacity var\(--motion-fast\) var\(--ease-standard\)/s,
+    "Room tiles must keep a fixed footprint and use the shared fast hover motion"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(hover: hover\) and \(pointer: fine\)\s*\{[\s\S]*?button\.room-switch-tab:not\(:disabled\):hover\s*\{[^}]*opacity:\s*0\.98[^}]*translate3d\(0, -1px, 0\) scale\(1\.01\)/,
+    "Room hover feedback must be compositor-only and limited to hover-capable pointers"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /button\.room-switch-tab:not\(:disabled\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*scale\(0\.96\)/s,
+    "Room tiles must retain the shared tactile press response"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.room-switch-label,\s*\.room-switch-meta\s*\{[^}]*position:\s*absolute[^}]*clip-path:\s*inset\(50%\)[^}]*pointer-events:\s*none/s,
+    "Room labels must stay accessible without changing the flex-row geometry"
+  );
+  assert.doesNotMatch(eventComposerStyles.text, /\.room-switch-tab\.is-expanded/);
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /\.room-switch-tab(?::hover|:focus(?:-visible)?)[^{]*\{[^}]*(?:max-width|padding-right)\s*:/s,
+    "Hover and focus must not resize room tiles"
   );
   assert.match(eventComposerStyles.text, /\.event-composer\s*\{[^}]*max-height: calc\(100dvh - 12px\)[^}]*grid-template-rows: auto auto auto auto auto/s);
   assert.match(eventComposerStyles.text, /#eventModal\s*\{[^}]*width: 100vw[^}]*height: 100dvh[^}]*max-width: none[^}]*overflow: visible/s);
