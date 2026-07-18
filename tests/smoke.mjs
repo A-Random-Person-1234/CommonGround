@@ -236,6 +236,8 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
+  assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
+  assert.doesNotMatch(home.text, /class="privacy-note"/);
   assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
   assert.doesNotMatch(home.text, /Six-character room code/);
   assert.doesNotMatch(home.text, /Letters and numbers; uppercase or lowercase both work\./);
@@ -275,6 +277,28 @@ try {
   assert.match(eventComposerScript.text, /function setButtonLabelWithIcon\(button, label, iconClass\)/);
   assert.match(eventComposerScript.text, /function setPanelVisibility\(panel, visible/);
   assert.match(eventComposerScript.text, /function closeDialogWithMotion\(dialog, afterClose\)/);
+  assert.match(
+    eventComposerScript.text,
+    /function formatDayHeader\(day\) \{[\s\S]*?class="day-header-date"[^>]*data-date="\$\{escapeAttribute\(dateKey\(day\.date\)\)\}"[^>]*aria-label="View \$\{escapeAttribute\(fullDate\)\} in day view"/,
+    "Planner headers must render each date number as an accessible button"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const dateButton = header\.querySelector\("\.day-header-date"\);[\s\S]*?dateButton\?\.addEventListener\("click", async \(\) => \{\s*await goToDay\(day\.date\);/,
+    "Planner date buttons must drill directly into the selected day"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const dateButton = document\.createElement\("button"\);[\s\S]*?dateButton\.className = "month-date-number";[\s\S]*?dateButton\.setAttribute\("aria-label", `View \$\{formatFullDate\(date\)\} in day view`\);[\s\S]*?await openDay\(\);/,
+    "Month date numbers must be native buttons with full-date labels"
+  );
+  assert.doesNotMatch(eventComposerScript.text, /cell\.setAttribute\("role", "button"\)/);
+  assert.doesNotMatch(eventComposerScript.text, /cell\.tabIndex = 0/);
+  assert.match(
+    eventComposerScript.text,
+    /node\.setAttribute\("aria-label", `View \$\{formatFullDate\(date\)\} in day view`\);[\s\S]*?await goToDay\(date\);/,
+    "Year date buttons must expose their full date and retain day drill-down"
+  );
   assert.match(eventComposerScript.text, /input\.style\.setProperty\("--inline-name-width", `\$\{targetWidth\}px`\)/);
   assert.match(
     eventComposerScript.text,
@@ -319,419 +343,4 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /if \(currentView === "year"\) \{\s*freeBusyGeneration \+= 1;\s*const pendingController = freeBusyController;\s*freeBusyController = null;\s*pendingController\?\.abort\(\);/,
-    "Year view must invalidate and release any older free\/busy request"
-  );
-  assert.match(eventComposerScript.text, /function prefersReducedMotion\(\)/);
-  assert.match(eventComposerScript.text, /const motionPressMs = 100;/);
-  assert.match(eventComposerScript.text, /const motionFastMs = 150;/);
-  assert.match(eventComposerScript.text, /const motionStandardMs = 250;/);
-  assert.match(eventComposerScript.text, /const motionSlowMs = 350;/);
-  assert.match(eventComposerScript.text, /const motionPageMs = 400;/);
-  assert.match(eventComposerScript.text, /const panelMotionTimers = new WeakMap\(\);/);
-  assert.match(eventComposerScript.text, /const dialogMotionTimers = new WeakMap\(\);/);
-  assert.match(eventComposerScript.text, /const replayMotionStates = new WeakMap\(\);/);
-  assert.match(
-    eventComposerScript.text,
-    /function resolvedCalendarRowHeight\(\) \{[\s\S]*?querySelector\("\.calendar-cell"\)\?\.getBoundingClientRect\(\)\.height[\s\S]*?Number\.isFinite\(renderedCellHeight\)/,
-    "Drag-create geometry must use the rendered row height, including fullscreen calc/min tracks"
-  );
-  assert.match(
-    eventComposerScript.text,
-    /const previousState = nodeStates\.get\(className\);[\s\S]*?if \(previousState\?\.timer\) window\.clearTimeout\(previousState\.timer\);[\s\S]*?const token = Symbol\(className\);[\s\S]*?if \(nodeStates\.get\(className\)\?\.token !== token\) return;/,
-    "Replayed motion must cancel stale timers and reject stale animation frames"
-  );
-  assert.match(
-    eventComposerScript.text,
-    /function prepareDialogForOpen\(dialog\) \{[\s\S]*?dialogMotionTimers\.get\(dialog\)[\s\S]*?window\.clearTimeout\(pendingTimer\)[\s\S]*?dialog\.classList\.remove\("is-closing"\)/,
-    "Opening a dialog must cancel any pending close timer"
-  );
-  assert.match(
-    eventComposerScript.text,
-    /function closeDialogWithMotion\(dialog, afterClose\) \{[\s\S]*?dialogMotionTimers\.get\(dialog\) !== timer \|\| !dialog\.classList\.contains\("is-closing"\)[\s\S]*?dialogMotionTimers\.set\(dialog, timer\);/,
-    "Dialog close completion must verify timer ownership and closing state"
-  );
-  assert.match(
-    eventComposerScript.text,
-    /function openCreateRoomModal\(\) \{[\s\S]*?prepareDialogForOpen\(createRoomModal\);[\s\S]*?createRoomModal\.showModal\(\);/
-  );
-  assert.match(
-    eventComposerScript.text,
-    /function openEventModal\([^)]*\) \{[\s\S]*?prepareDialogForOpen\(eventModal\);[\s\S]*?eventModal\.showModal\(\);/
-  );
-  assert.match(eventComposerScript.text, /let participantsDrawerGesture = null/);
-  assert.match(eventComposerScript.text, /Math\.abs\(deltaX\) >= 32/);
-  assert.doesNotMatch(eventComposerScript.text, /participantsRail\?\.addEventListener\("click"/);
-  for (const option of expectedParticipantPalette) {
-    assert.ok(
-      eventComposerScript.text.includes(`{ value: "${option.value}", name: "${option.name}" }`),
-      `${option.name} is missing from the participant colour picker`
-    );
-  }
-  const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
-  assert.match(
-    eventComposerStyles.text,
-    /\.home-grid\s*\{[^}]*grid-auto-rows:\s*1fr[^}]*align-items:\s*stretch/s,
-    "Home cards must share equal-height grid tracks"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /\.action-card\s*\{[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\) auto[^}]*align-content:\s*stretch/s,
-    "Home card controls must share a consistent three-row layout"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /\.topbar-identity\s*\{[^}]*--identity-control-height:\s*36px[^}]*display:\s*inline-flex[^}]*gap:\s*0[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:\s*999px/s,
-    "The identity controls must render inside one outer pill"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /\.topbar-identity > \.topbar-identity-menu > \.topbar-color-trigger\s*\{[^}]*width:\s*36px[^}]*border:\s*0[^}]*border-left:\s*1px solid var\(--line\)[^}]*border-radius:\s*0 999px 999px 0/s,
-    "The colour control must remain an independent right-hand segment"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /\.topbar-identity > input\.inline-name-input\s*\{[^}]*width:\s*clamp\([^}]*--inline-name-width/s,
-    "Inline name editing must retain the name segment width"
-  );
-  assert.match(eventComposerStyles.text, /\.composer-body textarea\s*\{[^}]*min-height: 48px[^}]*resize: none/s);
-  assert.match(eventComposerStyles.text, /\.color-option-list\s*\{[^}]*max-height: calc\(100dvh - 96px\)/s);
-  assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*width: 18px[^}]*height: 18px/s);
-  assert.match(eventComposerStyles.text, /--motion-press:\s*100ms;/);
-  assert.match(eventComposerStyles.text, /--motion-fast:\s*150ms;/);
-  assert.match(eventComposerStyles.text, /--motion-standard:\s*250ms;/);
-  assert.match(eventComposerStyles.text, /--motion-slow:\s*350ms;/);
-  assert.match(eventComposerStyles.text, /--motion-page:\s*400ms;/);
-  assert.match(eventComposerStyles.text, /--ease-standard:\s*cubic-bezier\(0\.32, 0\.72, 0, 1\);/);
-  assert.match(eventComposerStyles.text, /--ease-entrance:\s*cubic-bezier\(0\.25, 1, 0\.5, 1\);/);
-  const approvedCurves = [
-    "cubic-bezier(0.25,1,0.5,1)",
-    "cubic-bezier(0.32,0.72,0,1)"
-  ];
-  const usedCurves = [...new Set(
-    stripCssComments(eventComposerStyles.text)
-      .match(/cubic-bezier\([^)]*\)/g)
-      ?.map((curve) => curve.replace(/\s+/g, "")) || []
-  )].sort();
-  assert.deepEqual(usedCurves, approvedCurves, "Only the two approved motion curves may be used");
-  assert.match(
-    eventComposerStyles.text,
-    /button:not\(:disabled\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(0\.96\)/s,
-    "Buttons must compress to scale(.96) on press"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /@keyframes modal-in\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0[^}]*transform:\s*translate3d\(0, 10px, 0\) scale\(0\.9\)/,
-    "Modal entrance must begin at scale(.90)"
-  );
-  assert.match(eventComposerStyles.text, /\.drag-create-preview::before\s*\{[^}]*height:\s*var\(--preview-base-height[^}]*transform:\s*scaleY\(var\(--preview-scale/s);
-  assert.match(eventComposerStyles.text, /\.drag-create-preview-cap\s*\{[^}]*transform:\s*translate3d\(0, var\(--preview-bottom-y, 0px\), 0\)/s);
-  assert.match(
-    eventComposerStyles.text,
-    /button\.free-glow-block:not\(:disabled\):active\s*\{[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(1\)[^}]*opacity:\s*0\.96/s,
-    "An active Free card must retain its true column bounds beneath the drag preview"
-  );
-  assertCompositorOnlyMotion(eventComposerStyles.text);
-  assertTransformOpacityKeyframes(eventComposerStyles.text);
-  assert.match(eventComposerStyles.text, /\.modal\.is-closing \.modal-card/);
-  assert.match(
-    eventComposerStyles.text,
-    /\.calendar-grid\.is-view-entering\s*\{[^}]*animation:\s*calendar-view-enter var\(--motion-fast\) var\(--ease-standard\) both/s,
-    "The new timetable should settle in quickly after it is already rendered"
-  );
-  assert.doesNotMatch(eventComposerStyles.text, /\.calendar-grid\.is-view-exiting\s*\{/);
-  assert.match(
-    eventComposerStyles.text,
-    /@keyframes calendar-view-enter\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0\.82[^}]*translateY\(2px\) scale\(0\.998\)/,
-    "Calendar entrance must remain readable from its first painted frame"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /\.room-switch-tab\s*\{[^}]*width:\s*36px[^}]*max-width:\s*36px[^}]*transform var\(--motion-fast\) var\(--ease-standard\)[^}]*opacity var\(--motion-fast\) var\(--ease-standard\)/s,
-    "Room tiles must keep a fixed footprint and use the shared fast hover motion"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /@media \(hover: hover\) and \(pointer: fine\)\s*\{[\s\S]*?button\.room-switch-tab:not\(:disabled\):hover\s*\{[^}]*opacity:\s*0\.98[^}]*translate3d\(0, -1px, 0\) scale\(1\.01\)/,
-    "Room hover feedback must be compositor-only and limited to hover-capable pointers"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /button\.room-switch-tab:not\(:disabled\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*scale\(0\.96\)/s,
-    "Room tiles must retain the shared tactile press response"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /\.room-switch-label,\s*\.room-switch-meta\s*\{[^}]*position:\s*absolute[^}]*clip-path:\s*inset\(50%\)[^}]*pointer-events:\s*none/s,
-    "Room labels must stay accessible without changing the flex-row geometry"
-  );
-  assert.doesNotMatch(eventComposerStyles.text, /\.room-switch-tab\.is-expanded/);
-  assert.doesNotMatch(
-    eventComposerStyles.text,
-    /\.room-switch-tab(?::hover|:focus(?:-visible)?)[^{]*\{[^}]*(?:max-width|padding-right)\s*:/s,
-    "Hover and focus must not resize room tiles"
-  );
-  assert.match(eventComposerStyles.text, /\.event-composer\s*\{[^}]*max-height: calc\(100dvh - 12px\)[^}]*grid-template-rows: auto auto auto auto auto/s);
-  assert.match(eventComposerStyles.text, /#eventModal\s*\{[^}]*width: 100vw[^}]*height: 100dvh[^}]*max-width: none[^}]*overflow: visible/s);
-  assert.match(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow: visible/s);
-  assert.match(eventComposerStyles.text, /\.invite-dropdown-panel\s*\{[^}]*position: absolute[^}]*max-height: min\(220px, calc\(100dvh - 160px\)\)[^}]*overflow-y: auto/s);
-  assert.match(eventComposerStyles.text, /@media \(max-height: 560px\)[\s\S]*?\.composer-sync-toggle small\s*\{[^}]*display: none/);
-  assert.doesNotMatch(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow-y:\s*auto/s);
-  assert.match(eventComposerStyles.text, /\.calendar-legal-links\s*\{[^}]*position:\s*static[^}]*margin:\s*12px 12px 14px auto/s);
-  assert.match(eventComposerStyles.text, /\.calendar-wrap > \.calendar-grid\s*\{[^}]*min-height:\s*calc\(100% \+ 1px\)/s);
-  assert.match(eventComposerStyles.text, /\.room-page\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\)[^}]*overflow:\s*hidden/s);
-  assert.match(eventComposerStyles.text, /\.room-topbar\s*\{[^}]*position:\s*relative[^}]*top:\s*auto[^}]*margin-bottom:\s*8px/s);
-  assert.doesNotMatch(eventComposerStyles.text, /\.room-topbar\s*\{[^}]*position:\s*sticky/s);
-  assert.match(eventComposerStyles.text, /\.calendar-stage\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\)[^}]*overflow:\s*hidden/s);
-  assert.match(eventComposerStyles.text, /\.calendar-wrap\s*\{[^}]*grid-row:\s*1[^}]*overflow:\s*auto/s);
-  assert.match(
-    eventComposerStyles.text,
-    /\.calendar-grid\.year-view\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(150px, 1fr\)\)[^}]*grid-template-rows:\s*none[^}]*grid-auto-rows:\s*minmax\(214px, auto\)/s,
-    "Year view must clear the planner's explicit hourly rows before laying out months"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /\.participants-sidebar\s*\{[^}]*overflow:\s*hidden[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:\s*0 22px 22px 0[^}]*box-shadow:\s*var\(--shadow\)[^}]*touch-action:\s*pan-y/s,
-    "The participants drawer must own one unified outer surface"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /\.participants-card\s*\{[^}]*border:\s*0[^}]*border-radius:\s*0[^}]*background:\s*transparent[^}]*box-shadow:\s*none/s,
-    "The participants card must not render a second surface"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /\.participants-rail\s*\{[^}]*border:\s*0[^}]*background:\s*transparent[^}]*cursor:\s*default[^}]*box-shadow:\s*none/s,
-    "The Members label must be visually fused and non-interactive"
-  );
-  assert.match(eventComposerStyles.text, /\.participants-rail span\s*\{[^}]*pointer-events:\s*none/s);
-  assert.doesNotMatch(eventComposerStyles.text, /\.participants-rail\[aria-expanded="true"\]/);
-  assert.doesNotMatch(eventComposerStyles.text, /\.participants-rail:focus-visible/);
-  assert.match(
-    eventComposerStyles.text,
-    /@media \(min-width: 900px\)[\s\S]*?\.calendar-grid\.week-view\s*\{[^}]*min-width:\s*0[^}]*minmax\(0, 1fr\)/
-  );
-  assert.match(eventComposerStyles.text, /@media \(prefers-reduced-motion: reduce\)[\s\S]*transition-duration: 1ms !important/);
-  assert.doesNotMatch(eventComposerStyles.text, /transition:\s*all\b/);
-  for (const iconAsset of expectedIconAssets) {
-    const icon = await publicSession.request(`/icons/${iconAsset}`, { accept: "image/svg+xml" });
-    assert.match(icon.text, /<svg[^>]*viewBox="0 0 24 24"/);
-  }
-  const contentSecurityPolicy = home.response.headers.get("content-security-policy");
-  assert.ok(contentSecurityPolicy, "CSP header is missing");
-  assert.doesNotMatch(contentSecurityPolicy, /script-src[^;]*'unsafe-inline'/);
-  assert.equal(home.response.headers.get("x-content-type-options"), "nosniff");
-  assert.ok(home.response.headers.get("referrer-policy"), "Referrer-Policy header is missing");
-  await publicSession.request("/privacy", { accept: "text/html" });
-  await publicSession.request("/terms", { accept: "text/html" });
-  await publicSession.request("/api/me", { method: "POST", expected: 405 });
-
-  const host = new BrowserSession();
-  const guest = new BrowserSession();
-  const spectator = new BrowserSession();
-  await host.request("/api/me");
-  await guest.request("/api/me");
-  await spectator.request("/api/me");
-
-  const created = await host.request("/api/rooms", {
-    method: "POST",
-    expected: 201,
-    body: { name: "Decagon", emoji: "ðŸ§­", displayName: "Host" }
-  });
-  const firstCode = created.payload.room.code;
-  assert.match(firstCode, /^[A-HJ-NP-Z2-9]{6}$/);
-  assert.equal(created.payload.room.emoji, "ðŸ§­");
-  assert.equal(created.payload.isHost, true);
-
-  const secondRoom = await host.request("/api/rooms", {
-    method: "POST",
-    expected: 201,
-    body: { name: "Second room", emoji: "ðŸŽ’", displayName: "Host" }
-  });
-  assert.notEqual(secondRoom.payload.room.code, firstCode);
-  const memberships = await host.request("/api/my-rooms");
-  assert.equal(memberships.payload.rooms.length, 2);
-  assert.ok(memberships.payload.rooms.some((room) => room.code === firstCode && room.emoji === "ðŸ§­"));
-
-  const joined = await guest.request(`/api/rooms/${firstCode.toLowerCase()}/join`, {
-    method: "POST",
-    body: { displayName: "Guest <img src=x onerror=alert(1)>" }
-  });
-  assert.equal(joined.payload.room.code, firstCode);
-  const guestId = joined.payload.participant.id;
-
-  const spectatorJoin = await spectator.request(`/api/rooms/${firstCode}/join`, {
-    method: "POST",
-    body: { displayName: "Spectator" }
-  });
-  const spectatorId = spectatorJoin.payload.participant.id;
-
-  const hostRoom = await host.request(`/api/rooms/${firstCode}`);
-  const hostId = hostRoom.payload.participant.id;
-  assert.equal(hostRoom.payload.room.participants.length, 3);
-  assertNoKeys(hostRoom.payload, new Set(["userId", "ownerEmail", "tokens", "googleTokens", "microsoftTokens"]));
-
-  for (const { value: color } of expectedParticipantPalette) {
-    const recolored = await host.request(`/api/rooms/${firstCode}/participants/${hostId}`, {
-      method: "PATCH",
-      body: { color }
-    });
-    assert.equal(recolored.payload.participant.color, color);
-  }
-  const migratedLegacyColor = await host.request(`/api/rooms/${firstCode}/participants/${hostId}`, {
-    method: "PATCH",
-    body: { color: "#2F6F9F" }
-  });
-  assert.equal(migratedLegacyColor.payload.participant.color, "#65758A");
-
-  await guest.request(`/api/rooms/${firstCode}`, {
-    method: "PATCH",
-    expected: 403,
-    body: { name: "Not allowed" }
-  });
-
-  const start = "2026-07-20T10:00:00.000Z";
-  const end = "2026-07-20T10:30:00.000Z";
-  const createdEvent = await host.request(`/api/rooms/${firstCode}/events`, {
-    method: "POST",
-    expected: 201,
-    body: {
-      title: "",
-      start,
-      end,
-      timezone: "Asia/Kolkata",
-      location: "Cafe",
-      description: "Room-visible proposal",
-      inviteeParticipantIds: [hostId, guestId],
-      syncToGoogle: false
-    }
-  });
-  const eventId = createdEvent.payload.event.id;
-  assert.equal(createdEvent.payload.event.title, "(No title)");
-  assert.equal(createdEvent.payload.event.timezone, "Asia/Kolkata");
-  assertNoKeys(createdEvent.payload, new Set(["googleCalendarSync", "outlookCalendarSync", "ownerEmail", "userId"]));
-
-  const allDayStart = "2026-07-19T18:30:00.000Z";
-  const allDayEnd = "2026-07-20T18:30:00.000Z";
-  const allDayEvent = await host.request(`/api/rooms/${firstCode}/events`, {
-    method: "POST",
-    expected: 201,
-    body: {
-      title: "Local all-day plan",
-      start: allDayStart,
-      end: allDayEnd,
-      timezone: "Asia/Kolkata",
-      allDay: true,
-      inviteeParticipantIds: [hostId]
-    }
-  });
-  assert.equal(allDayEvent.payload.event.date, "2026-07-20");
-  assert.equal(allDayEvent.payload.event.allDay, true);
-
-  const preservedAllDayEvent = await host.request(`/api/rooms/${firstCode}/events/${allDayEvent.payload.event.id}`, {
-    method: "PATCH",
-    body: {
-      title: "Renamed all-day plan",
-      start: allDayStart,
-      end: allDayEnd,
-      inviteeParticipantIds: [hostId]
-    }
-  });
-  assert.equal(preservedAllDayEvent.payload.event.timezone, "Asia/Kolkata");
-  assert.equal(preservedAllDayEvent.payload.event.date, "2026-07-20");
-  assert.equal(preservedAllDayEvent.payload.event.allDay, true);
-  const allDayIcs = await host.request(
-    `/api/rooms/${firstCode}/events/${allDayEvent.payload.event.id}/ics`,
-    { accept: "text/calendar" }
-  );
-  assert.match(allDayIcs.text, /DTSTART;VALUE=DATE:20260720/);
-  assert.match(allDayIcs.text, /DTEND;VALUE=DATE:20260721/);
-
-  const guestInviteNotifications = await guest.request("/api/notifications");
-  assert.ok(guestInviteNotifications.payload.notifications.some((item) => item.type === "event_invite"));
-
-  const spectatorRoom = await spectator.request(`/api/rooms/${firstCode}`);
-  const spectatorEvent = spectatorRoom.payload.room.events.find((event) => event.id === eventId);
-  assert.equal(spectatorEvent.title, "(No title)");
-  assert.equal(spectatorEvent.isInvited, false);
-  await spectator.request(`/api/rooms/${firstCode}/events/${eventId}/respond`, {
-    method: "POST",
-    expected: 403,
-    body: { response: "yes" }
-  });
-
-  const vote = await guest.request(`/api/rooms/${firstCode}/events/${eventId}/respond`, {
-    method: "POST",
-    body: { response: "yes" }
-  });
-  assert.equal(vote.payload.event.responseSummary.yes, 1);
-
-  await guest.request(`/api/rooms/${firstCode}/events/${eventId}/comments`, {
-    method: "POST",
-    expected: 201,
-    body: { text: "<img id=xss src=x onerror=alert(1)> Looks good" }
-  });
-
-  await guest.request(`/api/rooms/${firstCode}/events/${eventId}/respond`, {
-    method: "POST",
-    expected: [200, 400, 422],
-    body: {
-      response: "yes",
-      proposedStart: "2026-07-20T12:00:00.000Z",
-      proposedEnd: "2026-07-20T13:00:00.000Z"
-    }
-  });
-  const unchangedRoom = await host.request(`/api/rooms/${firstCode}`);
-  const unchangedEvent = unchangedRoom.payload.room.events.find((event) => event.id === eventId);
-  assert.equal(unchangedEvent.start, start);
-  assert.equal(unchangedEvent.end, end);
-
-  const freeBusy = await host.request(
-    `/api/rooms/${firstCode}/freebusy?timeMin=2026-07-20T00:00:00.000Z&timeMax=2026-07-21T00:00:00.000Z`
-  );
-  assertNoKeys(freeBusy.payload, new Set([
-    "userId",
-    "ownerEmail",
-    "title",
-    "location",
-    "description",
-    "googleCalendarSync",
-    "outlookCalendarSync"
-  ]));
-
-  await stopServer(server);
-  server = await startServer();
-  const persistedRoom = await host.request(`/api/rooms/${firstCode}`);
-  assert.ok(persistedRoom.payload.room.events.some((event) => event.id === eventId));
-
-  const refreshed = await host.request(`/api/rooms/${firstCode}/refresh-code`, {
-    method: "POST"
-  });
-  const refreshedCode = refreshed.payload.room.code;
-  assert.match(refreshedCode, /^[A-HJ-NP-Z2-9]{6}$/);
-  assert.notEqual(refreshedCode, firstCode);
-  await publicSession.request(`/api/rooms/${firstCode}`, { expected: 404 });
-
-  const migratedNotifications = await guest.request("/api/notifications");
-  assert.ok(
-    migratedNotifications.payload.notifications
-      .filter((item) => item.eventId === eventId)
-      .every((item) => item.roomCode === refreshedCode),
-    "Event notifications were not migrated to the refreshed room code"
-  );
-
-  await host.request(`/api/rooms/${refreshedCode}`, { method: "DELETE" });
-  const afterDeleteRooms = await guest.request("/api/my-rooms");
-  assert.ok(!afterDeleteRooms.payload.rooms.some((room) => room.code === refreshedCode));
-  const afterDeleteNotifications = await guest.request("/api/notifications");
-  assert.ok(!afterDeleteNotifications.payload.notifications.some((item) => item.roomCode === refreshedCode));
-
-  console.log("CommonGround smoke checks passed.");
-} catch (error) {
-  console.error(error.stack || error.message || error);
-  if (server) console.error(server.logs());
-  process.exitCode = 1;
-} finally {
-  await stopServer(server);
-  rmSync(runtimeDir, { recursive: true, force: true });
-}
+    /if \(currentView === "year"\) \{\s*freeBusyGeneration \+= 1;\s*const pendingController = freeBusyControllerÛ~õ¶‰žËkºwµçdÀ¤ˆ(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹‘É…œµÉ•…Ñ”µÁÉ•Ù¥•Üèé‰•™½É•qÌ©qímyõt©¡•¥¡ÐéqÌ©Ù…Ép ´µÁÉ•Ù¥•Üµ‰…Í”µ¡•¥¡Ñmyõt©ÑÉ…¹Í™½É´éqÌ©Í…±•ep¡Ù…Ép ´µÁÉ•Ù¥•ÜµÍ…±”½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹‘É…œµÉ•…Ñ”µÁÉ•Ù¥•Üµ…ÁqÌ©qímyõt©ÑÉ…¹Í™½É´éqÌ©ÑÉ…¹Í±…Ñ”Í‘p À°Ù…Ép ´µÁÉ•Ù¥•Üµ‰½ÑÑ½´µä°€ÁÁáp¤°€Áp¤½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½‰ÕÑÑ½¹p¹™É•”µ±½Üµ‰±½¬é¹½Ñp é‘¥Í…‰±•‘p¤é…Ñ¥Ù•qÌ©qímyõt©ÑÉ…¹Í™½É´éqÌ©ÑÉ…¹Í±…Ñ”Í‘p À°€À°€Áp¤Í…±•p Åp¥myõt©½Á…¥ÑäéqÌ¨Áp¸äØ½Ì°(€€€€‰¸…Ñ¥Ù”É•”…ÉµÕÍÐÉ•Ñ…¥¸¥ÑÌÑÉÕ”½±Õµ¸‰½Õ¹‘Ì‰•¹•…Ñ Ñ¡”‘É…œÁÉ•Ù¥•Üˆ(€€¤ì(€…ÍÍ•ÉÑ½µÁ½Í¥Ñ½É=¹±å5½Ñ¥½¸¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ¤ì(€…ÍÍ•ÉÑQÉ…¹Í™½Éµ=Á…¥Ñå-•å™É…µ•Ì¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹µ½‘…±p¹¥Ìµ±½Í¥¹œp¹µ½‘…°µ…É¼¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½p¹…±•¹‘…ÈµÉ¥‘p¹¥ÌµÙ¥•Üµ•¹Ñ•É¥¹qÌ©qímyõt©…¹¥µ…Ñ¥½¸éqÌ©…±•¹‘…ÈµÙ¥•Üµ•¹Ñ•ÈÙ…Ép ´µµ½Ñ¥½¸µ™…ÍÑp¤Ù…Ép ´µ•…Í”µÍÑ…¹‘…É‘p¤‰½Ñ ½Ì°(€€€€‰Q¡”¹•ÜÑ¥µ•Ñ…‰±”Í¡½Õ±Í•ÑÑ±”¥¸ÅÕ¥­±ä…™Ñ•È¥Ð¥Ì…±É•…‘äÉ•¹‘•É•ˆ(€€¤ì(€…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹…±•¹‘…ÈµÉ¥‘p¹¥ÌµÙ¥•Üµ•á¥Ñ¥¹qÌ©qì¼¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½­•å™É…µ•Ì…±•¹‘…ÈµÙ¥•Üµ•¹Ñ•ÉqÌ©qímqÍqMt¨ý™É½µqÌ©qímyõt©½Á…¥ÑäéqÌ¨Áp¸àÉmyõt©ÑÉ…¹Í±…Ñ•ep ÉÁáp¤Í…±•p Áp¸ääáp¤¼°(€€€€‰…±•¹‘…È•¹ÑÉ…¹”µÕÍÐÉ•µ…¥¸É•…‘…‰±”™É½´¥ÑÌ™¥ÉÍÐÁ…¥¹Ñ•™É…µ”ˆ(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½p¹É½½´µÍÝ¥Ñ µÑ…‰qÌ©qímyõt©Ý¥‘Ñ éqÌ¨ÌÙÁámyõt©µ…àµÝ¥‘Ñ éqÌ¨ÌÙÁámyõt©ÑÉ…¹Í™½É´Ù…Ép ´µµ½Ñ¥½¸µ™…ÍÑp¤Ù…Ép ´µ•…Í”µÍÑ…¹‘…É‘p¥myõt©½Á…¥ÑäÙ…Ép ´µµ½Ñ¥½¸µ™…ÍÑp¤Ù…Ép ´µ•…Í”µÍÑ…¹‘…É‘p¤½Ì°(€€€€‰I½½´Ñ¥±•ÌµÕÍÐ­••À„™¥á•™½½ÑÁÉ¥¹Ð…¹ÕÍ”Ñ¡”Í¡…É•™…ÍÐ¡½Ù•Èµ½Ñ¥½¸ˆ(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½µ•‘¥„p¡¡½Ù•Èè¡½Ù•Ép¤…¹p¡Á½¥¹Ñ•Èè™¥¹•p¥qÌ©qímqÍqMt¨ý‰ÕÑÑ½¹p¹É½½´µÍÝ¥Ñ µÑ…ˆé¹½Ñp é‘¥Í…‰±•‘p¤é¡½Ù•ÉqÌ©qímyõt©½Á…¥ÑäéqÌ¨Áp¸äámyõt©ÑÉ…¹Í±…Ñ”Í‘p À°€´ÅÁà°€Áp¤Í…±•p Åp¸ÀÅp¤¼°(€€€€‰I½½´¡½Ù•È™••‘‰…¬µÕÍÐ‰”½µÁ½Í¥Ñ½Èµ½¹±ä…¹±¥µ¥Ñ•Ñ¼¡½Ù•Èµ…Á…‰±”Á½¥¹Ñ•ÉÌˆ(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½‰ÕÑÑ½¹p¹É½½´µÍÝ¥Ñ µÑ…ˆé¹½Ñp é‘¥Í…‰±•‘p¤é…Ñ¥Ù•qÌ©qímyõt©ÑÉ…¹Í¥Ñ¥½¸µ‘ÕÉ…Ñ¥½¸éqÌ©Ù…Ép ´µµ½Ñ¥½¸µÁÉ•ÍÍp¥myõt©Í…±•p Áp¸äÙp¤½Ì°(€€€€‰I½½´Ñ¥±•ÌµÕÍÐÉ•Ñ…¥¸Ñ¡”Í¡…É•Ñ…Ñ¥±”ÁÉ•ÍÌÉ•ÍÁ½¹Í”ˆ(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½p¹É½½´µÍÝ¥Ñ µ±…‰•°±qÌ©p¹É½½´µÍÝ¥Ñ µµ•Ñ…qÌ©qímyõt©Á½Í¥Ñ¥½¸éqÌ©…‰Í½±ÕÑ•myõt©±¥ÀµÁ…Ñ éqÌ©¥¹Í•Ñp ÔÀ•p¥myõt©Á½¥¹Ñ•Èµ•Ù•¹ÑÌéqÌ©¹½¹”½Ì°(€€€€‰I½½´±…‰•±ÌµÕÍÐÍÑ…ä…•ÍÍ¥‰±”Ý¥Ñ¡½ÕÐ¡…¹¥¹œÑ¡”™±•àµÉ½Ü•½µ•ÑÉäˆ(€€¤ì(€…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹É½½´µÍÝ¥Ñ µÑ…‰p¹¥Ìµ•áÁ…¹‘•¼¤ì(€…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½p¹É½½´µÍÝ¥Ñ µÑ…ˆ üèé¡½Ù•Éðé™½ÕÌ üèµÙ¥Í¥‰±”¤ü¥myít©qímyõt¨ üéµ…àµÝ¥‘Ñ¡ñÁ…‘‘¥¹œµÉ¥¡Ð¥qÌ¨è½Ì°(€€€€‰!½Ù•È…¹™½ÕÌµÕÍÐ¹½ÐÉ•Í¥é”É½½´Ñ¥±•Ìˆ(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹•Ù•¹Ðµ½µÁ½Í•ÉqÌ©qímyõt©µ…àµ¡•¥¡Ðè…±p ÄÀÁ‘Ù €´€ÄÉÁáp¥myõt©É¥µÑ•µÁ±…Ñ”µÉ½ÝÌè…ÕÑ¼…ÕÑ¼…ÕÑ¼…ÕÑ¼…ÕÑ¼½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€¼•Ù•¹Ñ5½‘…±qÌ©qímyõt©Ý¥‘Ñ è€ÄÀÁÙÝmyõt©¡•¥¡Ðè€ÄÀÁ‘Ù¡myõt©µ…àµÝ¥‘Ñ è¹½¹•myõt©½Ù•É™±½ÜèÙ¥Í¥‰±”½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹½µÁ½Í•Èµ‰½‘åqÌ©qímyõt©½Ù•É™±½ÜèÙ¥Í¥‰±”½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹¥¹Ù¥Ñ”µ‘É½Á‘½Ý¸µÁ…¹•±qÌ©qímyõt©Á½Í¥Ñ¥½¸è…‰Í½±ÕÑ•myõt©µ…àµ¡•¥¡Ðèµ¥¹p ÈÈÁÁà°…±p ÄÀÁ‘Ù €´€ÄØÁÁáp¥p¥myõt©½Ù•É™±½Üµäè…ÕÑ¼½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½µ•‘¥„p¡µ…àµ¡•¥¡Ðè€ÔØÁÁáp¥mqÍqMt¨ýp¹½µÁ½Í•ÈµÍå¹ŒµÑ½±”Íµ…±±qÌ©qímyõt©‘¥ÍÁ±…äè¹½¹”¼¤ì(€…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹½µÁ½Í•Èµ‰½‘åqÌ©qímyõt©½Ù•É™±½ÜµäéqÌ©…ÕÑ¼½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹…±•¹‘…Èµ±•…°µ±¥¹­ÍqÌ©qímyõt©Á½Í¥Ñ¥½¸éqÌ©ÍÑ…Ñ¥myõt©µ…É¥¸éqÌ¨ÄÉÁà€ÄÉÁà€ÄÑÁà…ÕÑ¼½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹…±•¹‘…ÈµÝÉ…À€øp¹…±•¹‘…ÈµÉ¥‘qÌ©qímyõt©µ¥¸µ¡•¥¡ÐéqÌ©…±p ÄÀÀ”p¬€ÅÁáp¤½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹É½½´µÁ…•qÌ©qímyõt©É¥µÑ•µÁ±…Ñ”µÉ½ÝÌéqÌ©µ¥¹µ…áp À°€Å™Ép¥myõt©½Ù•É™±½ÜéqÌ©¡¥‘‘•¸½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹É½½´µÑ½Á‰…ÉqÌ©qímyõt©Á½Í¥Ñ¥½¸éqÌ©É•±…Ñ¥Ù•myõt©Ñ½ÀéqÌ©…ÕÑ½myõt©µ…É¥¸µ‰½ÑÑ½´éqÌ¨áÁà½Ì¤ì(€…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹É½½´µÑ½Á‰…ÉqÌ©qímyõt©Á½Í¥Ñ¥½¸éqÌ©ÍÑ¥­ä½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹…±•¹‘…ÈµÍÑ…•qÌ©qímyõt©É¥µÑ•µÁ±…Ñ”µÉ½ÝÌéqÌ©µ¥¹µ…áp À°€Å™Ép¥myõt©½Ù•É™±½ÜéqÌ©¡¥‘‘•¸½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹…±•¹‘…ÈµÝÉ…ÁqÌ©qímyõt©É¥µÉ½ÜéqÌ¨Åmyõt©½Ù•É™±½ÜéqÌ©…ÕÑ¼½Ì¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½p¹…±•¹‘…ÈµÉ¥‘p¹å•…ÈµÙ¥•ÝqÌ©qímyõt©É¥µÑ•µÁ±…Ñ”µ½±Õµ¹ÌéqÌ©É•Á•…Ñp Ð°µ¥¹µ…áp ÄÔÁÁà°€Å™Ép¥p¥myõt©É¥µÑ•µÁ±…Ñ”µÉ½ÝÌéqÌ©¹½¹•myõt©É¥µ…ÕÑ¼µÉ½ÝÌéqÌ©µ¥¹µ…áp ÈÄÑÁà°…ÕÑ½p¤½Ì°(€€€€‰e•…ÈÙ¥•ÜµÕÍÐ±•…ÈÑ¡”Á±…¹¹•ÈÌ•áÁ±¥¥Ð¡½ÕÉ±äÉ½ÝÌ‰•™½É”±…å¥¹œ½ÕÐµ½¹Ñ¡Ìˆ(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½p¹Á…ÉÑ¥¥Á…¹ÑÌµÍ¥‘•‰…ÉqÌ©qímyõt©½Ù•É™±½ÜéqÌ©¡¥‘‘•¹myõt©‰½É‘•ÈéqÌ¨ÅÁàÍ½±¥Ù…Ép ´µ±¥¹•p¥myõt©‰½É‘•ÈµÉ…‘¥ÕÌéqÌ¨À€ÈÉÁà€ÈÉÁà€Ámyõt©‰½àµÍ¡…‘½ÜéqÌ©Ù…Ép ´µÍ¡…‘½Ýp¥myõt©Ñ½Õ µ…Ñ¥½¸éqÌ©Á…¸µä½Ì°(€€€€‰Q¡”Á…ÉÑ¥¥Á…¹ÑÌ‘É…Ý•ÈµÕÍÐ½Ý¸½¹”Õ¹¥™¥•½ÕÑ•ÈÍÕÉ™…”ˆ(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½p¹Á…ÉÑ¥¥Á…¹ÑÌµ…É‘qÌ©qímyõt©‰½É‘•ÈéqÌ¨Ámyõt©‰½É‘•ÈµÉ…‘¥ÕÌéqÌ¨Ámyõt©‰…­É½Õ¹éqÌ©ÑÉ…¹ÍÁ…É•¹Ñmyõt©‰½àµÍ¡…‘½ÜéqÌ©¹½¹”½Ì°(€€€€‰Q¡”Á…ÉÑ¥¥Á…¹ÑÌ…ÉµÕÍÐ¹½ÐÉ•¹‘•È„Í•½¹ÍÕÉ™…”ˆ(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½p¹Á…ÉÑ¥¥Á…¹ÑÌµÉ…¥±qÌ©qímyõt©‰½É‘•ÈéqÌ¨Ámyõt©‰…­É½Õ¹éqÌ©ÑÉ…¹ÍÁ…É•¹Ñmyõt©ÕÉÍ½ÈéqÌ©‘•™…Õ±Ñmyõt©‰½àµÍ¡…‘½ÜéqÌ©¹½¹”½Ì°(€€€€‰Q¡”5•µ‰•ÉÌ±…‰•°µÕÍÐ‰”Ù¥ÍÕ…±±ä™ÕÍ•…¹¹½¸µ¥¹Ñ•É…Ñ¥Ù”ˆ(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹Á…ÉÑ¥¥Á…¹ÑÌµÉ…¥°ÍÁ…¹qÌ©qímyõt©Á½¥¹Ñ•Èµ•Ù•¹ÑÌéqÌ©¹½¹”½Ì¤ì(€…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹Á…ÉÑ¥¥Á…¹ÑÌµÉ…¥±qm…É¥„µ•áÁ…¹‘•ô‰ÑÉÕ”‰qt¼¤ì(€…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½p¹Á…ÉÑ¥¥Á…¹ÑÌµÉ…¥°é™½ÕÌµÙ¥Í¥‰±”¼¤ì(€…ÍÍ•ÉÐ¹µ…Ñ  (€€€•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°(€€€€½µ•‘¥„p¡µ¥¸µÝ¥‘Ñ è€äÀÁÁáp¥mqÍqMt¨ýp¹…±•¹‘…ÈµÉ¥‘p¹Ý••¬µÙ¥•ÝqÌ©qímyõt©µ¥¸µÝ¥‘Ñ éqÌ¨Ámyõt©µ¥¹µ…áp À°€Å™Ép¤¼(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½µ•‘¥„p¡ÁÉ•™•ÉÌµÉ•‘Õ•µµ½Ñ¥½¸èÉ•‘Õ•p¥mqÍqMt©ÑÉ…¹Í¥Ñ¥½¸µ‘ÕÉ…Ñ¥½¸è€ÅµÌ€…¥µÁ½ÉÑ…¹Ð¼¤ì(€…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡•Ù•¹Ñ½µÁ½Í•ÉMÑå±•Ì¹Ñ•áÐ°€½ÑÉ…¹Í¥Ñ¥½¸éqÌ©…±±qˆ¼¤ì(€™½È€¡½¹ÍÐ¥½¹ÍÍ•Ð½˜•áÁ•Ñ•‘%½¹ÍÍ•ÑÌ¤ì(€€€½¹ÍÐ¥½¸€ô…Ý…¥ÐÁÕ‰±¥M•ÍÍ¥½¸¹É•ÅÕ•ÍÐ¡€½¥½¹Ì¼‘í¥½¹ÍÍ•Ñõ€°ì…•ÁÐè€‰¥µ…”½ÍÙœ­áµ°ˆô¤ì(€€€…ÍÍ•ÉÐ¹µ…Ñ ¡¥½¸¹Ñ•áÐ°€¼ñÍÙmxùt©Ù¥•Ý	½àôˆÀ€À€ÈÐ€ÈÐˆ¼¤ì(€ô(€½¹ÍÐ½¹Ñ•¹ÑM•ÕÉ¥ÑåA½±¥ä€ô¡½µ”¹É•ÍÁ½¹Í”¹¡•…‘•ÉÌ¹•Ð ‰½¹Ñ•¹ÐµÍ•ÕÉ¥ÑäµÁ½±¥äˆ¤ì(€…ÍÍ•ÉÐ¹½¬¡½¹Ñ•¹ÑM•ÕÉ¥ÑåA½±¥ä°€‰M@¡•…‘•È¥Ìµ¥ÍÍ¥¹œˆ¤ì(€…ÍÍ•ÉÐ¹‘½•Í9½Ñ5…Ñ ¡½¹Ñ•¹ÑM•ÕÉ¥ÑåA½±¥ä°€½ÍÉ¥ÁÐµÍÉmxít¨Õ¹Í…™”µ¥¹±¥¹”œ¼¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡¡½µ”¹É•ÍÁ½¹Í”¹¡•…‘•ÉÌ¹•Ð ‰àµ½¹Ñ•¹ÐµÑåÁ”µ½ÁÑ¥½¹Ìˆ¤°€‰¹½Í¹¥™˜ˆ¤ì(€…ÍÍ•ÉÐ¹½¬¡¡½µ”¹É•ÍÁ½¹Í”¹¡•…‘•ÉÌ¹•Ð ‰É•™•ÉÉ•ÈµÁ½±¥äˆ¤°€‰I•™•ÉÉ•ÈµA½±¥ä¡•…‘•È¥Ìµ¥ÍÍ¥¹œˆ¤ì(€…Ý…¥ÐÁÕ‰±¥M•ÍÍ¥½¸¹É•ÅÕ•ÍÐ ˆ½ÁÉ¥Ù…äˆ°ì…•ÁÐè€‰Ñ•áÐ½¡Ñµ°ˆô¤ì(€…Ý…¥ÐÁÕ‰±¥M•ÍÍ¥½¸¹É•ÅÕ•ÍÐ ˆ½Ñ•ÉµÌˆ°ì…•ÁÐè€‰Ñ•áÐ½¡Ñµ°ˆô¤ì(€…Ý…¥ÐÁÕ‰±¥M•ÍÍ¥½¸¹É•ÅÕ•ÍÐ ˆ½…Á¤½µ”ˆ°ìµ•Ñ¡½è€‰A=MPˆ°•áÁ•Ñ•è€ÐÀÔô¤ì((€½¹ÍÐ¡½ÍÐ€ô¹•Ü	É½ÝÍ•ÉM•ÍÍ¥½¸ ¤ì(€½¹ÍÐÕ•ÍÐ€ô¹•Ü	É½ÝÍ•ÉM•ÍÍ¥½¸ ¤ì(€½¹ÍÐÍÁ•Ñ…Ñ½È€ô¹•Ü	É½ÝÍ•ÉM•ÍÍ¥½¸ ¤ì(€…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ ˆ½…Á¤½µ”ˆ¤ì(€…Ý…¥ÐÕ•ÍÐ¹É•ÅÕ•ÍÐ ˆ½…Á¤½µ”ˆ¤ì(€…Ý…¥ÐÍÁ•Ñ…Ñ½È¹É•ÅÕ•ÍÐ ˆ½…Á¤½µ”ˆ¤ì((€½¹ÍÐÉ•…Ñ•€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ ˆ½…Á¤½É½½µÌˆ°ì(€€€µ•Ñ¡½è€‰A=MPˆ°(€€€•áÁ•Ñ•è€ÈÀÄ°(€€€‰½‘äèì¹…µ”è€‰•…½¸ˆ°•µ½©¤è€‹Â~ž´ˆ°‘¥ÍÁ±…å9…µ”è€‰!½ÍÐˆô(€ô¤ì(€½¹ÍÐ™¥ÉÍÑ½‘”€ôÉ•…Ñ•¹Á…å±½…¹É½½´¹½‘”ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡™¥ÉÍÑ½‘”°€½ymµ!(µ9@µhÈ´åuìÙô¼¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡É•…Ñ•¹Á…å±½…¹É½½´¹•µ½©¤°€‹Â~ž´ˆ¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡É•…Ñ•¹Á…å±½…¹¥Í!½ÍÐ°ÑÉÕ”¤ì((€½¹ÍÐÍ•½¹‘I½½´€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ ˆ½…Á¤½É½½µÌˆ°ì(€€€µ•Ñ¡½è€‰A=MPˆ°(€€€•áÁ•Ñ•è€ÈÀÄ°(€€€‰½‘äèì¹…µ”è€‰M•½¹É½½´ˆ°•µ½©¤è€‹Â~:Hˆ°‘¥ÍÁ±…å9…µ”è€‰!½ÍÐˆô(€ô¤ì(€…ÍÍ•ÉÐ¹¹½ÑÅÕ…°¡Í•½¹‘I½½´¹Á…å±½…¹É½½´¹½‘”°™¥ÉÍÑ½‘”¤ì(€½¹ÍÐµ•µ‰•ÉÍ¡¥ÁÌ€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ ˆ½…Á¤½µäµÉ½½µÌˆ¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡µ•µ‰•ÉÍ¡¥ÁÌ¹Á…å±½…¹É½½µÌ¹±•¹Ñ °€È¤ì(€…ÍÍ•ÉÐ¹½¬¡µ•µ‰•ÉÍ¡¥ÁÌ¹Á…å±½…¹É½½µÌ¹Í½µ” ¡É½½´¤€ôøÉ½½´¹½‘”€ôôô™¥ÉÍÑ½‘”€˜˜É½½´¹•µ½©¤€ôôô€‹Â~ž´ˆ¤¤ì((€½¹ÍÐ©½¥¹•€ô…Ý…¥ÐÕ•ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘”¹Ñ½1½Ý•É…Í” ¥ô½©½¥¹€°ì(€€€µ•Ñ¡½è€‰A=MPˆ°(€€€‰½‘äèì‘¥ÍÁ±…å9…µ”è€‰Õ•ÍÐ€ñ¥µœÍÉŒõà½¹•ÉÉ½Èõ…±•ÉÐ Ä¤øˆô(€ô¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡©½¥¹•¹Á…å±½…¹É½½´¹½‘”°™¥ÉÍÑ½‘”¤ì(€½¹ÍÐÕ•ÍÑ%€ô©½¥¹•¹Á…å±½…¹Á…ÉÑ¥¥Á…¹Ð¹¥ì((€½¹ÍÐÍÁ•Ñ…Ñ½É)½¥¸€ô…Ý…¥ÐÍÁ•Ñ…Ñ½È¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½©½¥¹€°ì(€€€µ•Ñ¡½è€‰A=MPˆ°(€€€‰½‘äèì‘¥ÍÁ±…å9…µ”è€‰MÁ•Ñ…Ñ½Èˆô(€ô¤ì(€½¹ÍÐÍÁ•Ñ…Ñ½É%€ôÍÁ•Ñ…Ñ½É)½¥¸¹Á…å±½…¹Á…ÉÑ¥¥Á…¹Ð¹¥ì((€½¹ÍÐ¡½ÍÑI½½´€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•õ€¤ì(€½¹ÍÐ¡½ÍÑ%€ô¡½ÍÑI½½´¹Á…å±½…¹Á…ÉÑ¥¥Á…¹Ð¹¥ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡¡½ÍÑI½½´¹Á…å±½…¹É½½´¹Á…ÉÑ¥¥Á…¹ÑÌ¹±•¹Ñ °€Ì¤ì(€…ÍÍ•ÉÑ9½-•åÌ¡¡½ÍÑI½½´¹Á…å±½…°¹•ÜM•Ð¡l‰ÕÍ•É%ˆ°€‰½Ý¹•Éµ…¥°ˆ°€‰Ñ½­•¹Ìˆ°€‰½½±•Q½­•¹Ìˆ°€‰µ¥É½Í½™ÑQ½­•¹Ì‰t¤¤ì((€™½È€¡½¹ÍÐìÙ…±Õ”è½±½Èô½˜•áÁ•Ñ•‘A…ÉÑ¥¥Á…¹ÑA…±•ÑÑ”¤ì(€€€½¹ÍÐÉ•½±½É•€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½Á…ÉÑ¥¥Á…¹ÑÌ¼‘í¡½ÍÑ%‘õ€°ì(€€€€€µ•Ñ¡½è€‰AQ ˆ°(€€€€€‰½‘äèì½±½Èô(€€€ô¤ì(€€€…ÍÍ•ÉÐ¹•ÅÕ…°¡É•½±½É•¹Á…å±½…¹Á…ÉÑ¥¥Á…¹Ð¹½±½È°½±½È¤ì(€ô(€½¹ÍÐµ¥É…Ñ•‘1•…å½±½È€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½Á…ÉÑ¥¥Á…¹ÑÌ¼‘í¡½ÍÑ%‘õ€°ì(€€€µ•Ñ¡½è€‰AQ ˆ°(€€€‰½‘äèì½±½Èè€ˆŒÉÙåˆô(€ô¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡µ¥É…Ñ•‘1•…å½±½È¹Á…å±½…¹Á…ÉÑ¥¥Á…¹Ð¹½±½È°€ˆŒØÔÜÔáˆ¤ì((€…Ý…¥ÐÕ•ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•õ€°ì(€€€µ•Ñ¡½è€‰AQ ˆ°(€€€•áÁ•Ñ•è€ÐÀÌ°(€€€‰½‘äèì¹…µ”è€‰9½Ð…±±½Ý•ˆô(€ô¤ì((€½¹ÍÐÍÑ…ÉÐ€ô€ˆÈÀÈØ´ÀÜ´ÈÁPÄÀèÀÀèÀÀ¸ÀÀÁhˆì(€½¹ÍÐ•¹€ô€ˆÈÀÈØ´ÀÜ´ÈÁPÄÀèÌÀèÀÀ¸ÀÀÁhˆì(€½¹ÍÐÉ•…Ñ•‘Ù•¹Ð€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½•Ù•¹ÑÍ€°ì(€€€µ•Ñ¡½è€‰A=MPˆ°(€€€•áÁ•Ñ•è€ÈÀÄ°(€€€‰½‘äèì(€€€€€Ñ¥Ñ±”è€ˆˆ°(€€€€€ÍÑ…ÉÐ°(€€€€€•¹°(€€€€€Ñ¥µ•é½¹”è€‰Í¥„½-½±­…Ñ„ˆ°(€€€€€±½…Ñ¥½¸è€‰…™”ˆ°(€€€€€‘•ÍÉ¥ÁÑ¥½¸è€‰I½½´µÙ¥Í¥‰±”ÁÉ½Á½Í…°ˆ°(€€€€€¥¹Ù¥Ñ••A…ÉÑ¥¥Á…¹Ñ%‘Ìèm¡½ÍÑ%°Õ•ÍÑ%‘t°(€€€€€Íå¹Q½½½±”è™…±Í”(€€€ô(€ô¤ì(€½¹ÍÐ•Ù•¹Ñ%€ôÉ•…Ñ•‘Ù•¹Ð¹Á…å±½…¹•Ù•¹Ð¹¥ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡É•…Ñ•‘Ù•¹Ð¹Á…å±½…¹•Ù•¹Ð¹Ñ¥Ñ±”°€ˆ¡9¼Ñ¥Ñ±”¤ˆ¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡É•…Ñ•‘Ù•¹Ð¹Á…å±½…¹•Ù•¹Ð¹Ñ¥µ•é½¹”°€‰Í¥„½-½±­…Ñ„ˆ¤ì(€…ÍÍ•ÉÑ9½-•åÌ¡É•…Ñ•‘Ù•¹Ð¹Á…å±½…°¹•ÜM•Ð¡l‰½½±•…±•¹‘…ÉMå¹Œˆ°€‰½ÕÑ±½½­…±•¹‘…ÉMå¹Œˆ°€‰½Ý¹•Éµ…¥°ˆ°€‰ÕÍ•É%‰t¤¤ì((€½¹ÍÐ…±±…åMÑ…ÉÐ€ô€ˆÈÀÈØ´ÀÜ´ÄåPÄàèÌÀèÀÀ¸ÀÀÁhˆì(€½¹ÍÐ…±±…å¹€ô€ˆÈÀÈØ´ÀÜ´ÈÁPÄàèÌÀèÀÀ¸ÀÀÁhˆì(€½¹ÍÐ…±±…åÙ•¹Ð€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½•Ù•¹ÑÍ€°ì(€€€µ•Ñ¡½è€‰A=MPˆ°(€€€•áÁ•Ñ•è€ÈÀÄ°(€€€‰½‘äèì(€€€€€Ñ¥Ñ±”è€‰1½…°…±°µ‘…äÁ±…¸ˆ°(€€€€€ÍÑ…ÉÐè…±±…åMÑ…ÉÐ°(€€€€€•¹è…±±…å¹°(€€€€€Ñ¥µ•é½¹”è€‰Í¥„½-½±­…Ñ„ˆ°(€€€€€…±±…äèÑÉÕ”°(€€€€€¥¹Ù¥Ñ••A…ÉÑ¥¥Á…¹Ñ%‘Ìèm¡½ÍÑ%‘t(€€€ô(€ô¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡…±±…åÙ•¹Ð¹Á…å±½…¹•Ù•¹Ð¹‘…Ñ”°€ˆÈÀÈØ´ÀÜ´ÈÀˆ¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡…±±…åÙ•¹Ð¹Á…å±½…¹•Ù•¹Ð¹…±±…ä°ÑÉÕ”¤ì((€½¹ÍÐÁÉ•Í•ÉÙ•‘±±…åÙ•¹Ð€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½•Ù•¹ÑÌ¼‘í…±±…åÙ•¹Ð¹Á…å±½…¹•Ù•¹Ð¹¥‘õ€°ì(€€€µ•Ñ¡½è€‰AQ ˆ°(€€€‰½‘äèì(€€€€€Ñ¥Ñ±”è€‰I•¹…µ•…±°µ‘…äÁ±…¸ˆ°(€€€€€ÍÑ…ÉÐè…±±…åMÑ…ÉÐ°(€€€€€•¹è…±±…å¹°(€€€€€¥¹Ù¥Ñ••A…ÉÑ¥¥Á…¹Ñ%‘Ìèm¡½ÍÑ%‘t(€€€ô(€ô¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡ÁÉ•Í•ÉÙ•‘±±…åÙ•¹Ð¹Á…å±½…¹•Ù•¹Ð¹Ñ¥µ•é½¹”°€‰Í¥„½-½±­…Ñ„ˆ¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡ÁÉ•Í•ÉÙ•‘±±…åÙ•¹Ð¹Á…å±½…¹•Ù•¹Ð¹‘…Ñ”°€ˆÈÀÈØ´ÀÜ´ÈÀˆ¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡ÁÉ•Í•ÉÙ•‘±±…åÙ•¹Ð¹Á…å±½…¹•Ù•¹Ð¹…±±…ä°ÑÉÕ”¤ì(€½¹ÍÐ…±±…å%Ì€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ (€€€€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½•Ù•¹ÑÌ¼‘í…±±…åÙ•¹Ð¹Á…å±½…¹•Ù•¹Ð¹¥‘ô½¥Í€°(€€€ì…•ÁÐè€‰Ñ•áÐ½…±•¹‘…Èˆô(€€¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡…±±…å%Ì¹Ñ•áÐ°€½QMQIPíY1UõQèÈÀÈØÀÜÈÀ¼¤ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡…±±…å%Ì¹Ñ•áÐ°€½Q9íY1UõQèÈÀÈØÀÜÈÄ¼¤ì((€½¹ÍÐÕ•ÍÑ%¹Ù¥Ñ•9½Ñ¥™¥…Ñ¥½¹Ì€ô…Ý…¥ÐÕ•ÍÐ¹É•ÅÕ•ÍÐ ˆ½…Á¤½¹½Ñ¥™¥…Ñ¥½¹Ìˆ¤ì(€…ÍÍ•ÉÐ¹½¬¡Õ•ÍÑ%¹Ù¥Ñ•9½Ñ¥™¥…Ñ¥½¹Ì¹Á…å±½…¹¹½Ñ¥™¥…Ñ¥½¹Ì¹Í½µ” ¡¥Ñ•´¤€ôø¥Ñ•´¹ÑåÁ”€ôôô€‰•Ù•¹Ñ}¥¹Ù¥Ñ”ˆ¤¤ì((€½¹ÍÐÍÁ•Ñ…Ñ½ÉI½½´€ô…Ý…¥ÐÍÁ•Ñ…Ñ½È¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•õ€¤ì(€½¹ÍÐÍÁ•Ñ…Ñ½ÉÙ•¹Ð€ôÍÁ•Ñ…Ñ½ÉI½½´¹Á…å±½…¹É½½´¹•Ù•¹ÑÌ¹™¥¹ ¡•Ù•¹Ð¤€ôø•Ù•¹Ð¹¥€ôôô•Ù•¹Ñ%¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡ÍÁ•Ñ…Ñ½ÉÙ•¹Ð¹Ñ¥Ñ±”°€ˆ¡9¼Ñ¥Ñ±”¤ˆ¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡ÍÁ•Ñ…Ñ½ÉÙ•¹Ð¹¥Í%¹Ù¥Ñ•°™…±Í”¤ì(€…Ý…¥ÐÍÁ•Ñ…Ñ½È¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½•Ù•¹ÑÌ¼‘í•Ù•¹Ñ%‘ô½É•ÍÁ½¹‘€°ì(€€€µ•Ñ¡½è€‰A=MPˆ°(€€€•áÁ•Ñ•è€ÐÀÌ°(€€€‰½‘äèìÉ•ÍÁ½¹Í”è€‰å•Ìˆô(€ô¤ì((€½¹ÍÐÙ½Ñ”€ô…Ý…¥ÐÕ•ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½•Ù•¹ÑÌ¼‘í•Ù•¹Ñ%‘ô½É•ÍÁ½¹‘€°ì(€€€µ•Ñ¡½è€‰A=MPˆ°(€€€‰½‘äèìÉ•ÍÁ½¹Í”è€‰å•Ìˆô(€ô¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡Ù½Ñ”¹Á…å±½…¹•Ù•¹Ð¹É•ÍÁ½¹Í•MÕµµ…Éä¹å•Ì°€Ä¤ì((€…Ý…¥ÐÕ•ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½•Ù•¹ÑÌ¼‘í•Ù•¹Ñ%‘ô½½µµ•¹ÑÍ€°ì(€€€µ•Ñ¡½è€‰A=MPˆ°(€€€•áÁ•Ñ•è€ÈÀÄ°(€€€‰½‘äèìÑ•áÐè€ˆñ¥µœ¥õáÍÌÍÉŒõà½¹•ÉÉ½Èõ…±•ÉÐ Ä¤ø1½½­Ì½½ˆô(€ô¤ì((€…Ý…¥ÐÕ•ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½•Ù•¹ÑÌ¼‘í•Ù•¹Ñ%‘ô½É•ÍÁ½¹‘€°ì(€€€µ•Ñ¡½è€‰A=MPˆ°(€€€•áÁ•Ñ•èlÈÀÀ°€ÐÀÀ°€ÐÈÉt°(€€€‰½‘äèì(€€€€€É•ÍÁ½¹Í”è€‰å•Ìˆ°(€€€€€ÁÉ½Á½Í•‘MÑ…ÉÐè€ˆÈÀÈØ´ÀÜ´ÈÁPÄÈèÀÀèÀÀ¸ÀÀÁhˆ°(€€€€€ÁÉ½Á½Í•‘¹è€ˆÈÀÈØ´ÀÜ´ÈÁPÄÌèÀÀèÀÀ¸ÀÀÁhˆ(€€€ô(€ô¤ì(€½¹ÍÐÕ¹¡…¹•‘I½½´€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•õ€¤ì(€½¹ÍÐÕ¹¡…¹•‘Ù•¹Ð€ôÕ¹¡…¹•‘I½½´¹Á…å±½…¹É½½´¹•Ù•¹ÑÌ¹™¥¹ ¡•Ù•¹Ð¤€ôø•Ù•¹Ð¹¥€ôôô•Ù•¹Ñ%¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡Õ¹¡…¹•‘Ù•¹Ð¹ÍÑ…ÉÐ°ÍÑ…ÉÐ¤ì(€…ÍÍ•ÉÐ¹•ÅÕ…°¡Õ¹¡…¹•‘Ù•¹Ð¹•¹°•¹¤ì((€½¹ÍÐ™É••	ÕÍä€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ (€€€€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½™É••‰ÕÍäýÑ¥µ•5¥¸ôÈÀÈØ´ÀÜ´ÈÁPÀÀèÀÀèÀÀ¸ÀÀÁh™Ñ¥µ•5…àôÈÀÈØ´ÀÜ´ÈÅPÀÀèÀÀèÀÀ¸ÀÀÁi€(€€¤ì(€…ÍÍ•ÉÑ9½-•åÌ¡™É••	ÕÍä¹Á…å±½…°¹•ÜM•Ð¡l(€€€€‰ÕÍ•É%ˆ°(€€€€‰½Ý¹•Éµ…¥°ˆ°(€€€€‰Ñ¥Ñ±”ˆ°(€€€€‰±½…Ñ¥½¸ˆ°(€€€€‰‘•ÍÉ¥ÁÑ¥½¸ˆ°(€€€€‰½½±•…±•¹‘…ÉMå¹Œˆ°(€€€€‰½ÕÑ±½½­…±•¹‘…ÉMå¹Œˆ(€t¤¤ì((€…Ý…¥ÐÍÑ½ÁM•ÉÙ•È¡Í•ÉÙ•È¤ì(€Í•ÉÙ•È€ô…Ý…¥ÐÍÑ…ÉÑM•ÉÙ•È ¤ì(€½¹ÍÐÁ•ÉÍ¥ÍÑ•‘I½½´€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•õ€¤ì(€…ÍÍ•ÉÐ¹½¬¡Á•ÉÍ¥ÍÑ•‘I½½´¹Á…å±½…¹É½½´¹•Ù•¹ÑÌ¹Í½µ” ¡•Ù•¹Ð¤€ôø•Ù•¹Ð¹¥€ôôô•Ù•¹Ñ%¤¤ì((€½¹ÍÐÉ•™É•Í¡•€ô…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•ô½É•™É•Í µ½‘•€°ì(€€€µ•Ñ¡½è€‰A=MPˆ(€ô¤ì(€½¹ÍÐÉ•™É•Í¡•‘½‘”€ôÉ•™É•Í¡•¹Á…å±½…¹É½½´¹½‘”ì(€…ÍÍ•ÉÐ¹µ…Ñ ¡É•™É•Í¡•‘½‘”°€½ymµ!(µ9@µhÈ´åuìÙô¼¤ì(€…ÍÍ•ÉÐ¹¹½ÑÅÕ…°¡É•™É•Í¡•‘½‘”°™¥ÉÍÑ½‘”¤ì(€…Ý…¥ÐÁÕ‰±¥M•ÍÍ¥½¸¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘í™¥ÉÍÑ½‘•õ€°ì•áÁ•Ñ•è€ÐÀÐô¤ì((€½¹ÍÐµ¥É…Ñ•‘9½Ñ¥™¥…Ñ¥½¹Ì€ô…Ý…¥ÐÕ•ÍÐ¹É•ÅÕ•ÍÐ ˆ½…Á¤½¹½Ñ¥™¥…Ñ¥½¹Ìˆ¤ì(€…ÍÍ•ÉÐ¹½¬ (€€€µ¥É…Ñ•‘9½Ñ¥™¥…Ñ¥½¹Ì¹Á…å±½…¹¹½Ñ¥™¥…Ñ¥½¹Ì(€€€€€€¹™¥±Ñ•È ¡¥Ñ•´¤€ôø¥Ñ•´¹•Ù•¹Ñ%€ôôô•Ù•¹Ñ%¤(€€€€€€¹•Ù•Éä ¡¥Ñ•´¤€ôø¥Ñ•´¹É½½µ½‘”€ôôôÉ•™É•Í¡•‘½‘”¤°(€€€€‰Ù•¹Ð¹½Ñ¥™¥…Ñ¥½¹ÌÝ•É”¹½Ðµ¥É…Ñ•Ñ¼Ñ¡”É•™É•Í¡•É½½´½‘”ˆ(€€¤ì((€…Ý…¥Ð¡½ÍÐ¹É•ÅÕ•ÍÐ¡€½…Á¤½É½½µÌ¼‘íÉ•™É•Í¡•‘½‘•õ€°ìµ•Ñ¡½è€‰1Qˆô¤ì(€½¹ÍÐ…™Ñ•É•±•Ñ•I½½µÌ€ô…Ý…¥ÐÕ•ÍÐ¹É•ÅÕ•ÍÐ ˆ½…Á¤½µäµÉ½½µÌˆ¤ì(€…ÍÍ•ÉÐ¹½¬ ……™Ñ•É•±•Ñ•I½½µÌ¹Á…å±½…¹É½½µÌ¹Í½µ” ¡É½½´¤€ôøÉ½½´¹½‘”€ôôôÉ•™É•Í¡•‘½‘”¤¤ì(€½¹ÍÐ…™Ñ•É•±•Ñ•9½Ñ¥™¥…Ñ¥½¹Ì€ô…Ý…¥ÐÕ•ÍÐ¹É•ÅÕ•ÍÐ ˆ½…Á¤½¹½Ñ¥™¥…Ñ¥½¹Ìˆ¤ì(€…ÍÍ•ÉÐ¹½¬ ……™Ñ•É•±•Ñ•9½Ñ¥™¥…Ñ¥½¹Ì¹Á…å±½…¹¹½Ñ¥™¥…Ñ¥½¹Ì¹Í½µ” ¡¥Ñ•´¤€ôø¥Ñ•´¹É½½µ½‘”€ôôôÉ•™É•Í¡•‘½‘”¤¤ì((€½¹Í½±”¹±½œ ‰½µµ½¹É½Õ¹Íµ½­”¡•­ÌÁ…ÍÍ•¸ˆ¤ì)ô…Ñ €¡•ÉÉ½È¤ì(€½¹Í½±”¹•ÉÉ½È¡•ÉÉ½È¹ÍÑ…¬ñð•ÉÉ½È¹µ•ÍÍ…”ñð•ÉÉ½È¤ì(€¥˜€¡Í•ÉÙ•È¤½¹Í½±”¹•ÉÉ½È¡Í•ÉÙ•È¹±½Ì ¤¤ì(€ÁÉ½•ÍÌ¹•á¥Ñ½‘”€ô€Äì)ô™¥¹…±±äì(€…Ý…¥ÐÍÑ½ÁM•ÉÙ•È¡Í•ÉÙ•È¤ì(€ÉµMå¹Œ¡ÉÕ¹Ñ¥µ•¥È°ìÉ•ÕÉÍ¥Ù”èÑÉÕ”°™½É”èÑÉÕ”ô¤ì)ô(
