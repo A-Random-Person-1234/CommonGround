@@ -248,7 +248,7 @@ try {
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
   assert.match(home.text, /href="\/styles\.css\?v=20260718-flat-grid"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260718-emoji"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260719-week-date"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
   assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
@@ -459,25 +459,30 @@ try {
   assert.match(eventComposerScript.text, /function closeDialogWithMotion\(dialog, afterClose\)/);
   assert.match(
     eventComposerScript.text,
-    /function formatDayHeader\(day\) \{[\s\S]*?class="day-header-date"[^>]*data-date="\$\{escapeAttribute\(dateKey\(day\.date\)\)\}"[^>]*aria-label="View \$\{escapeAttribute\(fullDate\)\} in day view"/,
+    /function formatDayHeader\(day\) \{[\s\S]*?class="day-header-date"[^>]*data-date="\$\{escapeAttribute\(dateKey\(day\.date\)\)\}"[^>]*aria-label="View \$\{escapeAttribute\(fullDate\)\} in week view"/,
     "Planner headers must render each date number as an accessible button"
   );
   assert.match(
     eventComposerScript.text,
-    /const dateButton = header\.querySelector\("\.day-header-date"\);[\s\S]*?dateButton\?\.addEventListener\("click", async \(\) => \{\s*await goToDay\(day\.date\);/,
-    "Planner date buttons must drill directly into the selected day"
+    /const dateButton = header\.querySelector\("\.day-header-date"\);[\s\S]*?dateButton\?\.addEventListener\("click", async \(\) => \{\s*await goToDateInWeek\(day\.date\);/,
+    "Planner date buttons must select the clicked date without leaving week view"
   );
   assert.match(
     eventComposerScript.text,
-    /const dateButton = document\.createElement\("button"\);[\s\S]*?dateButton\.className = "month-date-number";[\s\S]*?dateButton\.setAttribute\("aria-label", `View \$\{formatFullDate\(date\)\} in day view`\);[\s\S]*?await openDay\(\);/,
-    "Month date numbers must be native buttons with full-date labels"
+    /const dateButton = document\.createElement\("button"\);[\s\S]*?dateButton\.className = "month-date-number";[\s\S]*?dateButton\.setAttribute\("aria-label", `View \$\{formatFullDate\(date\)\} in week view`\);[\s\S]*?await openWeek\(\);/,
+    "Month date numbers must open their selected date in week view"
   );
   assert.doesNotMatch(eventComposerScript.text, /cell\.setAttribute\("role", "button"\)/);
   assert.doesNotMatch(eventComposerScript.text, /cell\.tabIndex = 0/);
   assert.match(
     eventComposerScript.text,
-    /node\.setAttribute\("aria-label", `View \$\{formatFullDate\(date\)\} in day view`\);[\s\S]*?await goToDay\(date\);/,
-    "Year date buttons must expose their full date and retain day drill-down"
+    /node\.setAttribute\("aria-label", `View \$\{formatFullDate\(date\)\} in week view`\);[\s\S]*?await goToDateInWeek\(date\);/,
+    "Year date buttons must open their selected date in week view"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function goToDateInWeek\(date\) \{\s*const wasWeekView = currentView === "week";\s*currentFocusDate = startOfDay\(date\);\s*currentView = "week";\s*if \(wasWeekView\) \{\s*animateCalendarTransition\(render\);\s*return;\s*\}\s*await refreshCalendarAfterImmediateRender\(\);/,
+    "Date navigation must retain the clicked date as the selection anchor and use week view"
   );
   assert.match(eventComposerScript.text, /input\.style\.setProperty\("--inline-name-width", `\$\{targetWidth\}px`\)/);
   assert.match(

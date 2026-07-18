@@ -538,7 +538,7 @@ function formatDayHeader(day) {
   const fullDate = formatFullDate(day.date);
   return `
     <span class="day-header-weekday">${escapeHtml(day.short)}</span>
-    <button class="day-header-date" type="button" data-date="${escapeAttribute(dateKey(day.date))}" aria-label="View ${escapeAttribute(fullDate)} in day view" title="View ${escapeAttribute(fullDate)} in day view">${escapeHtml(dayNumber)}</button>
+    <button class="day-header-date" type="button" data-date="${escapeAttribute(dateKey(day.date))}" aria-label="View ${escapeAttribute(fullDate)} in week view" title="View ${escapeAttribute(fullDate)} in week view">${escapeHtml(dayNumber)}</button>
   `;
 }
 
@@ -1714,10 +1714,13 @@ async function toggleFullscreenMode() {
   updateFullscreenControl();
 }
 
-async function goToDay(date) {
+async function goToDateInWeek(date) {
+  const wasWeekView = currentView === "week";
   currentFocusDate = startOfDay(date);
-  if (currentView !== "day") {
-    currentView = "day";
+  currentView = "week";
+  if (wasWeekView) {
+    animateCalendarTransition(render);
+    return;
   }
   await refreshCalendarAfterImmediateRender();
 }
@@ -3733,7 +3736,7 @@ function renderPlanner(days) {
     const dateButton = header.querySelector(".day-header-date");
     if (isSelected) dateButton?.setAttribute("aria-current", "date");
     dateButton?.addEventListener("click", async () => {
-      await goToDay(day.date);
+      await goToDateInWeek(day.date);
     });
     calendarGrid.appendChild(header);
   }
@@ -3827,22 +3830,22 @@ function renderMonth() {
       cell.classList.add("free-day");
       cell.title = "Free day";
     }
-    const openDay = async () => {
-      await goToDay(date);
+    const openWeek = async () => {
+      await goToDateInWeek(date);
     };
     const dateButton = document.createElement("button");
     dateButton.type = "button";
     dateButton.className = "month-date-number";
     dateButton.textContent = String(date.getDate());
-    dateButton.setAttribute("aria-label", `View ${formatFullDate(date)} in day view`);
-    dateButton.title = `View ${formatFullDate(date)} in day view`;
+    dateButton.setAttribute("aria-label", `View ${formatFullDate(date)} in week view`);
+    dateButton.title = `View ${formatFullDate(date)} in week view`;
     if (sameDate(date, currentFocusDate)) dateButton.setAttribute("aria-current", "date");
     dateButton.addEventListener("click", async (event) => {
       event.stopPropagation();
-      await openDay();
+      await openWeek();
     });
     cell.appendChild(dateButton);
-    cell.addEventListener("click", openDay);
+    cell.addEventListener("click", openWeek);
 
     const visibleLimit = Math.max(1, events.length > maxRows ? maxRows - 1 : maxRows);
     for (const eventBlock of events.slice(0, visibleLimit)) {
@@ -3867,7 +3870,7 @@ function renderMonth() {
       moreButton.textContent = `+${hiddenCount} more`;
       moreButton.addEventListener("click", async (event) => {
         event.stopPropagation();
-        await openDay();
+        await openWeek();
       });
       cell.appendChild(moreButton);
     }
@@ -3922,11 +3925,11 @@ function renderYear() {
         sameDate(date, currentFocusDate) ? "selected" : ""
       ].filter(Boolean).join(" ");
       node.textContent = date.getDate();
-      node.setAttribute("aria-label", `View ${formatFullDate(date)} in day view`);
-      node.title = `View ${formatFullDate(date)} in day view`;
+      node.setAttribute("aria-label", `View ${formatFullDate(date)} in week view`);
+      node.title = `View ${formatFullDate(date)} in week view`;
       if (sameDate(date, currentFocusDate)) node.setAttribute("aria-current", "date");
       node.addEventListener("click", async () => {
-        await goToDay(date);
+        await goToDateInWeek(date);
       });
       mini.appendChild(node);
     }
