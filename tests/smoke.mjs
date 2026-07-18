@@ -366,6 +366,11 @@ try {
   assert.match(eventComposerStyles.text, /\.calendar-wrap\s*\{[^}]*grid-row:\s*1[^}]*overflow:\s*auto/s);
   assert.match(
     eventComposerStyles.text,
+    /\.calendar-grid\.year-view\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(150px, 1fr\)\)[^}]*grid-template-rows:\s*none[^}]*grid-auto-rows:\s*minmax\(214px, auto\)/s,
+    "Year view must clear the planner's explicit hourly rows before laying out months"
+  );
+  assert.match(
+    eventComposerStyles.text,
     /\.participants-sidebar\s*\{[^}]*overflow:\s*hidden[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:\s*0 22px 22px 0[^}]*box-shadow:\s*var\(--shadow\)[^}]*touch-action:\s*pan-y/s,
     "The participants drawer must own one unified outer surface"
   );

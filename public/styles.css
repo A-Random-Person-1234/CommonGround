@@ -2589,6 +2589,7 @@ a:focus-visible {
 
 .calendar-grid.year-view {
   grid-template-columns: repeat(4, minmax(150px, 1fr));
+  grid-template-rows: none;
   grid-auto-rows: minmax(214px, auto);
   align-items: start;
   align-content: start;
