@@ -55,11 +55,7 @@
 
           <form class="panel action-card" id="joinRoomForm">
             <p class="panel-label">Join room</p>
-            <label class="field-label" for="joinRoomCode">
-              <span>Six-character room code</span>
-              <input id="joinRoomCode" name="roomCode" type="text" placeholder="ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" minlength="6" pattern="[A-Za-z0-9]{6}" aria-describedby="joinRoomHint" />
-            </label>
-            <small class="field-hint" id="joinRoomHint">Letters and numbers; uppercase or lowercase both work.</small>
+            <input id="joinRoomCode" name="roomCode" type="text" placeholder="ABC123" aria-label="Room code" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" minlength="6" pattern="[A-Za-z0-9]{6}" />
             <button class="secondary strong" type="submit">Join room</button>
           </form>
         </section>

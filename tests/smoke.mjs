@@ -236,6 +236,9 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
+  assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
+  assert.doesNotMatch(home.text, /Six-character room code/);
+  assert.doesNotMatch(home.text, /Letters and numbers; uppercase or lowercase both work\./);
   assert.match(home.text, /id="googleEventSyncToggle" type="checkbox" checked/);
   assert.match(home.text, /id="eventForm"/);
   assert.doesNotMatch(home.text, /id="eventForm" method="dialog"/);
@@ -366,6 +369,16 @@ try {
     );
   }
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerStyles.text,
+    /\.home-grid\s*\{[^}]*grid-auto-rows:\s*1fr[^}]*align-items:\s*stretch/s,
+    "Home cards must share equal-height grid tracks"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.action-card\s*\{[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\) auto[^}]*align-content:\s*stretch/s,
+    "Home card controls must share a consistent three-row layout"
+  );
   assert.match(
     eventComposerStyles.text,
     /\.topbar-identity\s*\{[^}]*--identity-control-height:\s*36px[^}]*display:\s*inline-flex[^}]*gap:\s*0[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:\s*999px/s,
