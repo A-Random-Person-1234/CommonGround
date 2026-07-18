@@ -267,7 +267,36 @@ try {
   assert.match(eventComposerScript.text, /function setButtonLabelWithIcon\(button, label, iconClass\)/);
   assert.match(eventComposerScript.text, /function setPanelVisibility\(panel, visible/);
   assert.match(eventComposerScript.text, /function closeDialogWithMotion\(dialog, afterClose\)/);
-  assert.match(eventComposerScript.text, /async function animateCalendarTransition\(renderAction\)/);
+  assert.match(
+    eventComposerScript.text,
+    /function animateCalendarTransition\(renderAction\) \{\s*renderAction\(\);[\s\S]*?replayMotionClass\(calendarGrid, "is-view-entering", motionFastMs\);\s*\}/,
+    "Calendar view motion must happen after an immediate render"
+  );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /calendarGrid\.classList\.add\("is-view-exiting"\)[\s\S]*?setTimeout/,
+    "Calendar view changes must not wait on a pre-render timeout"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function refreshCalendarAfterImmediateRender\(\) \{\s*const refreshPromise = loadCalendarRangeWithMotion\(\);\s*animateCalendarTransition\(render\);\s*if \(await refreshPromise\) render\(\);\s*\}/,
+    "The target timetable must render before free\/busy refresh completes"
+  );
+  assert.equal(
+    (eventComposerScript.text.match(/await refreshCalendarAfterImmediateRender\(\);/g) || []).length,
+    3,
+    "View, period, and drill-down changes must share the immediate-render path"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const generation = \+\+calendarLoadGeneration;[\s\S]*?if \(generation === calendarLoadGeneration\) \{\s*calendarStatus\?\.classList\.remove\("is-loading"\);/,
+    "An older request must not clear the latest calendar loading state"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /if \(currentView === "year"\) \{\s*freeBusyGeneration \+= 1;\s*const pendingController = freeBusyController;\s*freeBusyController = null;\s*pendingController\?\.abort\(\);/,
+    "Year view must invalidate and release any older free\/busy request"
+  );
   assert.match(eventComposerScript.text, /function prefersReducedMotion\(\)/);
   assert.match(eventComposerScript.text, /const motionPressMs = 100;/);
   assert.match(eventComposerScript.text, /const motionFastMs = 150;/);
@@ -350,7 +379,17 @@ try {
   assertCompositorOnlyMotion(eventComposerStyles.text);
   assertTransformOpacityKeyframes(eventComposerStyles.text);
   assert.match(eventComposerStyles.text, /\.modal\.is-closing \.modal-card/);
-  assert.match(eventComposerStyles.text, /\.calendar-grid\.is-view-entering/);
+  assert.match(
+    eventComposerStyles.text,
+    /\.calendar-grid\.is-view-entering\s*\{[^}]*animation:\s*calendar-view-enter var\(--motion-fast\) var\(--ease-standard\) both/s,
+    "The new timetable should settle in quickly after it is already rendered"
+  );
+  assert.doesNotMatch(eventComposerStyles.text, /\.calendar-grid\.is-view-exiting\s*\{/);
+  assert.match(
+    eventComposerStyles.text,
+    /@keyframes calendar-view-enter\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0\.82[^}]*translateY\(2px\) scale\(0\.998\)/,
+    "Calendar entrance must remain readable from its first painted frame"
+  );
   assert.match(eventComposerStyles.text, /\.event-composer\s*\{[^}]*max-height: calc\(100dvh - 12px\)[^}]*grid-template-rows: auto auto auto auto auto/s);
   assert.match(eventComposerStyles.text, /#eventModal\s*\{[^}]*width: 100vw[^}]*height: 100dvh[^}]*max-width: none[^}]*overflow: visible/s);
   assert.match(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow: visible/s);

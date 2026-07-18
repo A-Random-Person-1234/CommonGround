@@ -212,7 +212,7 @@ const panelMotionTimers = new WeakMap();
 const dialogMotionTimers = new WeakMap();
 const replayMotionStates = new WeakMap();
 const keyboardPressTimers = new WeakMap();
-let calendarMotionGeneration = 0;
+let calendarLoadGeneration = 0;
 
 function prefersReducedMotion() {
   return reducedMotionQuery.matches;
@@ -361,28 +361,29 @@ function closeDialogWithMotion(dialog, afterClose) {
   dialogMotionTimers.set(dialog, timer);
 }
 
-async function animateCalendarTransition(renderAction) {
-  if (!calendarGrid || prefersReducedMotion()) {
-    renderAction();
-    return;
-  }
-  const generation = ++calendarMotionGeneration;
-  calendarGrid.classList.remove("is-view-entering");
-  calendarGrid.classList.add("is-view-exiting");
-  await new Promise((resolve) => window.setTimeout(resolve, motionStandardMs));
-  if (generation !== calendarMotionGeneration) return;
+function animateCalendarTransition(renderAction) {
   renderAction();
+  if (!calendarGrid || prefersReducedMotion()) return;
   calendarGrid.classList.remove("is-view-exiting");
-  replayMotionClass(calendarGrid, "is-view-entering");
+  replayMotionClass(calendarGrid, "is-view-entering", motionFastMs);
 }
 
 async function loadCalendarRangeWithMotion() {
+  const generation = ++calendarLoadGeneration;
   calendarStatus?.classList.add("is-loading");
   try {
     return await loadFreeBusy();
   } finally {
-    calendarStatus?.classList.remove("is-loading");
+    if (generation === calendarLoadGeneration) {
+      calendarStatus?.classList.remove("is-loading");
+    }
   }
+}
+
+async function refreshCalendarAfterImmediateRender() {
+  const refreshPromise = loadCalendarRangeWithMotion();
+  animateCalendarTransition(render);
+  if (await refreshPromise) render();
 }
 let displayNameSaveTimer = null;
 let roomNameSaveTimer = null;
@@ -1052,8 +1053,7 @@ function applyParticipantPatchLocally(participantId, patch) {
 async function setCurrentView(view) {
   if (!view || currentView === view) return;
   currentView = view;
-  await loadCalendarRangeWithMotion();
-  await animateCalendarTransition(render);
+  await refreshCalendarAfterImmediateRender();
 }
 
 function calendarPeriodText() {
@@ -1101,8 +1101,7 @@ async function shiftCalendarPeriod(direction) {
     currentFocusDate = startOfDay(addDays(currentFocusDate, step * 7));
   }
 
-  await loadCalendarRangeWithMotion();
-  await animateCalendarTransition(render);
+  await refreshCalendarAfterImmediateRender();
 }
 
 async function toggleFullscreenMode() {
@@ -1121,8 +1120,7 @@ async function goToDay(date) {
   if (currentView !== "day") {
     currentView = "day";
   }
-  await loadCalendarRangeWithMotion();
-  await animateCalendarTransition(render);
+  await refreshCalendarAfterImmediateRender();
 }
 
 function shouldIgnoreViewShortcut(target) {
@@ -3734,7 +3732,10 @@ async function loadRoom(code, { signal, generation } = {}) {
 async function loadFreeBusy() {
   if (!currentRoom) return;
   if (currentView === "year") {
-    freeBusyController?.abort();
+    freeBusyGeneration += 1;
+    const pendingController = freeBusyController;
+    freeBusyController = null;
+    pendingController?.abort();
     googleBusy = [];
     return true;
   }

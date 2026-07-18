@@ -6260,8 +6260,7 @@ a:focus-visible {
   will-change: transform, opacity;
 }
 
-.calendar-wrap,
-.calendar-grid {
+.calendar-wrap {
   transition:
     opacity var(--motion-fast) var(--ease-standard),
     transform var(--motion-standard) var(--ease-standard);
@@ -6271,15 +6270,8 @@ a:focus-visible {
   transform-origin: 50% 0;
 }
 
-.calendar-grid.is-view-exiting {
-  opacity: 0.42;
-  transform: translateY(3px) scale(0.995);
-  pointer-events: none;
-  will-change: transform, opacity;
-}
-
 .calendar-grid.is-view-entering {
-  animation: calendar-view-enter var(--motion-standard) var(--ease-entrance) both;
+  animation: calendar-view-enter var(--motion-fast) var(--ease-standard) both;
   will-change: transform, opacity;
 }
 
@@ -6406,8 +6398,8 @@ a:focus-visible {
 
 @keyframes calendar-view-enter {
   from {
-    opacity: 0;
-    transform: translateY(4px) scale(0.996);
+    opacity: 0.82;
+    transform: translateY(2px) scale(0.998);
   }
   to {
     opacity: 1;
