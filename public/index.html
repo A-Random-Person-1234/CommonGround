@@ -11,7 +11,7 @@
       }
     </script>
     <title>CommonGround | Shared calendar rooms</title>
-    <link rel="stylesheet" href="/styles.css?v=20260723-compact-composer" />
+    <link rel="stylesheet" href="/styles.css?v=20260723-google-connect" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -128,6 +128,11 @@
         </div>
 
         <div class="room-actions calendar-nav-actions">
+          <button class="calendar-google-button needs-connection button-with-icon" id="calendarGoogleButton" type="button" title="Connect Google Calendar" aria-label="Connect Google Calendar">
+            <span class="ui-icon ui-icon-calendar-sync" aria-hidden="true"></span>
+            <span>Connect Google</span>
+          </button>
+
           <button class="icon-button nav-icon-button" id="settingsButton" type="button" title="Settings" aria-label="Open settings">
             <span class="ui-icon ui-icon-settings" aria-hidden="true"></span>
           </button>
@@ -618,6 +623,6 @@
       <p class="sr-only" id="emojiPickerStatus" role="status" aria-live="polite"></p>
     </div>
 
-    <script src="/app.js?v=20260723-compact-composer"></script>
+    <script src="/app.js?v=20260723-google-connect"></script>
   </body>
 </html>
