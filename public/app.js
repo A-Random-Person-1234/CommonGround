@@ -192,9 +192,11 @@ let googleAuthPopupPollTimer = null;
 let googleAuthPopupPending = false;
 let dragCreateState = null;
 let eventResizeState = null;
+let eventMoveState = null;
 let dragPreviewNode = null;
 let dragPreviewFrame = 0;
 let eventResizeFrame = 0;
+let eventMoveFrame = 0;
 let suppressCalendarClickUntil = 0;
 let participantsDrawerGesture = null;
 
@@ -238,6 +240,7 @@ const motionSlowMs = 350;
 const motionPageMs = 400;
 const eventResizeSnapMinutes = 15;
 const eventResizeMinMinutes = 15;
+const eventMoveThresholdPixels = 6;
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const panelMotionTimers = new WeakMap();
 const dialogMotionTimers = new WeakMap();
@@ -2545,6 +2548,7 @@ function renderCalendarGoogleControl() {
     "is-connected"
   );
   calendarGoogleButton.classList.add(state);
+  calendarGoogleButton.classList.toggle("hidden", state === "is-connected");
   calendarGoogleButton.dataset.googleAction = state === "is-connected" ? "manage" : "authorize";
   calendarGoogleButton.title = accessibleLabel;
   calendarGoogleButton.setAttribute("aria-label", accessibleLabel);
@@ -3644,6 +3648,19 @@ function createEventBlock(item, dayIndex, dayDate) {
   const laneIndex = Math.max(0, Number(item.laneIndex || 0));
   const laneSizeClass = laneCount > 1 ? `event-lanes-${Math.min(laneCount, 4)}` : "";
   const isEditable = canManageEvent(item.originalEvent || {});
+  const isOwnedByViewer = Boolean(
+    currentParticipant?.id &&
+    item.originalEvent?.createdByParticipantId === currentParticipant.id
+  );
+  const canMove = Boolean(
+    isOwnedByViewer &&
+    !item.continuesBefore &&
+    !item.continuesAfter &&
+    !item.allDay &&
+    item.id &&
+    item.eventStart &&
+    item.eventEnd
+  );
   const canResizeTop = Boolean(isEditable && !item.continuesBefore && !item.allDay && item.id && item.eventStart);
   const canResizeBottom = Boolean(isEditable && !item.continuesAfter && !item.allDay && item.id && item.eventEnd);
   block.className = [
@@ -3653,6 +3670,7 @@ function createEventBlock(item, dayIndex, dayDate) {
     laneCount > 1 ? "event-overlap-lane" : "",
     laneSizeClass,
     isEditable ? "can-resize" : "",
+    canMove ? "can-move" : "",
     canResizeTop ? "event-resize-top" : "",
     canResizeBottom ? "event-resize-bottom" : "",
     item.isInvitee ? "invitee" : "",
@@ -3667,6 +3685,7 @@ function createEventBlock(item, dayIndex, dayDate) {
   block.dataset.dayIndex = String(dayIndex);
   block.dataset.canResizeTop = String(canResizeTop);
   block.dataset.canResizeBottom = String(canResizeBottom);
+  block.dataset.canMove = String(canMove);
   block.dataset.startMinute = String(startMinute);
   block.dataset.durationMinute = String(durationMinute);
   block.setAttribute("aria-label", `${item.title || "Event"} at ${formatEventRange(item.startHour, item.endHour)}`);
@@ -3715,6 +3734,9 @@ function createEventBlock(item, dayIndex, dayDate) {
     if (event.target.closest(".event-resize-handle")) return;
     openEventDetail(item.id);
   });
+  if (canMove) {
+    block.addEventListener("pointerdown", startEventMove);
+  }
 
   if (canResizeTop) {
     const topHandle = document.createElement("span");
@@ -4150,6 +4172,200 @@ function buildEventResizePayload(eventEntry, startMinute, durationMinute, dayKey
   };
 }
 
+function resetEventMoveVisual(block) {
+  if (!block) return;
+  block.classList.remove("is-moving");
+  block.style.removeProperty("--event-move-x");
+  block.style.removeProperty("--event-move-y");
+}
+
+function applyEventMovePreview(state, dayIndex, startMinute) {
+  const { block, baseDayIndex, baseStartMinute, baseDurationMinute, pixelsPerMinute } = state || {};
+  if (!block) return { dayIndex: baseDayIndex || 0, startMinute: baseStartMinute || 0 };
+
+  const safeDayIndex = Math.max(0, Math.min(currentView === "day" ? 0 : 6, Number(dayIndex || 0)));
+  const safeStartMinute = clampEventMinutes(
+    snapEventMinutes(startMinute, eventResizeSnapMinutes),
+    0,
+    Math.max(0, 24 * 60 - baseDurationMinute)
+  );
+  const eventsLayer = calendarGrid.querySelector(".events-layer");
+  const dayCount = currentView === "day" ? 1 : 7;
+  const dayWidth = eventsLayer?.getBoundingClientRect().width / dayCount || 0;
+  const translateX = (safeDayIndex - baseDayIndex) * dayWidth;
+  const translateY = (safeStartMinute - baseStartMinute) * pixelsPerMinute;
+
+  block.style.setProperty("--event-move-x", `${translateX}px`);
+  block.style.setProperty("--event-move-y", `${translateY}px`);
+  return { dayIndex: safeDayIndex, startMinute: safeStartMinute };
+}
+
+function scheduleEventMoveUpdate() {
+  if (eventMoveFrame) return;
+  eventMoveFrame = window.requestAnimationFrame(() => {
+    eventMoveFrame = 0;
+    const state = eventMoveState;
+    if (!state?.block?.isConnected) return;
+
+    const deltaX = state.moveX - state.startDragX;
+    const deltaY = state.moveY - state.startDragY;
+    if (!state.moved && Math.hypot(deltaX, deltaY) < eventMoveThresholdPixels) return;
+
+    if (!state.moved) {
+      state.moved = true;
+      state.block.classList.add("is-moving");
+    }
+
+    const candidateStart = state.baseStartMinute + deltaY / state.pixelsPerMinute;
+    const result = applyEventMovePreview(
+      state,
+      dayIndexFromPointer(state.moveX),
+      candidateStart
+    );
+    state.finalDayIndex = result.dayIndex;
+    state.finalStartMinute = result.startMinute;
+  });
+}
+
+function stopEventMove() {
+  if (eventMoveState?.captureTarget?.hasPointerCapture?.(eventMoveState.pointerId)) {
+    eventMoveState.captureTarget.releasePointerCapture(eventMoveState.pointerId);
+  }
+  window.removeEventListener("pointermove", handleEventMoveMove);
+  window.removeEventListener("pointerup", handleEventMoveEnd);
+  window.removeEventListener("pointercancel", handleEventMoveCancel);
+  if (eventMoveFrame) {
+    window.cancelAnimationFrame(eventMoveFrame);
+    eventMoveFrame = 0;
+  }
+  eventMoveState = null;
+}
+
+function handleEventMoveMove(event) {
+  if (!eventMoveState || event.pointerId !== eventMoveState.pointerId) return;
+  eventMoveState.moveX = event.clientX;
+  eventMoveState.moveY = event.clientY;
+  const deltaX = event.clientX - eventMoveState.startDragX;
+  const deltaY = event.clientY - eventMoveState.startDragY;
+  if (eventMoveState.moved || Math.hypot(deltaX, deltaY) >= eventMoveThresholdPixels) {
+    event.preventDefault();
+  }
+  scheduleEventMoveUpdate();
+}
+
+async function handleEventMoveEnd(event) {
+  if (!eventMoveState || event.pointerId !== eventMoveState.pointerId) return;
+  eventMoveState.moveX = event.clientX;
+  eventMoveState.moveY = event.clientY;
+  scheduleEventMoveUpdate();
+  await new Promise((resolve) => {
+    if (eventMoveFrame) {
+      window.requestAnimationFrame(resolve);
+    } else {
+      resolve();
+    }
+  });
+
+  const state = eventMoveState;
+  const block = state?.block;
+  if (!state?.moved) {
+    resetEventMoveVisual(block);
+    stopEventMove();
+    return;
+  }
+
+  event.preventDefault();
+  markCalendarClickSuppressed();
+  const dayEvent = roomEventById(state.eventId);
+  const finalDayIndex = Number.isFinite(state.finalDayIndex) ? state.finalDayIndex : state.baseDayIndex;
+  const finalStartMinute = Number.isFinite(state.finalStartMinute) ? state.finalStartMinute : state.baseStartMinute;
+  const targetDayKey = dateKey(dateFromDayIndex(finalDayIndex));
+
+  try {
+    if (!dayEvent || !block) return;
+    if (targetDayKey === state.dayKey && finalStartMinute === state.baseStartMinute) return;
+
+    const payload = buildEventResizePayload(
+      dayEvent,
+      finalStartMinute,
+      state.baseDurationMinute,
+      targetDayKey
+    );
+    payload.syncToGoogle = dayEvent.syncToGoogle === true || calendarEventSyncEnabled();
+    const data = await fetchJson(`/api/rooms/${currentRoom.code}/events/${state.eventId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!data?.event) {
+      throw new Error("Could not move event.");
+    }
+
+    currentRoom.events = currentRoom.events.map((item) => (
+      item.id === state.eventId ? data.event : item
+    ));
+    render();
+    fetchNotifications();
+    try {
+      if (await loadFreeBusy()) render();
+    } catch (syncRefreshError) {
+      calendarStatus.textContent = syncRefreshError.message;
+    }
+  } catch (error) {
+    calendarStatus.textContent = error.message;
+    resetEventMoveVisual(block);
+    render();
+  } finally {
+    resetEventMoveVisual(block);
+    stopEventMove();
+  }
+}
+
+function handleEventMoveCancel() {
+  if (!eventMoveState) return;
+  resetEventMoveVisual(eventMoveState.block);
+  stopEventMove();
+}
+
+function startEventMove(event) {
+  const block = event.currentTarget;
+  if (!block || event.button !== undefined && event.button !== 0) return;
+  if (event.target.closest(".event-resize-handle")) return;
+  if (eventResizeState || eventMoveState || dragCreateState) return;
+  if (block.dataset.canMove !== "true") return;
+
+  const eventId = block.dataset.eventId;
+  const calendarEvent = roomEventById(eventId);
+  if (!calendarEvent || calendarEvent.createdByParticipantId !== currentParticipant?.id) return;
+  const startMinute = Number(block.dataset.startMinute);
+  const durationMinute = Number(block.dataset.durationMinute);
+  if (!Number.isFinite(startMinute) || !Number.isFinite(durationMinute)) return;
+
+  event.stopPropagation();
+  eventMoveState = {
+    eventId,
+    block,
+    captureTarget: block,
+    pointerId: event.pointerId,
+    dayKey: block.dataset.eventDate || "",
+    baseDayIndex: Number(block.dataset.dayIndex || 0),
+    finalDayIndex: Number(block.dataset.dayIndex || 0),
+    baseStartMinute: startMinute,
+    finalStartMinute: startMinute,
+    baseDurationMinute: durationMinute,
+    startDragX: event.clientX,
+    startDragY: event.clientY,
+    moveX: event.clientX,
+    moveY: event.clientY,
+    pixelsPerMinute: resolvedCalendarRowHeight() / 60,
+    moved: false
+  };
+  block.setPointerCapture?.(event.pointerId);
+  window.addEventListener("pointermove", handleEventMoveMove);
+  window.addEventListener("pointerup", handleEventMoveEnd);
+  window.addEventListener("pointercancel", handleEventMoveCancel);
+}
+
 function scheduleEventResizeUpdate() {
   if (eventResizeFrame) return;
   eventResizeFrame = window.requestAnimationFrame(() => {
@@ -4293,6 +4509,7 @@ function startEventResize(event) {
   event.stopPropagation();
   const handle = event.currentTarget;
   if (!handle || event.button !== undefined && event.button !== 0) return;
+  if (eventMoveState || dragCreateState) return;
   const block = handle.closest(".event-card");
   if (!block) return;
   if (block.classList.contains("is-resizing")) return;
@@ -4716,6 +4933,8 @@ function resetRoomScopedState({ clearRoom = false } = {}) {
   pendingEventPrefill = null;
   hiddenParticipantIds.clear();
   stopDragCreate();
+  handleEventMoveCancel();
+  handleEventResizeCancel();
   closeExpandedBusyStacks();
 
   if (eventModal?.open) {
