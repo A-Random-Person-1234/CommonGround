@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="referrer" content="no-referrer" />
     <title>Google Calendar connection</title>
+    <meta name="theme-color" content="#101c31" />
+    <link rel="icon" type="image/png" href="/icons/CommonGroundAppIcon.png?v=20260724" />
+    <link rel="apple-touch-icon" href="/icons/CommonGroundAppIcon.png?v=20260724" />
     <style>
       * { box-sizing: border-box; }
       html, body { min-height: 100%; }
@@ -30,12 +33,11 @@
         width: 46px;
         height: 46px;
         margin: 0 auto 16px;
-        display: grid;
-        place-items: center;
+        display: block;
         border-radius: 14px;
-        background: #8a5a35;
-        color: #fffaf3;
-        font-weight: 900;
+        object-fit: cover;
+        overflow: hidden;
+        box-shadow: 0 10px 22px rgba(16, 28, 49, 0.2);
       }
       h1 { margin: 0; font-size: 22px; line-height: 1.2; }
       p { margin: 12px 0 0; color: #725b4b; line-height: 1.5; }
@@ -58,7 +60,7 @@
   </head>
   <body>
     <main>
-      <div class="mark" aria-hidden="true">CG</div>
+      <img class="mark" src="/icons/CommonGroundAppIcon.png" alt="" width="46" height="46" />
       <h1>Finishing your connection</h1>
       <p id="oauthPopupStatus" role="status" aria-live="polite">Confirming Google Calendar access...</p>
       <button id="oauthPopupClose" type="button" hidden>Close this window</button>

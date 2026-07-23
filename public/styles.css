@@ -603,6 +603,15 @@ a:focus-visible {
   box-shadow: 0 10px 22px rgba(124, 84, 44, 0.18);
 }
 
+.app-brand-icon {
+  display: block;
+  padding: 0;
+  object-fit: cover;
+  overflow: hidden;
+  background: #101c31;
+  color: transparent;
+}
+
 .eyebrow,
 .panel-label {
   margin: 0;
@@ -8481,17 +8490,14 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage .calendar-product-mark {
-  display: grid;
-  place-items: center;
+  display: block;
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: linear-gradient(180deg, #78a9ff 0%, #2f76e8 100%);
-  color: #fff;
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.38);
+  object-fit: cover;
+  overflow: hidden;
+  background: #101c31;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24);
 }
 
 #roomPage .calendar-today-button,

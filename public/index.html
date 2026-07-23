@@ -11,7 +11,16 @@
       }
     </script>
     <title>CommonGround | Shared calendar rooms</title>
-    <link rel="stylesheet" href="/styles.css?v=20260723-date-header" />
+    <meta name="description" content="CommonGround helps groups compare calendar availability and find a time that works." />
+    <meta name="theme-color" content="#101c31" />
+    <meta property="og:title" content="CommonGround | Shared calendar rooms" />
+    <meta property="og:description" content="Compare availability and find the overlap without the group chat chaos." />
+    <meta property="og:image" content="https://commonground-3qij.onrender.com/icons/CommonGroundAppIcon.png" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" type="image/png" href="/icons/CommonGroundAppIcon.png?v=20260724" />
+    <link rel="apple-touch-icon" href="/icons/CommonGroundAppIcon.png?v=20260724" />
+    <link rel="stylesheet" href="/styles.css?v=20260724-app-icon" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -19,7 +28,7 @@
     <section class="home-page" id="homePage">
       <div class="home-shell">
         <header class="brand-row">
-          <div class="mark" aria-hidden="true">CG</div>
+          <img class="mark app-brand-icon" src="/icons/CommonGroundAppIcon.png" alt="" width="46" height="46" />
           <div class="brand-meta">
             <div class="brand-label">CommonGround</div>
           </div>
@@ -69,7 +78,7 @@
     <section class="entry-choice-page hidden" id="entryChoicePage">
       <div class="entry-choice-shell">
         <header class="brand-row compact">
-          <div class="mark" aria-hidden="true">CG</div>
+          <img class="mark app-brand-icon" src="/icons/CommonGroundAppIcon.png" alt="" width="46" height="46" />
           <div class="brand-meta">
             <div class="brand-label">CommonGround</div>
           </div>
@@ -111,9 +120,9 @@
               <path d="M4 7h16M4 12h16M4 17h16"></path>
             </svg>
           </button>
-          <div class="calendar-product" aria-label="Calendar">
-            <span class="calendar-product-mark" aria-hidden="true">23</span>
-            <span class="calendar-product-name">Calendar</span>
+          <div class="calendar-product" aria-label="CommonGround calendar">
+            <img class="calendar-product-mark app-brand-icon" src="/icons/CommonGroundAppIcon.png" alt="" width="32" height="32" />
+            <span class="calendar-product-name">CommonGround</span>
           </div>
           <button class="calendar-today-button" id="todayButton" type="button">Today</button>
           <div class="calendar-date-nav" aria-label="Calendar date navigation">
