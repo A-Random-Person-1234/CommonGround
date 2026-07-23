@@ -178,8 +178,10 @@ let googleAuthPopupToken = "";
 let googleAuthPopupPollTimer = null;
 let googleAuthPopupPending = false;
 let dragCreateState = null;
+let eventResizeState = null;
 let dragPreviewNode = null;
 let dragPreviewFrame = 0;
+let eventResizeFrame = 0;
 let suppressCalendarClickUntil = 0;
 let participantsDrawerGesture = null;
 
@@ -218,13 +220,19 @@ const motionFastMs = 150;
 const motionStandardMs = 250;
 const motionSlowMs = 350;
 const motionPageMs = 400;
+const eventResizeSnapMinutes = 15;
+const eventResizeMinMinutes = 15;
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const panelMotionTimers = new WeakMap();
 const dialogMotionTimers = new WeakMap();
 const replayMotionStates = new WeakMap();
 const keyboardPressTimers = new WeakMap();
 const emojiSpringStates = new WeakMap();
-const emojiKeywordDictionaryUrl = "/assets/emojilib/3.0.11/emoji-en-US.json";
+const freeBlockReflowAnimations = new WeakMap();
+const emojiKeywordDictionaryUrl = "https://unpkg.com/emojilib@3.0.11/dist/emoji-en-US.json";
+const emojiKeywordDictionaryFallbackUrl = "/assets/emojilib/3.0.11/emoji-en-US.json";
+const maxEmojiPickerResults = 60;
+const maxFrequentlyUsedEmojis = 40;
 const frequentRoomEmojis = Object.freeze([
   "😀", "😃", "😄", "😁", "😆", "😅", "😂", "🙂",
   "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘",
@@ -501,6 +509,47 @@ function sameDate(a, b) {
 
 function dateKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function parseDateKey(value = "") {
+  const parts = String(value).split("-").map((part) => Number(part));
+  if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
+    return startOfDay(new Date());
+  }
+  const [year, month, day] = parts;
+  const parsed = new Date(year, month - 1, day);
+  return Number.isFinite(parsed.getTime()) ? parsed : startOfDay(new Date());
+}
+
+function dayStartFromDateKey(value = "") {
+  return startOfDay(parseDateKey(value));
+}
+
+function dateTimeFromDateKeyAndMinutes(value = "", minutes = 0) {
+  const date = dayStartFromDateKey(value);
+  const dateTime = new Date(date);
+  dateTime.setMinutes(minutes);
+  dateTime.setSeconds(0, 0);
+  return dateTime;
+}
+
+function eventInviteeIds(event = {}) {
+  const ids = Array.isArray(event.invitees)
+    ? event.invitees.map((invitee) => invitee?.participantId || invitee?.id || "")
+    : [];
+  return [...new Set(ids.filter(Boolean))];
+}
+
+function canManageEvent(event = {}) {
+  return Boolean(currentIsHost || (currentParticipant?.id && event.createdByParticipantId === currentParticipant.id));
+}
+
+function clampEventMinutes(value = 0, min = 0, max = 24 * 60) {
+  return Math.min(max, Math.max(min, value));
+}
+
+function snapEventMinutes(value = 0, step = eventResizeSnapMinutes) {
+  return Math.round(value / step) * step;
 }
 
 function currentWeekDays() {
@@ -852,8 +901,8 @@ function normalizedEmojiSearchText(value) {
 }
 
 function emojiEntryName(entry) {
-  const keyword = entry?.keywords?.find((value) => typeof value === "string" && /[a-z]/i.test(value));
-  const label = normalizedEmojiSearchText(keyword || "emoji");
+  const keyword = entry?.label || entry?.keywords?.find((value) => typeof value === "string" && /[a-z]/i.test(value));
+  const label = normalizedEmojiSearchText(keyword || "emoji").replace(/_/g, " ");
   return label ? `${label.charAt(0).toUpperCase()}${label.slice(1)}` : "Emoji";
 }
 
@@ -1019,38 +1068,61 @@ async function loadEmojiKeywordDictionary() {
   if (emojiKeywordEntries) return emojiKeywordEntries;
   if (emojiKeywordLoadPromise) return emojiKeywordLoadPromise;
 
-  emojiKeywordLoadPromise = fetch(emojiKeywordDictionaryUrl, {
-    headers: { Accept: "application/json" },
-    credentials: "same-origin"
-  })
-    .then(async (response) => {
-      if (!response.ok) throw new Error("Emoji dictionary could not be loaded.");
-      const dictionary = await response.json();
-      if (!dictionary || Array.isArray(dictionary) || typeof dictionary !== "object") {
-        throw new Error("Emoji dictionary response is invalid.");
-      }
+  emojiKeywordLoadPromise = (async () => {
+    let dictionary = null;
+    const sources = [emojiKeywordDictionaryUrl, emojiKeywordDictionaryFallbackUrl];
+    let lastError = null;
 
-      emojiKeywordEntries = Object.entries(dictionary)
-        .filter(([emoji, keywords]) => emoji && Array.isArray(keywords))
-        .map(([emoji, keywords]) => {
-          const safeKeywords = keywords.filter((keyword) => typeof keyword === "string");
-          return {
-            emoji,
-            keywords: safeKeywords,
-            searchText: normalizedEmojiSearchText(`${emoji} ${safeKeywords.join(" ")}`)
-          };
+    for (const source of sources) {
+      try {
+        const response = await fetch(source, {
+          headers: { Accept: "application/json" },
+          mode: source.startsWith("http") ? "cors" : "same-origin",
+          credentials: source.startsWith("http") ? "omit" : "same-origin"
         });
-      emojiKeywordEntryMap = new Map(emojiKeywordEntries.map((entry) => [entry.emoji, entry]));
-      emojiPickerState.loadError = false;
-      syncAllEmojiTriggers();
-      if (emojiPickerState.open) renderEmojiPicker();
-      return emojiKeywordEntries;
-    })
-    .catch((error) => {
+        if (!response.ok) {
+          throw new Error(`Emoji dictionary response not ok: ${response.status}`);
+        }
+        dictionary = await response.json();
+        if (!dictionary || Array.isArray(dictionary) || typeof dictionary !== "object") {
+          throw new Error("Emoji dictionary response is invalid.");
+        }
+        break;
+      } catch (error) {
+        lastError = error;
+      }
+    }
+
+    if (!dictionary) {
       emojiPickerState.loadError = true;
       if (emojiPickerState.open) renderEmojiPicker();
-      throw error;
-    });
+      throw lastError || new Error("Emoji dictionary could not be loaded.");
+    }
+
+    const entries = Object.entries(dictionary)
+      .filter(([emoji, keywords]) => emoji && Array.isArray(keywords))
+      .map(([emoji, keywords]) => {
+        const safeKeywords = keywords.filter((keyword) => typeof keyword === "string");
+        const safeLabel = safeKeywords.find((keyword) => typeof keyword === "string" && /[a-z]/i.test(keyword)) || "emoji";
+        return {
+          emoji,
+          label: safeLabel,
+          keywords: safeKeywords,
+          searchText: normalizedEmojiSearchText(`${emoji} ${safeLabel} ${safeKeywords.join(" ")}`)
+        };
+      });
+
+    emojiKeywordEntries = entries;
+    emojiKeywordEntryMap = new Map(entries.map((entry) => [entry.emoji, entry]));
+    emojiPickerState.loadError = false;
+    syncAllEmojiTriggers();
+    if (emojiPickerState.open) renderEmojiPicker();
+    return emojiKeywordEntries;
+  })().catch((error) => {
+    emojiPickerState.loadError = true;
+    if (emojiPickerState.open) renderEmojiPicker();
+    throw error;
+  });
 
   return emojiKeywordLoadPromise;
 }
@@ -1058,11 +1130,14 @@ async function loadEmojiKeywordDictionary() {
 function filteredEmojiEntries(query) {
   const normalizedQuery = normalizedEmojiSearchText(query);
   if (!normalizedQuery) {
-    return frequentRoomEmojis.map((emoji) => emojiKeywordEntryMap.get(emoji) || {
-      emoji,
-      keywords: [],
-      searchText: emoji
-    });
+    return frequentRoomEmojis
+      .slice(0, maxFrequentlyUsedEmojis)
+      .map((emoji) => emojiKeywordEntryMap.get(emoji) || {
+        emoji,
+        label: "emoji",
+        keywords: [],
+        searchText: emoji
+      });
   }
   if (!emojiKeywordEntries) return null;
 
@@ -1071,7 +1146,7 @@ function filteredEmojiEntries(query) {
   for (const entry of emojiKeywordEntries) {
     if (!terms.every((term) => entry.searchText.includes(term))) continue;
     results.push(entry);
-    if (results.length === 60) break;
+    if (results.length === maxEmojiPickerResults) break;
   }
   return results;
 }
@@ -1408,6 +1483,12 @@ function calendarEventSyncEnabled() {
 
 function activeEvent() {
   return currentRoom?.events?.find((event) => event.id === selectedEventId) || null;
+}
+
+function roomEventById(eventId) {
+  if (!currentRoom) return null;
+  const target = String(eventId || "");
+  return currentRoom.events?.find((event) => String(event.id) === target) || null;
 }
 
 function participantById(participantId) {
@@ -1802,7 +1883,7 @@ function openGoogleAuthPopup() {
   const popup = window.open(
     googleAuthUrl(currentRoom.code, { calendarWrite: true, popup: true, popupToken }),
     "GoogleAuthPopup",
-    `popup=yes,width=${width},height=${height},left=${left},top=${top},resizable=yes,scrollbars=yes`
+    `width=${width},height=${height},left=${left},top=${top}`
   );
 
   if (!popup) {
@@ -3064,7 +3145,9 @@ function eventBlocksForDate(date) {
     if (endHour <= startHour) continue;
     const isCreator = event.createdByParticipantId === currentParticipant?.id;
     const isInvitee = Boolean(event.isInvited);
+    const isOwnerEditable = canManageEvent(event);
     const showDetails = Boolean(event.viewerCanSeeDetails);
+    const allDay = Boolean(event.allDay);
     items.push({
       id: event.id,
       title: showDetails ? event.title : "Busy",
@@ -3079,7 +3162,13 @@ function eventBlocksForDate(date) {
       isInvitedViewer: Boolean(event.isInvited),
       continuesBefore: start < dayStart,
       continuesAfter: end > dayEnd,
-      showDetails
+      showDetails,
+      allDay,
+      timezone: event.timezone || "UTC",
+      eventStart: event.start,
+      eventEnd: event.end,
+      originalEvent: event,
+      isEditable: isOwnerEditable
     });
   }
   return items;
@@ -3376,25 +3465,46 @@ function createBusyStack(segment, dayIndex) {
   return stack;
 }
 
-function createEventBlock(item, dayIndex) {
+function createEventBlock(item, dayIndex, dayDate) {
   const block = document.createElement("button");
   block.type = "button";
   const duration = item.endHour - item.startHour;
+  const startMinute = Math.round((item.startHour - calendarStartHour) * 60);
+  const durationMinute = Math.max(
+    eventResizeMinMinutes,
+    Math.round((item.endHour - item.startHour) * 60)
+  );
   const { sizeClass, durationClass } = eventCardMetrics(duration);
   const laneCount = Math.max(1, Number(item.laneCount || 1));
   const laneIndex = Math.max(0, Number(item.laneIndex || 0));
   const laneSizeClass = laneCount > 1 ? `event-lanes-${Math.min(laneCount, 4)}` : "";
+  const isEditable = canManageEvent(item.originalEvent || {});
+  const canResizeTop = Boolean(isEditable && !item.continuesBefore && !item.allDay && item.id && item.eventStart);
+  const canResizeBottom = Boolean(isEditable && !item.continuesAfter && !item.allDay && item.id && item.eventEnd);
   block.className = [
     "event-card",
     sizeClass,
     durationClass,
     laneCount > 1 ? "event-overlap-lane" : "",
     laneSizeClass,
+    isEditable ? "can-resize" : "",
+    canResizeTop ? "event-resize-top" : "",
+    canResizeBottom ? "event-resize-bottom" : "",
     item.isInvitee ? "invitee" : "",
     item.isInvitedViewer ? "is-invited-viewer" : "",
     item.id === selectedEventId ? "is-selected" : ""
   ].filter(Boolean).join(" ");
   block.dataset.eventId = item.id;
+  block.dataset.eventDate = dayDate ? dateKey(dayDate) : "";
+  block.dataset.eventStart = item.eventStart || "";
+  block.dataset.eventEnd = item.eventEnd || "";
+  block.dataset.eventTimezone = item.timezone || "UTC";
+  block.dataset.dayIndex = String(dayIndex);
+  block.dataset.canResizeTop = String(canResizeTop);
+  block.dataset.canResizeBottom = String(canResizeBottom);
+  block.dataset.startMinute = String(startMinute);
+  block.dataset.durationMinute = String(durationMinute);
+  block.setAttribute("aria-label", `${item.title || "Event"} at ${formatEventRange(item.startHour, item.endHour)}`);
   block.setAttribute("aria-pressed", String(item.id === selectedEventId));
   block.style.setProperty("--day-index", dayIndex);
   block.style.setProperty("--start", item.startHour - calendarStartHour);
@@ -3437,12 +3547,34 @@ function createEventBlock(item, dayIndex) {
 
   block.addEventListener("click", (event) => {
     if (shouldSuppressCalendarClick(event)) return;
+    if (event.target.closest(".event-resize-handle")) return;
     openEventDetail(item.id);
   });
+
+  if (canResizeTop) {
+    const topHandle = document.createElement("span");
+    topHandle.className = "event-resize-handle event-resize-handle-top";
+    topHandle.setAttribute("data-edge", "top");
+    topHandle.setAttribute("aria-label", "Resize event start");
+    topHandle.tabIndex = -1;
+    topHandle.addEventListener("pointerdown", startEventResize);
+    block.appendChild(topHandle);
+  }
+
+  if (canResizeBottom) {
+    const bottomHandle = document.createElement("span");
+    bottomHandle.className = "event-resize-handle event-resize-handle-bottom";
+    bottomHandle.setAttribute("data-edge", "bottom");
+    bottomHandle.setAttribute("aria-label", "Resize event end");
+    bottomHandle.tabIndex = -1;
+    bottomHandle.addEventListener("pointerdown", startEventResize);
+    block.appendChild(bottomHandle);
+  }
+
   return block;
 }
 
-function createFreeGlowBlock(segment, dayIndex) {
+function configureFreeGlowBlock(block, segment, dayIndex, { live = false } = {}) {
   const occupiedSegments = segment.occupiedSegments || [];
   const duration = segment.endHour - segment.startHour;
   const freeSizeClass = duration <= 0.25 ? "free-15" : duration <= 0.5 ? "free-30" : duration < 1 ? "free-45" : "free-long";
@@ -3450,32 +3582,57 @@ function createFreeGlowBlock(segment, dayIndex) {
   const labelOverlap = occupiedSegments.some((item) => (
     item.endHour > segment.startHour && item.startHour < Math.min(segment.endHour, segment.startHour + labelHeightHours)
   ));
-  const block = document.createElement("button");
-  block.type = "button";
-  block.className = ["free-glow-block", freeSizeClass, labelOverlap ? "free-glow-block--label-hidden" : ""].filter(Boolean).join(" ");
+  block.className = [
+    "free-block",
+    "free-glow-block",
+    freeSizeClass,
+    labelOverlap ? "free-glow-block--label-hidden" : "",
+    live ? "is-live-reflowing" : ""
+  ].filter(Boolean).join(" ");
   block.style.setProperty("--day-index", dayIndex);
   block.style.setProperty("--start", segment.startHour - calendarStartHour);
   block.style.setProperty("--duration", duration);
+  block.dataset.dayKey = dateKey(segment.date);
+  block.dataset.dayIndex = String(dayIndex);
+  block.dataset.startHour = String(segment.startHour);
+  block.dataset.endHour = String(segment.endHour);
   const coversVisibleDay = duration >= (calendarEndHour - calendarStartHour) - 0.001;
   const timeRange = coversVisibleDay ? "All day" : formatEventRange(segment.startHour, segment.endHour);
   block.dataset.tooltip = `${timeRange} free`;
   block.title = block.dataset.tooltip;
+  block.setAttribute("aria-label", `${timeRange} free. Create an event.`);
+  block.replaceChildren();
   if (duration >= 1 && !labelOverlap) {
-    block.innerHTML = `<strong>Free</strong><span>${timeRange}</span>`;
+    const title = document.createElement("strong");
+    const time = document.createElement("span");
+    title.textContent = "Free";
+    time.textContent = timeRange;
+    block.append(title, time);
   } else if (duration >= 0.5 && !labelOverlap) {
-    block.innerHTML = `<span>${timeRange} free</span>`;
+    const time = document.createElement("span");
+    time.textContent = `${timeRange} free`;
+    block.appendChild(time);
   }
+  return block;
+}
+
+function createFreeGlowBlock(segment, dayIndex, options = {}) {
+  const block = document.createElement("button");
+  block.type = "button";
   block.addEventListener("click", (event) => {
     if (shouldSuppressCalendarClick(event)) return;
+    const startHour = Number(block.dataset.startHour);
+    const endHour = Number(block.dataset.endHour);
+    if (!Number.isFinite(startHour) || !Number.isFinite(endHour)) return;
     pendingEventPrefill = {
-      date: dateKey(segment.date),
-      startTime: formatInputTime(segment.startHour),
-      endTime: formatInputTime(segment.endHour),
+      date: block.dataset.dayKey,
+      startTime: formatInputTime(startHour),
+      endTime: formatInputTime(endHour),
       inviteeParticipantIds: defaultInviteeIds()
     };
     openEventModal("create");
   });
-  return block;
+  return configureFreeGlowBlock(block, segment, dayIndex, options);
 }
 
 function plannerSupportsDragCreate() {
@@ -3487,7 +3644,9 @@ function isTouchPointer(event) {
 }
 
 function dragTargetIsBlocked(target) {
-  if (target.closest(".event-card, .busy-card, .busy-stack-summary")) return false;
+  if (target.closest(".event-resize-handle")) return true;
+  if (target.closest(".event-card")) return true;
+  if (target.closest(".busy-card, .busy-stack-summary")) return false;
   return Boolean(target.closest(
     ".busy-stack-popover, .busy-stack-item, .color-picker-menu, .host-popover, .detail-panel, .modal-card, .vote-button, .chip-action, .icon-button, .add-event-button, input, textarea, select, summary, label"
   ));
@@ -3642,6 +3801,376 @@ function stopDragCreate() {
   clearDragPreview();
 }
 
+function resetEventResizeVisual(
+  block,
+  startMinute = Number(block?.dataset.startMinute),
+  durationMinute = Number(block?.dataset.durationMinute)
+) {
+  if (!block) return;
+  if (!Number.isFinite(startMinute) || !Number.isFinite(durationMinute)) return;
+  applyEventResizePreview(block, startMinute, durationMinute);
+}
+
+function applyEventResizePreview(block, startMinute, durationMinute) {
+  if (!block) return { startMinute: 0, durationMinute: eventResizeMinMinutes };
+
+  const clampedStart = clampEventMinutes(Math.round(startMinute), 0, (24 * 60) - eventResizeMinMinutes);
+  const clampedDuration = Math.max(
+    eventResizeMinMinutes,
+    Math.min(24 * 60 - clampedStart, Math.round(durationMinute))
+  );
+  const safeDuration = Math.max(eventResizeMinMinutes, clampEventMinutes(clampedDuration, eventResizeMinMinutes, 24 * 60));
+
+  const snappedStart = snapEventMinutes(clampedStart, eventResizeSnapMinutes);
+  const snappedDuration = clampEventMinutes(safeDuration, eventResizeMinMinutes, 24 * 60 - snappedStart);
+
+  const { sizeClass, durationClass } = eventCardMetrics(Math.max(0.25, snappedDuration / 60));
+  block.style.setProperty("--start", `${snappedStart / 60}`);
+  block.style.setProperty("--duration", `${snappedDuration / 60}`);
+  block.dataset.startMinute = String(snappedStart);
+  block.dataset.durationMinute = String(snappedDuration);
+  block.classList.remove(
+    "event-15",
+    "event-30",
+    "event-45",
+    "event-60plus",
+    "event-small",
+    "event-medium",
+    "event-large",
+    "event-tiny"
+  );
+  block.classList.add(sizeClass, durationClass);
+  return { startMinute: snappedStart, durationMinute: snappedDuration };
+}
+
+function animateLiveFreeBlock(block, previousRect = null) {
+  if (!block || reducedMotionQuery.matches || typeof block.animate !== "function") return;
+  freeBlockReflowAnimations.get(block)?.cancel();
+
+  const nextRect = block.getBoundingClientRect();
+  const hasPreviousGeometry = Boolean(
+    previousRect &&
+    previousRect.width > 0 &&
+    previousRect.height > 0 &&
+    nextRect.width > 0 &&
+    nextRect.height > 0
+  );
+  const translateY = hasPreviousGeometry ? previousRect.top - nextRect.top : 0;
+  const scaleY = hasPreviousGeometry
+    ? clampEventMinutes(previousRect.height / nextRect.height, 0.2, 5)
+    : 0.94;
+  const hasVisibleChange = !hasPreviousGeometry || Math.abs(translateY) > 0.5 || Math.abs(scaleY - 1) > 0.01;
+  if (!hasVisibleChange) return;
+
+  const animation = block.animate([
+    {
+      opacity: hasPreviousGeometry ? 0.78 : 0.5,
+      transform: `translate3d(0, ${translateY}px, 0) scaleY(${scaleY})`
+    },
+    {
+      opacity: 1,
+      transform: "translate3d(0, 0, 0) scaleY(1)"
+    }
+  ], {
+    duration: motionFastMs,
+    easing: "cubic-bezier(0.32, 0.72, 0, 1)",
+    fill: "none"
+  });
+  freeBlockReflowAnimations.set(block, animation);
+  animation.addEventListener("finish", () => {
+    if (freeBlockReflowAnimations.get(block) === animation) {
+      freeBlockReflowAnimations.delete(block);
+    }
+  }, { once: true });
+  animation.addEventListener("cancel", () => {
+    if (freeBlockReflowAnimations.get(block) === animation) {
+      freeBlockReflowAnimations.delete(block);
+    }
+  }, { once: true });
+}
+
+function refreshLiveFreeBlocksForResize(
+  state,
+  startMinute,
+  durationMinute,
+  { live = true, force = false } = {}
+) {
+  if (!state?.dayKey || !Number.isFinite(startMinute) || !Number.isFinite(durationMinute)) return;
+  const signature = `${state.dayKey}:${startMinute}:${durationMinute}:${live ? "live" : "settled"}`;
+  if (!force && state.liveFreeSignature === signature) return;
+  state.liveFreeSignature = signature;
+
+  const eventsLayer = calendarGrid.querySelector(".events-layer");
+  if (!eventsLayer) return;
+  const date = dayStartFromDateKey(state.dayKey);
+  const startHour = calendarStartHour + startMinute / 60;
+  const endHour = calendarStartHour + (startMinute + durationMinute) / 60;
+  const busySegments = state.liveBusySegments || busySegmentsForDate(date);
+  const eventBlocks = state.liveEventBlocks || eventBlocksForDate(date);
+  state.liveBusySegments = busySegments;
+  state.liveEventBlocks = eventBlocks;
+  const previewEvents = eventBlocks.map((eventBlock) => (
+    String(eventBlock.id) === String(state.eventId)
+      ? { ...eventBlock, startHour, endHour }
+      : eventBlock
+  ));
+  const occupiedSegments = occupiedSegmentsForDate(date, busySegments, previewEvents);
+  const nextSegments = freeSegmentsForDate(date, occupiedSegments)
+    .map((segment) => ({ ...segment, occupiedSegments }));
+  const dayIndex = Number.isFinite(Number(state.dayIndex)) ? Number(state.dayIndex) : 0;
+  const existing = [...eventsLayer.querySelectorAll(".free-block")]
+    .filter((block) => block.dataset.dayKey === state.dayKey)
+    .sort((a, b) => Number(a.dataset.startHour) - Number(b.dataset.startHour));
+  const previousRects = existing.map((block) => block.getBoundingClientRect());
+  const nextBlocks = [];
+  const firstOccupiedNode = eventsLayer.querySelector(".busy-card, .busy-stack, .event-card");
+
+  nextSegments.forEach((segment, index) => {
+    let block = existing[index];
+    if (block) {
+      configureFreeGlowBlock(block, segment, dayIndex, { live });
+    } else {
+      block = createFreeGlowBlock(segment, dayIndex, { live });
+      eventsLayer.insertBefore(block, firstOccupiedNode);
+    }
+    nextBlocks.push(block);
+  });
+
+  for (const staleBlock of existing.slice(nextSegments.length)) {
+    freeBlockReflowAnimations.get(staleBlock)?.cancel();
+    freeBlockReflowAnimations.delete(staleBlock);
+    staleBlock.remove();
+  }
+
+  nextBlocks.forEach((block, index) => {
+    animateLiveFreeBlock(block, previousRects[index] || null);
+  });
+}
+
+function buildEventResizePayload(eventEntry, startMinute, durationMinute, dayKey) {
+  const date = dayStartFromDateKey(dayKey || dateKey(startOfDay(new Date())));
+  const snappedStart = clampEventMinutes(
+    snapEventMinutes(startMinute, eventResizeSnapMinutes),
+    0,
+    24 * 60 - eventResizeMinMinutes
+  );
+  const snappedDuration = clampEventMinutes(
+    snapEventMinutes(durationMinute, eventResizeSnapMinutes),
+    eventResizeMinMinutes,
+    24 * 60 - snappedStart
+  );
+  const snappedEnd = snappedStart + snappedDuration;
+
+  const nextStart = new Date(date);
+  const nextEnd = new Date(date);
+  nextStart.setHours(0, snappedStart, 0, 0);
+  nextEnd.setHours(0, snappedEnd, 0, 0);
+
+  return {
+    title: eventEntry.title || "(No title)",
+    start: nextStart.toISOString(),
+    end: nextEnd.toISOString(),
+    timezone: eventEntry.timezone || "UTC",
+    allDay: Boolean(eventEntry.allDay),
+    location: eventEntry.location || "",
+    description: eventEntry.description || "",
+    syncToGoogle: eventEntry.syncToGoogle === true,
+    syncToOutlook: eventEntry.syncToOutlook === true,
+    inviteeParticipantIds: eventInviteeIds(eventEntry)
+  };
+}
+
+function scheduleEventResizeUpdate() {
+  if (eventResizeFrame) return;
+  eventResizeFrame = window.requestAnimationFrame(() => {
+    eventResizeFrame = 0;
+    if (!eventResizeState) return;
+    const {
+      block,
+      edge,
+      baseStartMinute,
+      baseDurationMinute,
+      startDragY,
+      pixelsPerMinute,
+      moveY
+    } = eventResizeState;
+    if (!block || !block.isConnected || !edge) return;
+
+    const deltaMinutes = (moveY - startDragY) / pixelsPerMinute;
+    const baseBottomMinute = baseStartMinute + baseDurationMinute;
+
+    let result;
+    if (edge === "top") {
+      const candidateStart = snapEventMinutes(baseStartMinute + deltaMinutes, eventResizeSnapMinutes);
+      const maxStart = Math.min(
+        baseBottomMinute - eventResizeMinMinutes,
+        (24 * 60) - eventResizeMinMinutes
+      );
+      const nextStart = clampEventMinutes(candidateStart, 0, maxStart);
+      const nextDuration = baseBottomMinute - nextStart;
+      result = applyEventResizePreview(block, nextStart, nextDuration);
+      eventResizeState.finalStartMinute = result.startMinute;
+      eventResizeState.finalDurationMinute = result.durationMinute;
+    } else {
+      const candidateEnd = snapEventMinutes(baseBottomMinute + deltaMinutes, eventResizeSnapMinutes);
+      const minEnd = baseStartMinute + eventResizeMinMinutes;
+      const nextEnd = clampEventMinutes(candidateEnd, minEnd, 24 * 60);
+      const nextDuration = nextEnd - baseStartMinute;
+      result = applyEventResizePreview(block, baseStartMinute, nextDuration);
+      eventResizeState.finalStartMinute = result.startMinute;
+      eventResizeState.finalDurationMinute = result.durationMinute;
+    }
+    refreshLiveFreeBlocksForResize(
+      eventResizeState,
+      result.startMinute,
+      result.durationMinute
+    );
+  });
+}
+
+function stopEventResize() {
+  if (eventResizeState?.captureTarget?.hasPointerCapture?.(eventResizeState.pointerId)) {
+    eventResizeState.captureTarget.releasePointerCapture(eventResizeState.pointerId);
+  }
+  window.removeEventListener("pointermove", handleEventResizeMove);
+  window.removeEventListener("pointerup", handleEventResizeEnd);
+  window.removeEventListener("pointercancel", handleEventResizeCancel);
+  if (eventResizeFrame) {
+    window.cancelAnimationFrame(eventResizeFrame);
+    eventResizeFrame = 0;
+  }
+  for (const freeBlock of calendarGrid.querySelectorAll(".free-block.is-live-reflowing")) {
+    freeBlock.classList.remove("is-live-reflowing");
+  }
+  eventResizeState = null;
+}
+
+function handleEventResizeMove(event) {
+  if (!eventResizeState || event.pointerId !== eventResizeState.pointerId) return;
+  event.preventDefault();
+  eventResizeState.moveY = event.clientY;
+  scheduleEventResizeUpdate();
+}
+
+async function handleEventResizeEnd(event) {
+  if (!eventResizeState || event.pointerId !== eventResizeState.pointerId) return;
+  event.preventDefault();
+  markCalendarClickSuppressed();
+  eventResizeState.moveY = event.clientY;
+  scheduleEventResizeUpdate();
+  await new Promise((resolve) => {
+    if (eventResizeFrame) {
+      window.requestAnimationFrame(resolve);
+    } else {
+      resolve();
+    }
+  });
+
+  const state = eventResizeState;
+  const dayEvent = roomEventById(state.eventId);
+  const block = state.block;
+  const finalStartMinute = Number.isFinite(state.finalStartMinute) ? state.finalStartMinute : state.baseStartMinute;
+  const finalDurationMinute = Number.isFinite(state.finalDurationMinute) ? state.finalDurationMinute : state.baseDurationMinute;
+  const startPx = Math.round(finalStartMinute * state.pixelsPerMinute);
+  const heightPx = Math.round(finalDurationMinute * state.pixelsPerMinute);
+  console.log(`Resize pixel result => top: ${startPx}, height: ${heightPx}`);
+
+  try {
+    if (!dayEvent || !block) return;
+
+    if (finalStartMinute === state.baseStartMinute && finalDurationMinute === state.baseDurationMinute) return;
+
+    const payload = buildEventResizePayload(dayEvent, finalStartMinute, finalDurationMinute, state.dayKey);
+    const data = await fetchJson(`/api/rooms/${currentRoom.code}/events/${state.eventId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!data?.event) {
+      throw new Error("Could not update event timing.");
+    }
+    currentRoom.events = currentRoom.events.map((item) => item.id === state.eventId ? data.event : item);
+    render();
+    fetchNotifications();
+  } catch (error) {
+    calendarStatus.textContent = error.message;
+    if (dayEvent && block?.isConnected) {
+      resetEventResizeVisual(block, state.baseStartMinute, state.baseDurationMinute);
+    }
+    render();
+  } finally {
+    if (block) block.classList.remove("is-resizing");
+    stopEventResize();
+  }
+}
+
+function handleEventResizeCancel() {
+  if (!eventResizeState) return;
+  const state = eventResizeState;
+  const { block, baseStartMinute, baseDurationMinute } = state;
+  if (block && block.isConnected) {
+    resetEventResizeVisual(block, baseStartMinute, baseDurationMinute);
+  }
+  refreshLiveFreeBlocksForResize(state, baseStartMinute, baseDurationMinute, {
+    live: false,
+    force: true
+  });
+  stopEventResize();
+}
+
+function startEventResize(event) {
+  event.preventDefault();
+  event.stopPropagation();
+  const handle = event.currentTarget;
+  if (!handle || event.button !== undefined && event.button !== 0) return;
+  const block = handle.closest(".event-card");
+  if (!block) return;
+  if (block.classList.contains("is-resizing")) return;
+  const eventId = block.dataset.eventId;
+  if (!eventId) return;
+  const edge = handle.dataset.edge;
+  if (!edge) return;
+
+  const dayKey = block.dataset.eventDate || "";
+  const calendarEvent = roomEventById(eventId);
+  if (!calendarEvent) return;
+
+  const canResizeTop = block.dataset.canResizeTop === "true";
+  const canResizeBottom = block.dataset.canResizeBottom === "true";
+  if (edge === "top" && !canResizeTop) return;
+  if (edge === "bottom" && !canResizeBottom) return;
+
+  const startMinute = Number(block.dataset.startMinute);
+  const durationMinute = Number(block.dataset.durationMinute);
+  if (!Number.isFinite(startMinute) || !Number.isFinite(durationMinute)) return;
+
+  const pixelsPerMinute = resolvedCalendarRowHeight() / 60;
+  eventResizeState = {
+    active: true,
+    eventId,
+    block,
+    edge,
+    dayKey,
+    dayIndex: Number(block.dataset.dayIndex || 0),
+    captureTarget: block,
+    pointerId: event.pointerId,
+    startDragY: event.clientY,
+    moveY: event.clientY,
+    baseStartMinute: startMinute,
+    baseDurationMinute: durationMinute,
+    finalStartMinute: startMinute,
+    finalDurationMinute: durationMinute,
+    pixelsPerMinute
+  };
+
+  block.classList.add("is-resizing");
+  markCalendarClickSuppressed();
+  block.setPointerCapture?.(event.pointerId);
+  window.addEventListener("pointermove", handleEventResizeMove);
+  window.addEventListener("pointerup", handleEventResizeEnd);
+  window.addEventListener("pointercancel", handleEventResizeCancel);
+}
+
 function suppressCalendarClickCapture(event) {
   if (!shouldSuppressCalendarClick(event)) return;
   event.stopImmediatePropagation?.();
@@ -3723,6 +4252,7 @@ function renderPlanner(days) {
   calendarGrid.className = `calendar-grid ${currentView}-view`;
   calendarGrid.style.setProperty("--day-count", days.length);
   calendarGrid.style.setProperty("--hour-count", hours.length);
+  const todayIndex = days.findIndex((day) => sameDate(day.date, new Date()));
 
   const corner = document.createElement("div");
   corner.className = "calendar-corner";
@@ -3731,7 +4261,8 @@ function renderPlanner(days) {
   for (const day of days) {
     const header = document.createElement("div");
     const isSelected = sameDate(day.date, currentFocusDate);
-    header.className = `day-header ${sameDate(day.date, new Date()) ? "today" : ""} ${isSelected ? "selected" : ""}`.trim();
+    const isToday = sameDate(day.date, new Date());
+    header.className = `day-header ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}`.trim();
     header.innerHTML = formatDayHeader(day);
     const dateButton = header.querySelector(".day-header-date");
     if (isSelected) dateButton?.setAttribute("aria-current", "date");
@@ -3747,12 +4278,16 @@ function renderPlanner(days) {
     timeCell.textContent = formatHour(hour);
     calendarGrid.appendChild(timeCell);
 
-    for (const day of days) {
+    for (let dayIndex = 0; dayIndex < days.length; dayIndex += 1) {
+      const day = days[dayIndex];
       const cell = document.createElement("div");
       cell.className = "calendar-cell";
-      cell.dataset.dayIndex = String(days.indexOf(day));
+      cell.dataset.dayIndex = String(dayIndex);
       cell.dataset.dayKey = dateKey(day.date);
       cell.dataset.hour = String(hour);
+      if (dayIndex === todayIndex) {
+        cell.classList.add("is-today");
+      }
       calendarGrid.appendChild(cell);
     }
   }
@@ -3784,7 +4319,7 @@ function renderPlanner(days) {
     }
 
     for (const eventBlock of dayEventBlocks) {
-      eventsLayer.appendChild(createEventBlock(eventBlock, dayIndex));
+      eventsLayer.appendChild(createEventBlock(eventBlock, dayIndex, day.date));
     }
   });
 
@@ -4968,9 +5503,7 @@ function positionEventModal() {
 
 function updateEventGoogleSyncControl() {
   if (!eventGoogleSyncInput || !eventGoogleSyncStatus) return;
-  const connected = currentUserConnected() && currentParticipantConnected();
-  const googleWriteReady = calendarWriteReady();
-  const needsAuthorization = !connected || !googleWriteReady;
+  const needsAuthorization = !calendarWriteReady() || !currentUserConnected() || !currentParticipantConnected();
   const email = String(sessionInfo?.user?.email || "").trim();
 
   eventGoogleSyncRow?.classList.toggle("is-unlinked", needsAuthorization && !googleAuthPopupPending);
@@ -5007,7 +5540,8 @@ function updateEventGoogleSyncControl() {
 }
 
 function activateEventGoogleSyncRow(event) {
-  if (calendarWriteReady() && currentUserConnected() && currentParticipantConnected()) return;
+  const needsAuthorization = !calendarWriteReady() || !currentUserConnected() || !currentParticipantConnected();
+  if (!needsAuthorization || !eventGoogleSyncInput || !eventGoogleSyncRow || googleAuthPopupPending) return;
   event.preventDefault();
   event.stopPropagation();
   openGoogleAuthPopup();
@@ -5689,7 +6223,7 @@ document.addEventListener("click", (event) => {
   if (detailPanel && !detailPanel.classList.contains("hidden")) {
     if (
       detailPanel.contains(event.target) ||
-      event.target.closest(".event-card, .busy-card, .busy-stack, .busy-chip, .event-chip, .free-glow-block")
+      event.target.closest(".event-card, .busy-card, .busy-stack, .busy-chip, .event-chip, .free-block, .free-glow-block")
     ) {
       return;
     }
