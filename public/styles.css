@@ -8165,7 +8165,10 @@ button.identity-name-button:not(:disabled):active,
   font-weight: 700;
 }
 
-:root[data-theme="dark"] .day-header.today,
+:root[data-theme="dark"] .day-header.today {
+  background-color: #171717;
+}
+
 :root[data-theme="dark"] .calendar-cell.is-today {
   background-color: rgba(255, 255, 255, 0.02);
 }
@@ -8175,8 +8178,12 @@ button.identity-name-button:not(:disabled):active,
 }
 
 :root[data-theme="dark"] .day-header.selected {
-  background-color: transparent;
+  background-color: #121212;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme="dark"] .day-header.today.selected {
+  background-color: #171717;
 }
 
 :root[data-theme="dark"] .day-header.selected .day-header-date {
