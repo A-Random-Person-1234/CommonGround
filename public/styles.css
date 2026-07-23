@@ -7194,7 +7194,7 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal[open] .event-composer {
   animation: event-composer-premium-in var(--motion-slow) var(--ease-modal) both;
-  transform-origin: center center;
+  transform-origin: var(--composer-transform-origin, center center);
   will-change: transform, opacity;
 }
 
@@ -7213,18 +7213,18 @@ button.identity-name-button:not(:disabled):active,
 #eventModal .event-composer,
 #eventModal.anchored-composer .modal-card,
 #eventModal.anchored-composer .event-composer {
-  width: min(560px, calc(100vw - 24px));
-  max-height: calc(100dvh - 16px);
+  width: min(440px, calc(100vw - 24px));
+  max-height: calc(100dvh - 24px);
   overflow: visible;
 }
 
 #eventModal .event-composer {
   display: grid;
   grid-template-rows: auto auto auto auto auto;
-  gap: 1.25rem;
-  padding: 24px;
+  gap: 16px;
+  padding: 16px;
   border: 1px solid var(--composer-faint);
-  border-radius: 16px;
+  border-radius: 14px;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
     var(--surface);
@@ -7240,14 +7240,18 @@ button.identity-name-button:not(:disabled):active,
   top: var(--composer-top, 24px);
 }
 
+#eventModal.anchored-composer::backdrop {
+  background: rgba(9, 13, 20, 0.1);
+}
+
 #eventModal .composer-heading-section {
   display: grid;
-  gap: 8px;
+  gap: 4px;
   min-width: 0;
 }
 
 #eventModal .event-composer-top {
-  min-height: 32px;
+  min-height: 28px;
   margin: 0;
 }
 
@@ -7265,10 +7269,10 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .composer-close {
-  width: 32px;
-  min-width: 32px;
-  height: 32px;
-  min-height: 32px;
+  width: 28px;
+  min-width: 28px;
+  height: 28px;
+  min-height: 28px;
   border-radius: 8px;
   color: var(--composer-muted);
   background: transparent;
@@ -7280,7 +7284,7 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-title {
   width: 100%;
-  min-height: 32px;
+  min-height: 28px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -7360,8 +7364,8 @@ button.identity-name-button:not(:disabled):active,
 #eventModal .composer-time-grid {
   grid-column: auto;
   display: grid;
-  grid-template-columns: minmax(132px, 1.25fr) minmax(88px, 0.8fr) auto minmax(88px, 0.8fr);
-  gap: 0 8px;
+  grid-template-columns: minmax(116px, 1.25fr) minmax(72px, 0.8fr) auto minmax(72px, 0.8fr);
+  gap: 0 6px;
   align-items: center;
   min-width: 0;
   padding: 8px;
@@ -7372,7 +7376,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal.anchored-composer .composer-time-grid {
-  grid-template-columns: minmax(132px, 1.25fr) minmax(88px, 0.8fr) auto minmax(88px, 0.8fr);
+  grid-template-columns: minmax(116px, 1.25fr) minmax(72px, 0.8fr) auto minmax(72px, 0.8fr);
 }
 
 #eventModal.anchored-composer .composer-date-field {
@@ -7384,8 +7388,8 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .composer-time-grid input {
-  min-height: 36px;
-  padding: 0 10px;
+  min-height: 32px;
+  padding: 0 8px;
   border: 0;
   border-radius: 6px;
   outline: 0;
@@ -7423,9 +7427,9 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .all-day-toggle {
   grid-column: 1 / -1;
-  min-height: 32px;
-  margin-top: 8px;
-  padding: 8px 8px 0;
+  min-height: 28px;
+  margin-top: 4px;
+  padding: 4px 8px 0;
   border-top: 1px solid var(--composer-faint);
   color: var(--composer-ink);
   font-size: 14px;
@@ -7451,13 +7455,13 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-meta-section {
   display: grid;
-  gap: 1.25rem;
+  gap: 8px;
   min-width: 0;
 }
 
 #eventModal .composer-field-row {
   position: relative;
-  min-height: 40px;
+  min-height: 36px;
   padding: 0 8px;
   border-radius: 8px;
   isolation: isolate;
@@ -7489,7 +7493,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .invite-dropdown summary {
-  min-height: 40px;
+  min-height: 36px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -7532,7 +7536,7 @@ button.identity-name-button:not(:disabled):active,
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  min-height: 48px;
+  min-height: 44px;
   border-radius: 8px;
   padding-right: 4px;
   transition:
@@ -7655,9 +7659,9 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-field-row > input,
 #eventModal .composer-field-row > textarea {
-  min-height: 40px;
+  min-height: 36px;
   max-height: none;
-  padding: 8px 0;
+  padding: 6px 0;
   border: 0;
   border-radius: 0;
   outline: 0;
@@ -7672,11 +7676,11 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-description-row {
   align-items: start;
-  min-height: 56px;
+  min-height: 44px;
 }
 
 #eventModal .composer-description-row .composer-row-icon {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 #eventModal .composer-field-row > input::placeholder,
@@ -7694,7 +7698,7 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-feedback {
   min-height: 0;
-  margin: -8px 0 0;
+  margin: -4px 0 0;
   color: var(--composer-muted);
   font-size: 12px;
   font-weight: 400;
@@ -7745,15 +7749,16 @@ button.identity-name-button:not(:disabled):active,
   transform: translate3d(0, 0, 0) scale(0.96);
 }
 
-@media (max-width: 620px) {
+@media (max-width: 820px) {
   #eventModal .event-composer,
   #eventModal.anchored-composer .modal-card,
   #eventModal.anchored-composer .event-composer {
-    width: min(100vw - 16px, 560px);
+    width: min(100vw - 16px, 360px);
   }
 
   #eventModal .event-composer {
-    padding: 20px;
+    gap: 12px;
+    padding: 16px;
   }
 
   #eventModal .composer-time-grid,
@@ -7769,8 +7774,8 @@ button.identity-name-button:not(:disabled):active,
 
 @media (max-height: 720px) {
   #eventModal .event-composer {
-    gap: 12px;
-    padding: 16px 20px;
+    gap: 10px;
+    padding: 14px 16px;
   }
 
   #eventModal .composer-heading-section {
@@ -7826,7 +7831,7 @@ button.identity-name-button:not(:disabled):active,
 @media (max-height: 560px) {
   #eventModal .event-composer {
     gap: 8px;
-    padding: 12px 16px;
+    padding: 10px 12px;
     border-radius: 12px;
   }
 
