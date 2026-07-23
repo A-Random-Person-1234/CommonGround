@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -10,6 +10,7 @@ const runtimeDir = mkdtempSync(path.join(tmpdir(), "commonground-smoke-"));
 const databasePath = path.join(runtimeDir, "commonground.db");
 const port = 44000 + Math.floor(Math.random() * 1000);
 const baseUrl = `http://127.0.0.1:${port}`;
+const serverSource = readFileSync(path.join(rootDir, "server.js"), "utf8");
 const expectedParticipantPalette = [
   { name: "Bordeaux", value: "#743F45" },
   { name: "Merlot", value: "#6C4652" },
@@ -594,6 +595,31 @@ try {
     "Free blocks must be recalculated locally while an event edge is dragged"
   );
   assert.match(
+    serverSource,
+    /function syncedGoogleCalendarMirrorIntervals\([\s\S]*?roomEvent\.syncToGoogle !== true[\s\S]*?ownEntry\?\.googleEventId[\s\S]*?isInviteeMirror[\s\S]*?intervals\.push\(\{ start, end \}\)/,
+    "Google mirror ranges must be identified for creators and invited participants"
+  );
+  assert.match(
+    serverSource,
+    /function subtractGoogleMirrorIntervals\([\s\S]*?mirror\.end <= fragment\.start[\s\S]*?mirror\.start > fragment\.start[\s\S]*?mirror\.end < fragment\.end[\s\S]*?return fragments\.filter/,
+    "Google mirror ranges must be subtracted without discarding unrelated busy fragments"
+  );
+  assert.match(
+    serverSource,
+    /const mirroredIntervals = syncedGoogleCalendarMirrorIntervals\(room, participant, user\.id\);[\s\S]*?for \(const fragment of subtractGoogleMirrorIntervals\(startDate, endDate, mirroredIntervals\)\)/,
+    "Google free/busy must exclude CommonGround events already rendered by the room"
+  );
+  assert.match(
+    serverSource,
+    /function deterministicGoogleCalendarEventId\([\s\S]*?createHash\("sha256"\)[\s\S]*?return `cg\$\{digest\}`;/,
+    "Google event creation must use a deterministic provider ID"
+  );
+  assert.match(
+    serverSource,
+    /findGoogleCalendarMirrorEvent\(user\.id, "primary", room, event\)[\s\S]*?body: \{ id: deterministicEventId, \.\.\.payload \}[\s\S]*?error\.status !== 409[\s\S]*?method: "PATCH"/,
+    "Google upserts must recover an existing mirror or PATCH the deterministic ID after a conflict"
+  );
+  assert.match(
     eventComposerScript.text,
     /function scheduleEventResizeUpdate\(\)[\s\S]*?applyEventResizePreview\([\s\S]*?refreshLiveFreeBlocksForResize\(/,
     "The event and Free-block previews must update in the same animation frame"
@@ -689,6 +715,11 @@ try {
     eventComposerStyles.text,
     /\.day-header\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*justify-items:\s*center[^}]*text-align:\s*center/s,
     "Planner weekday labels and date buttons must share one centered axis"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:root\[data-theme="dark"\] \.day-header\.today\s*\{[^}]*background-color:\s*#171717[^}]*\}[\s\S]*?:root\[data-theme="dark"\] \.day-header\.selected\s*\{[^}]*background-color:\s*#121212[^}]*\}[\s\S]*?:root\[data-theme="dark"\] \.day-header\.today\.selected\s*\{[^}]*background-color:\s*#171717/s,
+    "Sticky dark-mode day headers must remain opaque over scrolled event blocks"
   );
   assert.match(
     eventComposerStyles.text,
