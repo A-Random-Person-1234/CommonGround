@@ -32,7 +32,7 @@ const expectedIconAssets = [
   "calendar-sync.svg", "circle-arrow-left.svg", "circle-arrow-right.svg",
   "circle-x.svg", "clock-4.svg", "link-2.svg", "lock-keyhole.svg",
   "lock-keyhole-open.svg", "map-pin.svg", "maximize-2.svg", "minimize-2.svg",
-  "plus.svg", "refresh-cw.svg", "rotate-cw.svg", "settings.svg", "square.svg",
+  "move-vertical.svg", "plus.svg", "refresh-cw.svg", "rotate-cw.svg", "settings.svg", "square.svg",
   "trash-2.svg", "user-round-plus.svg", "x.svg"
 ];
 
@@ -357,9 +357,10 @@ try {
   assert.equal(emojiDictionaryHead.text, "");
   assert.equal(Number(emojiDictionaryHead.response.headers.get("content-length")), Buffer.byteLength(emojiDictionaryResponse.text));
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
-  assert.match(eventComposerScript.text, /const emojiKeywordDictionaryUrl = "\/assets\/emojilib\/3\.0\.11\/emoji-en-US\.json";/);
+  assert.match(eventComposerScript.text, /const emojiKeywordDictionaryUrl = "https:\/\/unpkg\.com\/emojilib@3\.0\.11\/dist\/emoji-en-US\.json";/);
+  assert.match(eventComposerScript.text, /const emojiKeywordDictionaryFallbackUrl = "\/assets\/emojilib\/3\.0\.11\/emoji-en-US\.json";/);
   assert.match(eventComposerScript.text, /const frequentRoomEmojis = Object\.freeze\(\[[\s\S]*?"🙏"[\s\S]*?\]\);/);
-  assert.match(eventComposerScript.text, /if \(results\.length === 60\) break;/);
+  assert.match(eventComposerScript.text, /if \(results\.length === maxEmojiPickerResults\) break;/);
   assert.match(eventComposerScript.text, /message\.textContent = "No emojis found";/);
   assert.match(eventComposerScript.text, /emojiPickerGrid\.replaceChildren\(fragment\);/);
   assert.match(eventComposerScript.text, /new Intl\.Segmenter\(undefined, \{ granularity: "grapheme" \}\)/);
@@ -582,6 +583,26 @@ try {
     /for \(const segment of freeSegmentsForDate\([\s\S]*?eventsLayer\.appendChild\(createFreeGlowBlock\([\s\S]*?for \(const eventBlock of dayEventBlocks\) \{\s*eventsLayer\.appendChild\(createEventBlock\(/,
     "Free availability and scheduled events must remain separate sibling elements"
   );
+  assert.match(
+    eventComposerScript.text,
+    /function dragTargetIsBlocked\(target\) \{[\s\S]*?target\.closest\("\.event-card"\)\) return true;/,
+    "Dragging an existing event must never arm the create-event gesture"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function refreshLiveFreeBlocksForResize\([\s\S]*?occupiedSegmentsForDate\([\s\S]*?freeSegmentsForDate\([\s\S]*?configureFreeGlowBlock\(/,
+    "Free blocks must be recalculated locally while an event edge is dragged"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function scheduleEventResizeUpdate\(\)[\s\S]*?applyEventResizePreview\([\s\S]*?refreshLiveFreeBlocksForResize\(/,
+    "The event and Free-block previews must update in the same animation frame"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function resetEventResizeVisual\(\s*block,\s*startMinute = Number\(block\?\.dataset\.startMinute\),\s*durationMinute = Number\(block\?\.dataset\.durationMinute\)/,
+    "Resize cancellation must be able to restore the original start and duration"
+  );
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
   assert.match(
     eventComposerStyles.text,
@@ -613,6 +634,26 @@ try {
     eventComposerStyles.text,
     /\.busy-card,\s*\.busy-stack,\s*\.event-card\s*\{[^}]*filter:\s*none;[^}]*backdrop-filter:\s*none;[^}]*mix-blend-mode:\s*normal;/s,
     "Scheduled and imported calendar blocks must use normal alpha compositing"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-resize-handle\s*\{[^}]*left:\s*8px[^}]*right:\s*8px[^}]*height:\s*10px[^}]*background:\s*transparent[^}]*cursor:\s*ns-resize[^}]*pointer-events:\s*auto/s,
+    "Only the narrow top and bottom resize strips may capture resize gestures"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-resize-handle::after\s*\{[^}]*opacity:\s*0[^}]*will-change:\s*transform, opacity[^}]*mask:\s*url\("\/icons\/move-vertical\.svg"\)/s,
+    "Resize affordances must use the supplied move-vertical icon"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-resize-handle:hover::after[\s\S]*?\{[^}]*opacity:\s*1[^}]*scale\(1\)/,
+    "A resize icon must appear only when its own edge strip is hovered"
+  );
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /\.event-card\.can-resize:hover \.event-resize-handle/,
+    "Hovering an event's sides or body must not reveal both resize affordances"
   );
   assert.match(
     eventComposerStyles.text,
@@ -770,7 +811,7 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /button\.free-glow-block:not\(:disabled\):active\s*\{[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(1\)[^}]*opacity:\s*0\.96/s,
+    /button\.free-block:not\(:disabled\):active\s*\{[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(1\)[^}]*opacity:\s*0\.96/s,
     "An active Free card must retain its true column bounds beneath the drag preview"
   );
   assertCompositorOnlyMotion(eventComposerStyles.text);
@@ -822,7 +863,7 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.event-composer\s*\{[^}]*grid-template-rows: auto auto auto auto auto[^}]*gap: 20px[^}]*padding: 24px[^}]*border-radius: 16px/s,
+    /#eventModal \.event-composer\s*\{[^}]*grid-template-rows: auto auto auto auto auto[^}]*gap: (?:20px|1\.25rem)[^}]*padding: 24px[^}]*border-radius: 16px/s,
     "The desktop composer must keep its compact five-row hierarchy and 8px rhythm"
   );
   assert.match(eventComposerStyles.text, /#eventModal\s*\{[^}]*width: 100vw[^}]*height: 100dvh[^}]*max-width: none[^}]*overflow: visible/s);
@@ -832,10 +873,10 @@ try {
     /#eventModal \.composer-schedule-section,\s*#eventModal \.composer-field-row\s*\{[^}]*grid-template-columns: 16px minmax\(0, 1fr\)[^}]*gap: 16px[^}]*align-items: center/s,
     "Schedule and option rows must share one aligned icon/content grid"
   );
-  assert.match(eventComposerStyles.text, /#eventModal \.composer-meta-section\s*\{[^}]*display: grid[^}]*gap: 8px/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-meta-section\s*\{[^}]*display: grid[^}]*gap: (?:20px|1\.25rem)/s);
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.composer-time-grid\s*\{[^}]*padding: 8px[^}]*border: 1px solid var\(--composer-faint\)[^}]*border-radius: 8px[^}]*background: var\(--composer-field\)/s,
+    /#eventModal \.composer-time-grid\s*\{[^}]*padding: 8px[^}]*border: 1px solid rgba\(255, 255, 255, 0\.08\)[^}]*border-radius: 8px[^}]*background: rgba\(255, 255, 255, 0\.03\)/s,
     "Date and time controls must read as one restrained scheduling section"
   );
   assert.match(
@@ -848,7 +889,7 @@ try {
   assert.match(eventComposerStyles.text, /#eventModal \.oauth-spinner\s*\{[^}]*display: none[^}]*width: 18px[^}]*height: 18px/s);
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.composer-sync-toggle\.is-authorizing \.oauth-spinner\s*\{[^}]*display: block[^}]*animation: composer-oauth-spin 700ms var\(--ease-standard\) infinite/s,
+    /#eventModal \.composer-sync-toggle\.is-authorizing \.oauth-spinner\s*\{[^}]*display: block[^}]*animation: composer-oauth-spin var\(--motion-page\) var\(--ease-standard\) infinite/s,
     "Popup authorization must expose a visible in-row progress state"
   );
   assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\.is-connected\s*\{[^}]*animation: composer-sync-settle var\(--motion-slow\) var\(--ease-modal\) both[^}]*will-change: transform, opacity/s);
