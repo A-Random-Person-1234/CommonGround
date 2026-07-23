@@ -3129,7 +3129,16 @@ function busySegmentsForDate(date) {
     const start = dateAtHour(startHour).toISOString();
     const end = dateAtHour(endHour).toISOString();
     const participants = mergeParticipantEntries(activeBlocks.map((block) => ({ ...block, start, end })));
-    const participantKey = participants.map((participant) => participant.participantId).sort().join("|");
+    const participantKey = participants
+      .map((participant) => {
+        const itemKey = dedupeBusyItems(participant.items || [])
+          .map((item) => item.sourceId || busyItemStableKey(item))
+          .sort()
+          .join(",");
+        return `${participant.participantId}:${itemKey}`;
+      })
+      .sort()
+      .join("|");
     const previous = segments[segments.length - 1];
     if (previous && previous.participantKey === participantKey && Math.abs(previous.endHour - startHour) < 0.001) {
       previous.endHour = endHour;
@@ -4242,6 +4251,7 @@ function scheduleEventMoveUpdate() {
     if (!state.moved) {
       state.moved = true;
       state.block.classList.add("is-moving");
+      markCalendarClickSuppressed();
     }
 
     const candidateStart = state.baseStartMinute + deltaY / state.pixelsPerMinute;
@@ -4285,6 +4295,20 @@ async function handleEventMoveEnd(event) {
   if (!eventMoveState || event.pointerId !== eventMoveState.pointerId) return;
   eventMoveState.moveX = event.clientX;
   eventMoveState.moveY = event.clientY;
+  const releaseDeltaX = event.clientX - eventMoveState.startDragX;
+  const releaseDeltaY = event.clientY - eventMoveState.startDragY;
+  const releaseIsMove = eventMoveState.moved ||
+    Math.hypot(releaseDeltaX, releaseDeltaY) >= eventMoveThresholdPixels;
+  if (releaseIsMove) {
+    // Pointer-up is followed by a synthetic click before the next animation
+    // frame. Suppress it synchronously so a successful drag can never open
+    // the event/busy detail popover.
+    event.preventDefault();
+    event.stopPropagation();
+    markCalendarClickSuppressed();
+    eventMoveState.moved = true;
+    eventMoveState.block?.classList.add("is-moving");
+  }
   scheduleEventMoveUpdate();
   await new Promise((resolve) => {
     if (eventMoveFrame) {
@@ -4302,8 +4326,6 @@ async function handleEventMoveEnd(event) {
     return;
   }
 
-  event.preventDefault();
-  markCalendarClickSuppressed();
   const isGoogleBusy = state.source === "google";
   const dayEvent = isGoogleBusy ? null : roomEventById(state.eventId);
   const finalDayIndex = Number.isFinite(state.finalDayIndex) ? state.finalDayIndex : state.baseDayIndex;
