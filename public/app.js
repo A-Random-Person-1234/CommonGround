@@ -574,13 +574,39 @@ function currentWeekDays() {
   }));
 }
 
-function formatRange() {
+function formatRange({ includeYear = false } = {}) {
   const displayDays = currentWeekDays();
   const start = displayDays[0].date;
   const end = displayDays[6].date;
-  const startLabel = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(start);
-  const endLabel = new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric", year: "numeric" }).format(end);
-  return `${startLabel} - ${endLabel}`;
+  const rangeFormatter = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(includeYear ? { year: "numeric" } : {})
+  });
+
+  if (typeof rangeFormatter.formatRange === "function") {
+    return rangeFormatter.formatRange(start, end);
+  }
+
+  const monthFormatter = new Intl.DateTimeFormat(undefined, { month: "short" });
+  const dayFormatter = new Intl.DateTimeFormat(undefined, { day: "numeric" });
+  const yearFormatter = new Intl.DateTimeFormat(undefined, { year: "numeric" });
+  const sameYear = start.getFullYear() === end.getFullYear();
+  const sameMonth = sameYear && start.getMonth() === end.getMonth();
+
+  if (sameMonth) {
+    const yearLabel = includeYear ? `, ${yearFormatter.format(end)}` : "";
+    return `${monthFormatter.format(start)} ${dayFormatter.format(start)}–${dayFormatter.format(end)}${yearLabel}`;
+  }
+
+  if (sameYear) {
+    const yearLabel = includeYear ? `, ${yearFormatter.format(end)}` : "";
+    return `${monthFormatter.format(start)} ${dayFormatter.format(start)}–${monthFormatter.format(end)} ${dayFormatter.format(end)}${yearLabel}`;
+  }
+
+  const startYear = includeYear ? `, ${yearFormatter.format(start)}` : "";
+  const endYear = includeYear ? `, ${yearFormatter.format(end)}` : "";
+  return `${monthFormatter.format(start)} ${dayFormatter.format(start)}${startYear}–${monthFormatter.format(end)} ${dayFormatter.format(end)}${endYear}`;
 }
 
 function formatMonthYear(date) {
@@ -1806,13 +1832,13 @@ async function setCurrentView(view) {
   await refreshCalendarAfterImmediateRender();
 }
 
-function calendarPeriodText() {
+function calendarPeriodText({ includeYear = false } = {}) {
   if (currentView === "day") {
     return new Intl.DateTimeFormat(undefined, {
       weekday: "short",
       month: "short",
       day: "numeric",
-      year: "numeric"
+      ...(includeYear ? { year: "numeric" } : {})
     }).format(currentFocusDate);
   }
 
@@ -1824,12 +1850,16 @@ function calendarPeriodText() {
     return String(currentFocusDate.getFullYear());
   }
 
-  return formatRange();
+  return formatRange({ includeYear });
 }
 
 function updateCalendarPeriodControls() {
   if (!calendarPeriodLabel) return;
-  calendarPeriodLabel.textContent = calendarPeriodText();
+  const periodText = calendarPeriodText();
+  const accessiblePeriodText = calendarPeriodText({ includeYear: true });
+  calendarPeriodLabel.textContent = periodText;
+  calendarPeriodLabel.title = accessiblePeriodText;
+  calendarPeriodLabel.setAttribute("aria-label", `Calendar period: ${accessiblePeriodText}`);
   const unit = currentView === "day" ? "day" : currentView;
   prevPeriodButton?.setAttribute("aria-label", `Previous ${unit}`);
   prevPeriodButton?.setAttribute("title", `Previous ${unit}`);
