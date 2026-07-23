@@ -416,6 +416,11 @@ try {
   );
   assert.match(
     eventComposerScript.text,
+    /function renderCalendarGoogleControl\(\)[\s\S]*?classList\.toggle\("hidden", state === "is-connected"\);/,
+    "The Google action control must disappear once fully connected while remaining available for action states"
+  );
+  assert.match(
+    eventComposerScript.text,
     /function renderRoomMeta\(\)[\s\S]*?renderCalendarEventSyncControls\(\);\s*renderCalendarGoogleControl\(\);/,
     "Room refreshes must keep the persistent Google Calendar control in sync with server state"
   );
@@ -675,6 +680,26 @@ try {
   );
   assert.match(
     eventComposerScript.text,
+    /const canMove = Boolean\([\s\S]*?isOwnedByViewer[\s\S]*?!item\.continuesBefore[\s\S]*?!item\.continuesAfter[\s\S]*?!item\.allDay[\s\S]*?block\.addEventListener\("pointerdown", startEventMove\);/,
+    "Only the viewer's complete, timed event blocks may start a move gesture"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function startEventMove\(event\)[\s\S]*?event\.target\.closest\("\.event-resize-handle"\)[\s\S]*?calendarEvent\.createdByParticipantId !== currentParticipant\?\.id[\s\S]*?setPointerCapture[\s\S]*?handleEventMoveMove[\s\S]*?handleEventMoveEnd/,
+    "Moving an event must preserve edge resizing, ownership, pointer capture, and document-level drag tracking"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function scheduleEventMoveUpdate\(\)[\s\S]*?Math\.hypot\(deltaX, deltaY\) < eventMoveThresholdPixels[\s\S]*?applyEventMovePreview\([\s\S]*?dayIndexFromPointer\(state\.moveX\)/,
+    "Event moving must wait for a drag threshold and preview snapped time/day changes"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function handleEventMoveEnd\(event\)[\s\S]*?buildEventResizePayload\([\s\S]*?payload\.syncToGoogle = dayEvent\.syncToGoogle === true \|\| calendarEventSyncEnabled\(\);[\s\S]*?method: "PATCH"[\s\S]*?currentRoom\.events = currentRoom\.events\.map[\s\S]*?loadFreeBusy\(\)/,
+    "Dropping an event must immediately persist the full payload, enable configured Google sync, and refresh busy data"
+  );
+  assert.match(
+    eventComposerScript.text,
     /function dragTargetIsBlocked\(target\) \{\s*if \(target\.closest\("\.day-header, \.calendar-corner"\)\) return true;/,
     "The sticky calendar header must remain outside the drag-create surface"
   );
@@ -836,10 +861,20 @@ try {
     /\.event-resize-handle:hover::after[\s\S]*?\{[^}]*opacity:\s*1[^}]*scale\(1\)/,
     "A resize icon must appear only when its own edge strip is hovered"
   );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-card\.is-moving\s*\{[^}]*cursor:\s*grabbing[^}]*opacity:\s*0\.92[^}]*transform:\s*translate3d\([^}]*transition:\s*none[^}]*will-change:\s*transform, opacity/s,
+    "Live event movement must use a hardware-accelerated transform without layout animation"
+  );
   assert.doesNotMatch(
     eventComposerStyles.text,
     /\.event-card\.can-resize:hover \.event-resize-handle/,
     "Hovering an event's sides or body must not reveal both resize affordances"
+  );
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /@media \(max-width: 480px\)\s*\{[\s\S]*?#roomPage #settingsButton\s*\{[\s\S]*?display:\s*none;/,
+    "Mobile users must retain Settings access after the connected Google badge is hidden"
   );
   assert.match(
     eventComposerStyles.text,
@@ -1381,6 +1416,43 @@ try {
   const unchangedEvent = unchangedRoom.payload.room.events.find((event) => event.id === eventId);
   assert.equal(unchangedEvent.start, start);
   assert.equal(unchangedEvent.end, end);
+
+  const movedStart = "2026-07-21T11:15:00.000Z";
+  const movedEnd = "2026-07-21T11:45:00.000Z";
+  const movedEvent = await host.request(`/api/rooms/${firstCode}/events/${eventId}`, {
+    method: "PATCH",
+    body: {
+      title: unchangedEvent.title,
+      start: movedStart,
+      end: movedEnd,
+      timezone: unchangedEvent.timezone,
+      allDay: false,
+      location: unchangedEvent.location,
+      description: unchangedEvent.description,
+      syncToGoogle: unchangedEvent.syncToGoogle,
+      syncToOutlook: unchangedEvent.syncToOutlook,
+      inviteeParticipantIds: unchangedEvent.invitees.map((invitee) => invitee.participantId)
+    }
+  });
+  assert.equal(movedEvent.payload.event.start, movedStart);
+  assert.equal(movedEvent.payload.event.end, movedEnd);
+  assert.equal(movedEvent.payload.event.location, "Cafe");
+  assert.equal(movedEvent.payload.event.description, "Room-visible proposal");
+  assert.equal(
+    new Date(movedEvent.payload.event.end).getTime() - new Date(movedEvent.payload.event.start).getTime(),
+    30 * 60 * 1000
+  );
+  await guest.request(`/api/rooms/${firstCode}/events/${eventId}`, {
+    method: "PATCH",
+    expected: 403,
+    body: {
+      title: movedEvent.payload.event.title,
+      start: "2026-07-21T12:00:00.000Z",
+      end: "2026-07-21T12:30:00.000Z",
+      timezone: movedEvent.payload.event.timezone,
+      inviteeParticipantIds: [hostId, guestId]
+    }
+  });
 
   const freeBusy = await host.request(
     `/api/rooms/${firstCode}/freebusy?timeMin=2026-07-20T00:00:00.000Z&timeMax=2026-07-21T00:00:00.000Z`
