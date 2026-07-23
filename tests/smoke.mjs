@@ -248,8 +248,8 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260723-event-card-layout"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260723-shell-cleanup"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260723-period-label"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260723-period-label"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
   assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
@@ -658,6 +658,31 @@ try {
     "Resize cancellation must be able to restore the original start and duration"
   );
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerScript.text,
+    /function formatRange\(\{ includeYear = false \} = \{\}\)[\s\S]*?typeof rangeFormatter\.formatRange === "function"[\s\S]*?rangeFormatter\.formatRange\(start, end\)[\s\S]*?sameMonth[\s\S]*?sameYear/,
+    "Week labels must use compact, locale-aware ranges with a compatibility fallback"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function updateCalendarPeriodControls\(\)[\s\S]*?const periodText = calendarPeriodText\(\);[\s\S]*?const accessiblePeriodText = calendarPeriodText\(\{ includeYear: true \}\);[\s\S]*?calendarPeriodLabel\.textContent = periodText;[\s\S]*?calendarPeriodLabel\.title = accessiblePeriodText;[\s\S]*?setAttribute\("aria-label", `Calendar period: \$\{accessiblePeriodText\}`\)/,
+    "The full period must remain available to pointer and assistive-technology users"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-nav-primary\s*\{[^}]*flex:\s*1 1 0;[^}]*overflow:\s*hidden;/s,
+    "The primary navigation must yield only the space needed by fixed actions"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-nav-actions\s*\{[^}]*flex:\s*0 0 auto;/s,
+    "Calendar actions must retain their usable width"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-period-label\s*\{[^}]*flex:\s*1 1 0;[^}]*max-width:\s*none;[^}]*font-size:\s*clamp\(16px, 1\.25vw, 20px\);/s,
+    "The period label must size itself from the actual available navigation space"
+  );
   assert.match(
     eventComposerStyles.text,
     /:root\[data-theme="dark"\]\s*\{[^}]*--calendar-bg:\s*#121212;[^}]*--calendar-line:\s*rgba\(255, 255, 255, 0\.05\);/s,
