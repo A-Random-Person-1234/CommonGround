@@ -248,7 +248,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260723-shell-cleanup"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260723-event-card-layout"/);
   assert.match(home.text, /src="\/app\.js\?v=20260723-shell-cleanup"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
@@ -682,6 +682,26 @@ try {
     eventComposerStyles.text,
     /\.busy-card,\s*\.busy-stack,\s*\.event-card\s*\{[^}]*filter:\s*none;[^}]*backdrop-filter:\s*none;[^}]*mix-blend-mode:\s*normal;/s,
     "Scheduled and imported calendar blocks must use normal alpha compositing"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-card,\s*\.busy-card\s*\{[^}]*container-type:\s*inline-size/s,
+    "Event labels must react to the width of their own calendar card"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-card \.event-line,\s*\.busy-card \.busy-line\s*\{[^}]*text-overflow:\s*ellipsis/s,
+    "Long event and busy labels must truncate cleanly inside their boxes"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-card\.event-15 \.event-line-compact,\s*\.busy-card\.event-15 \.busy-line-compact\s*\{[^}]*padding-right:\s*0/s,
+    "Single-line 15-minute cards must not reserve a duplicate time column"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@container \(max-width: 190px\)\s*\{[\s\S]*?\.event-card \.event-line:not\(\.event-line-meta\),\s*\.busy-card \.busy-line:not\(\.busy-line-time\)\s*\{[^}]*padding-right:\s*0;[^}]*\}[\s\S]*?\.event-card:not\(\.event-15\):not\(\.event-30\) \.event-line-meta,\s*\.busy-card:not\(\.event-15\):not\(\.event-30\) \.busy-line-time\s*\{[^}]*position:\s*static;[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*text-align:\s*left;[^}]*\}[\s\S]*?\.event-card\.event-30 \.event-line-meta,\s*\.busy-card\.event-30 \.busy-line-title,\s*\.busy-card\.event-30 \.busy-line-time\s*\{[^}]*display:\s*none;/s,
+    "Narrow cards must stack longer ranges and simplify short events without collisions"
   );
   assert.match(
     eventComposerStyles.text,
