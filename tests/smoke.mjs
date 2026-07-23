@@ -248,8 +248,8 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260719-motion-system"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260719-week-date"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260723-calendar-shell"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260723-calendar-shell"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
   assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
@@ -313,21 +313,24 @@ try {
   assert.match(home.text, /button-with-icon[^>]*id="addEventButton"/);
   assert.match(
     home.text,
-    /<div class="calendar-wrap">\s*<header class="room-topbar">/,
-    "Room controls must live inside the calendar scroll flow"
+    /<section class="room-page calendar-app-shell hidden" id="roomPage">\s*<header class="room-topbar calendar-app-nav">/,
+    "The room page must expose the persistent calendar application shell with its top navigation as a direct child"
   );
   assert.match(
     home.text,
-    /<header class="room-topbar">[\s\S]*?<div class="calendar-toolbar">[\s\S]*?<div class="empty-room hidden" id="emptyRoomState">[\s\S]*?<div class="calendar-grid" id="calendarGrid"><\/div>\s*<footer class="legal-links calendar-legal-links"/,
-    "Room controls, invite prompt, calendar, and legal links must share one scroll flow"
+    /<\/header>\s*<aside class="participants-sidebar" id="participantsSidebar"[^>]*data-open="true">[\s\S]*?<div class="mini-calendar-grid" id="miniCalendarGrid"><\/div>[\s\S]*?<input id="memberSearchInput" type="search" placeholder="Search for people"[\s\S]*?<span>Members<\/span>[\s\S]*?<div class="participant-strip" id="participantStrip"><\/div>/,
+    "The persistent left sidebar must contain the mini calendar, member search, and Members selection list"
   );
   assert.match(
     home.text,
-    /<div class="participants-rail" aria-hidden="true">\s*<span>Members<\/span>\s*<\/div>/,
-    "The Members rail label must remain passive text"
+    /<div class="calendar-grid" id="calendarGrid"><\/div>\s*<footer class="legal-links calendar-legal-links" aria-label="Legal links">/,
+    "Legal links must remain below the calendar grid in the scroll flow"
   );
-  assert.doesNotMatch(home.text, /<button[^>]*class="participants-rail"/);
-  assert.doesNotMatch(home.text, /id="participantsRail"/);
+  assert.match(
+    home.text,
+    /<aside class="calendar-icon-rail" aria-label="Calendar tools">[\s\S]*?aria-label="Keep"[\s\S]*?aria-label="Tasks"[\s\S]*?aria-label="Contacts"[\s\S]*?aria-label="Maps"[\s\S]*?id="calendarRailAddButton"/,
+    "The calendar shell must retain the thin right-hand tool rail"
+  );
   assert.match(
     home.text,
     /<div class="topbar-identity" id="topbarIdentity" role="group" aria-label="Your room identity"><\/div>/,
@@ -483,7 +486,7 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /async function goToDateInWeek\(date\) \{\s*const wasWeekView = currentView === "week";\s*currentFocusDate = startOfDay\(date\);\s*currentView = "week";\s*if \(wasWeekView\) \{\s*animateCalendarTransition\(render\);\s*return;\s*\}\s*await refreshCalendarAfterImmediateRender\(\);/,
+    /async function goToDateInWeek\(date\) \{\s*const wasWeekView = currentView === "week";\s*currentFocusDate = startOfDay\(date\);\s*currentView = "week";\s*syncMiniCalendarToFocus\(\);\s*if \(wasWeekView\) \{\s*animateCalendarTransition\(render\);\s*return;\s*\}\s*await refreshCalendarAfterImmediateRender\(\);/,
     "Date navigation must retain the clicked date as the selection anchor and use week view"
   );
   assert.match(eventComposerScript.text, /input\.style\.setProperty\("--inline-name-width", `\$\{targetWidth\}px`\)/);
@@ -520,8 +523,8 @@ try {
   );
   assert.equal(
     (eventComposerScript.text.match(/await refreshCalendarAfterImmediateRender\(\);/g) || []).length,
-    3,
-    "View, period, and drill-down changes must share the immediate-render path"
+    4,
+    "View, period, Today, and drill-down changes must share the immediate-render path"
   );
   assert.match(
     eventComposerScript.text,
@@ -570,9 +573,21 @@ try {
     eventComposerScript.text,
     /function openEventModal\([^)]*\) \{[\s\S]*?prepareDialogForOpen\(eventModal\);[\s\S]*?eventModal\.showModal\(\);/
   );
-  assert.match(eventComposerScript.text, /let participantsDrawerGesture = null/);
-  assert.match(eventComposerScript.text, /Math\.abs\(deltaX\) >= 32/);
-  assert.doesNotMatch(eventComposerScript.text, /participantsRail\?\.addEventListener\("click"/);
+  assert.match(
+    eventComposerScript.text,
+    /function setParticipantsPanelExpanded\(expanded\) \{[\s\S]*?roomPage\?\.classList\.toggle\("sidebar-collapsed", !isExpanded\)[\s\S]*?calendarSidebarButton\?\.setAttribute\("aria-expanded", String\(isExpanded\)\)/,
+    "The application navigation must control the persistent Members sidebar"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const checkbox = document\.createElement\("input"\);[\s\S]*?checkbox\.className = "member-calendar-checkbox";[\s\S]*?checkbox\.type = "checkbox";[\s\S]*?checkbox\.checked = !isHidden;[\s\S]*?checkbox\.addEventListener\("change", \(\) => \{[\s\S]*?hiddenParticipantIds\.(?:delete|add)\(participant\.id\)[\s\S]*?renderCalendar\(\);/,
+    "Members must render as accessible calendar visibility checkboxes backed by the existing participant state"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /memberSearchInput\?\.addEventListener\("input", filterParticipantRows\)/,
+    "The member search field must filter the persistent Members list"
+  );
   for (const option of expectedParticipantPalette) {
     assert.ok(
       eventComposerScript.text.includes(`{ value: "${option.value}", name: "${option.name}" }`),
@@ -581,8 +596,13 @@ try {
   }
   assert.match(
     eventComposerScript.text,
-    /for \(const segment of freeSegmentsForDate\([\s\S]*?eventsLayer\.appendChild\(createFreeGlowBlock\([\s\S]*?for \(const eventBlock of dayEventBlocks\) \{\s*eventsLayer\.appendChild\(createEventBlock\(/,
-    "Free availability and scheduled events must remain separate sibling elements"
+    /\/\*\s*TODO: Commonground Free Block Rendering - Hidden for current demo[\s\S]*?for \(const segment of freeSegmentsForDate\(day\.date, occupiedSegments\)\) \{[\s\S]*?eventsLayer\.appendChild\(createFreeGlowBlock\(\{ \.\.\.segment, occupiedSegments \}, dayIndex\)\);[\s\S]*?\}\s*\*\//,
+    "The complete Free-block injection loop must remain available but explicitly commented out for the current demo"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /\/\* TODO: Commonground Free Block Rendering - Hidden for current demo \*\/\s*const showFreeBlocks = false;/,
+    "Free-block rendering must be disabled behind an explicit demo flag"
   );
   assert.match(
     eventComposerScript.text,
@@ -591,8 +611,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function refreshLiveFreeBlocksForResize\([\s\S]*?occupiedSegmentsForDate\([\s\S]*?freeSegmentsForDate\([\s\S]*?configureFreeGlowBlock\(/,
-    "Free blocks must be recalculated locally while an event edge is dragged"
+    /function refreshLiveFreeBlocksForResize\([\s\S]*?if \(!showFreeBlocks\) \{[\s\S]*?calendarGrid\.querySelectorAll\("\.free-block"\)\.forEach\(\(block\) => block\.remove\(\)\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?occupiedSegmentsForDate\([\s\S]*?freeSegmentsForDate\([\s\S]*?configureFreeGlowBlock\(/,
+    "Live Free-block reflow must preserve its future implementation while returning immediately in the hidden demo"
   );
   assert.match(
     serverSource,
@@ -647,14 +667,8 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /\.free-glow-block\s*\{[^}]*border:\s*1px solid rgba\(218, 165, 32, 0\.3\);[^}]*border-radius:\s*8px;[^}]*background:\s*linear-gradient\(180deg, rgba\(218, 165, 32, 0\.05\) 0%, rgba\(218, 165, 32, 0\.02\) 100%\);[^}]*0 0 16px rgba\(218, 165, 32, 0\.12\),[^}]*inset 0 0 24px rgba\(218, 165, 32, 0\.08\);[^}]*mix-blend-mode:\s*normal;/s,
-    "Only Free blocks may own the exact isolated golden glow"
-  );
-  assert.match(eventComposerStyles.text, /\.free-glow-block::before\s*\{\s*content:\s*none;\s*\}/s);
-  assert.doesNotMatch(
-    eventComposerStyles.text,
-    /\.free-glow-block::before\s*\{[^}]*radial-gradient/s,
-    "Free blocks must not use an oversized radial pseudo-element glow"
+    /\/\* TODO: Commonground Free Block Rendering - Hidden for current demo[\s\S]*?\.free-block\s*\{[\s\S]*?border:\s*1px solid rgba\(218, 165, 32, 0\.3\);[\s\S]*?background:\s*linear-gradient\(180deg, rgba\(218, 165, 32, 0\.05\) 0%, rgba\(218, 165, 32, 0\.02\) 100%\);[\s\S]*?box-shadow:\s*0 0 16px rgba\(218, 165, 32, 0\.12\), inset 0 0 24px rgba\(218, 165, 32, 0\.08\);[\s\S]*?\}\s*\*\//,
+    "The future Free-block presentation must remain documented inside the explicit disabled-demo CSS comment"
   );
   assert.match(
     eventComposerStyles.text,
@@ -840,11 +854,6 @@ try {
     /\.topbar-identity:has\(> \.identity-name-button:active\),\s*\.topbar-identity:has\(> \.topbar-identity-menu > \.topbar-color-trigger:active\)\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*scale\(0\.96\)/s,
     "The segmented identity control must press as one visual surface"
   );
-  assert.match(
-    eventComposerStyles.text,
-    /button\.free-block:not\(:disabled\):active\s*\{[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(1\)[^}]*opacity:\s*0\.96/s,
-    "An active Free card must retain its true column bounds beneath the drag preview"
-  );
   assertCompositorOnlyMotion(eventComposerStyles.text);
   assertTransformOpacityKeyframes(eventComposerStyles.text);
   assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*will-change:\s*transform, opacity/s);
@@ -932,13 +941,12 @@ try {
   assert.match(eventComposerStyles.text, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?#eventModal\[open\] \.event-composer,[\s\S]*?animation-duration: 1ms !important/s);
   assert.doesNotMatch(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow-y:\s*auto/s);
   assert.doesNotMatch(eventComposerStyles.text, /#eventModal \.event-composer\s*\{[^}]*overflow-y:\s*auto/s);
-  assert.match(eventComposerStyles.text, /\.calendar-legal-links\s*\{[^}]*position:\s*static[^}]*margin:\s*12px 12px 14px auto/s);
-  assert.match(eventComposerStyles.text, /\.calendar-wrap > \.calendar-grid\s*\{[^}]*min-height:\s*calc\(100% \+ 1px\)/s);
-  assert.match(eventComposerStyles.text, /\.room-page\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\)[^}]*overflow:\s*hidden/s);
-  assert.match(eventComposerStyles.text, /\.room-topbar\s*\{[^}]*position:\s*relative[^}]*top:\s*auto[^}]*margin-bottom:\s*8px/s);
-  assert.doesNotMatch(eventComposerStyles.text, /\.room-topbar\s*\{[^}]*position:\s*sticky/s);
-  assert.match(eventComposerStyles.text, /\.calendar-stage\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\)[^}]*overflow:\s*hidden/s);
-  assert.match(eventComposerStyles.text, /\.calendar-wrap\s*\{[^}]*grid-row:\s*1[^}]*overflow:\s*auto/s);
+  assert.match(eventComposerStyles.text, /#roomPage\.calendar-app-shell\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*var\(--shell-sidebar-width\) minmax\(0, 1fr\) var\(--shell-rail-width\)[^}]*grid-template-areas:\s*"nav nav nav"\s*"sidebar content rail"/s);
+  assert.match(eventComposerStyles.text, /#roomPage \.calendar-app-nav\s*\{[^}]*grid-area:\s*nav[^}]*height:\s*var\(--shell-nav-height\)[^}]*background:\s*var\(--shell-panel\)/s);
+  assert.match(eventComposerStyles.text, /#roomPage \.calendar-legal-links\s*\{[^}]*position:\s*static[^}]*margin:\s*14px 14px 16px auto/s);
+  assert.match(eventComposerStyles.text, /#roomPage \.calendar-grid\s*\{[^}]*min-height:\s*calc\(100% \+ 1px\)/s);
+  assert.match(eventComposerStyles.text, /#roomPage \.calendar-stage\s*\{[^}]*min-height:\s*0[^}]*overflow:\s*hidden/s);
+  assert.match(eventComposerStyles.text, /#roomPage \.calendar-wrap\s*\{[^}]*grid-row:\s*1[^}]*height:\s*100%[^}]*overflow:\s*auto/s);
   assert.match(
     eventComposerStyles.text,
     /\.calendar-grid\.year-view\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(150px, 1fr\)\)[^}]*grid-template-rows:\s*none[^}]*grid-auto-rows:\s*minmax\(214px, auto\)/s,
@@ -946,22 +954,24 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /\.participants-sidebar\s*\{[^}]*overflow:\s*hidden[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:\s*0 22px 22px 0[^}]*box-shadow:\s*var\(--shadow\)[^}]*touch-action:\s*pan-y/s,
-    "The participants drawer must own one unified outer surface"
+    /#roomPage \.participants-sidebar\s*\{[^}]*grid-area:\s*sidebar[^}]*position:\s*relative[^}]*border-right:\s*1px solid var\(--shell-line\)[^}]*background:\s*var\(--shell-panel\)[^}]*opacity:\s*1/s,
+    "The Members sidebar must be a persistent application-shell column"
   );
   assert.match(
     eventComposerStyles.text,
-    /\.participants-card\s*\{[^}]*border:\s*0[^}]*border-radius:\s*0[^}]*background:\s*transparent[^}]*box-shadow:\s*none/s,
-    "The participants card must not render a second surface"
+    /#roomPage \.mini-calendar-grid\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*repeat\(7, minmax\(0, 1fr\)\)/s,
+    "The sidebar mini calendar must retain its seven-column layout"
   );
   assert.match(
     eventComposerStyles.text,
-    /\.participants-rail\s*\{[^}]*border:\s*0[^}]*background:\s*transparent[^}]*cursor:\s*default[^}]*box-shadow:\s*none/s,
-    "The Members label must be visually fused and non-interactive"
+    /#roomPage \.member-calendar-checkbox:checked \+ \.member-checkbox-visual\s*\{[^}]*border-color:\s*var\(--member-color\)[^}]*background:\s*var\(--member-color\)/s,
+    "Member checkboxes must expose a distinct per-member checked state"
   );
-  assert.match(eventComposerStyles.text, /\.participants-rail span\s*\{[^}]*pointer-events:\s*none/s);
-  assert.doesNotMatch(eventComposerStyles.text, /\.participants-rail\[aria-expanded="true"\]/);
-  assert.doesNotMatch(eventComposerStyles.text, /\.participants-rail:focus-visible/);
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-icon-rail\s*\{[^}]*grid-area:\s*rail[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*border-left:\s*1px solid var\(--shell-line\)/s,
+    "The right calendar tool rail must occupy its own fixed shell column"
+  );
   assert.match(
     eventComposerStyles.text,
     /@media \(min-width: 900px\)[\s\S]*?\.calendar-grid\.week-view\s*\{[^}]*min-width:\s*0[^}]*minmax\(0, 1fr\)/
