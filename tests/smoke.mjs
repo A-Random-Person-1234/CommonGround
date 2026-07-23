@@ -248,8 +248,8 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260723-period-label"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260723-period-label"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260723-compact-composer"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260723-compact-composer"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
   assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
@@ -288,6 +288,7 @@ try {
   assert.match(eventModalMarkup, /id="eventFormFeedback" role="status" aria-live="polite"/);
   assert.match(eventModalMarkup, /<label class="composer-field-row composer-input-row" for="eventLocationInput">/);
   assert.match(eventModalMarkup, /<label class="composer-field-row composer-input-row composer-description-row" for="eventDescriptionInput">/);
+  assert.match(eventModalMarkup, /id="eventDescriptionInput"[^>]*rows="1"/);
   assert.doesNotMatch(eventModalMarkup, /class="composer-body"/);
   assertInOrder(eventModalMarkup, [
     'class="composer-heading-section"',
@@ -398,6 +399,31 @@ try {
   );
   assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
   assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
+  assert.match(
+    eventComposerScript.text,
+    /function dragSelectionRect\(\)[\s\S]*?const width = Math\.max\(dayWidth - 16, 24\);/,
+    "The tentative event anchor must track the real calendar column instead of imposing a wide false rectangle"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function stopDragCreate\(\{ preservePreview = false \} = \{\}\)[\s\S]*?if \(!preservePreview\) clearDragPreview\(\);/,
+    "Drag cleanup must optionally preserve the tentative event while its adjacent composer is open"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function handleDragCreateEnd\([\s\S]*?stopDragCreate\(\{ preservePreview: true \}\);[\s\S]*?openDraggedEventComposer\(anchorRect\);/,
+    "Finishing a drag must keep its provisional event visible behind the adjacent composer"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function positionEventModal\(\)[\s\S]*?const edge = viewportWidth <= 820 \? 8 : 12;[\s\S]*?card\.offsetWidth \|\| 440[\s\S]*?const rightCandidate = anchorRight \+ gap;[\s\S]*?const leftCandidate = anchorLeft - width - gap;[\s\S]*?const rightFits = rightCandidate \+ width <= viewportWidth - edge;[\s\S]*?const leftFits = leftCandidate >= edge;[\s\S]*?eventModal\.dataset\.anchorSide = side;[\s\S]*?--composer-transform-origin/,
+    "The composer must use its measured size to choose an adjacent side and remain inside the viewport"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function closeEventModal\(\)[\s\S]*?delete eventModal\.dataset\.anchorSide;[\s\S]*?removeProperty\("--composer-left"\)[\s\S]*?removeProperty\("--composer-top"\)[\s\S]*?removeProperty\("--composer-transform-origin"\)/,
+    "Closing the composer must remove its transient anchor geometry"
+  );
   assert.match(
     eventComposerScript.text,
     /function googleAuthUrl\([^)]*\)[\s\S]*?params\.set\("popup", "1"\);[\s\S]*?params\.set\("popupToken", popupToken\);[\s\S]*?return `\$\{popup \? "\/api\/auth\/google" : "\/auth\/google"\}\?\$\{params\.toString\(\)\}`;/,
@@ -820,7 +846,7 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.composer-field-row > input,\s*#eventModal \.composer-field-row > textarea\s*\{[^}]*min-height: 40px[^}]*background: transparent[^}]*resize: none/s,
+    /#eventModal \.composer-field-row > input,\s*#eventModal \.composer-field-row > textarea\s*\{[^}]*min-height: 36px[^}]*padding: 6px 0[^}]*background: transparent[^}]*resize: none/s,
     "The sectioned composer fields must remain flat, compact, and non-resizing"
   );
   assert.match(eventComposerStyles.text, /\.color-option-list\s*\{[^}]*max-height: calc\(100dvh - 96px\)/s);
@@ -951,22 +977,22 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.event-composer,\s*#eventModal\.anchored-composer \.modal-card,\s*#eventModal\.anchored-composer \.event-composer\s*\{[^}]*width: min\(560px, calc\(100vw - 24px\)\)[^}]*max-height: calc\(100dvh - 16px\)[^}]*overflow: visible/s,
+    /#eventModal \.event-composer,\s*#eventModal\.anchored-composer \.modal-card,\s*#eventModal\.anchored-composer \.event-composer\s*\{[^}]*width: min\(440px, calc\(100vw - 24px\)\)[^}]*max-height: calc\(100dvh - 24px\)[^}]*overflow: visible/s,
     "The composer must stay within the viewport without introducing an inner scroll region"
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.event-composer\s*\{[^}]*grid-template-rows: auto auto auto auto auto[^}]*gap: (?:20px|1\.25rem)[^}]*padding: 24px[^}]*border-radius: 16px/s,
+    /#eventModal \.event-composer\s*\{[^}]*grid-template-rows: auto auto auto auto auto[^}]*gap: 16px[^}]*padding: 16px[^}]*border-radius: 14px/s,
     "The desktop composer must keep its compact five-row hierarchy and 8px rhythm"
   );
   assert.match(eventComposerStyles.text, /#eventModal\s*\{[^}]*width: 100vw[^}]*height: 100dvh[^}]*max-width: none[^}]*overflow: visible/s);
-  assert.match(eventComposerStyles.text, /#eventModal \.composer-heading-section\s*\{[^}]*display: grid[^}]*gap: 8px[^}]*min-width: 0/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-heading-section\s*\{[^}]*display: grid[^}]*gap: 4px[^}]*min-width: 0/s);
   assert.match(
     eventComposerStyles.text,
     /#eventModal \.composer-schedule-section,\s*#eventModal \.composer-field-row\s*\{[^}]*grid-template-columns: 16px minmax\(0, 1fr\)[^}]*gap: 16px[^}]*align-items: center/s,
     "Schedule and option rows must share one aligned icon/content grid"
   );
-  assert.match(eventComposerStyles.text, /#eventModal \.composer-meta-section\s*\{[^}]*display: grid[^}]*gap: (?:20px|1\.25rem)/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-meta-section\s*\{[^}]*display: grid[^}]*gap: 8px/s);
   assert.match(
     eventComposerStyles.text,
     /#eventModal \.composer-time-grid\s*\{[^}]*padding: 8px[^}]*border: 1px solid rgba\(255, 255, 255, 0\.08\)[^}]*border-radius: 8px[^}]*background: rgba\(255, 255, 255, 0\.03\)/s,
@@ -974,10 +1000,10 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.composer-field-row\s*\{[^}]*min-height: 40px[^}]*padding: 0 8px[^}]*border-radius: 8px/s,
+    /#eventModal \.composer-field-row\s*\{[^}]*min-height: 36px[^}]*padding: 0 8px[^}]*border-radius: 8px/s,
     "Composer option rows must retain compact, consistent geometry"
   );
-  assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\s*\{[^}]*min-height: 48px[^}]*border-radius: 8px/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\s*\{[^}]*min-height: 44px[^}]*border-radius: 8px/s);
   assert.match(eventComposerStyles.text, /#eventModal \.mini-toggle-ui\s*\{[^}]*width: 40px[^}]*height: 24px/s);
   assert.match(eventComposerStyles.text, /#eventModal \.oauth-spinner\s*\{[^}]*display: none[^}]*width: 18px[^}]*height: 18px/s);
   assert.match(
@@ -988,8 +1014,8 @@ try {
   assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\.is-connected\s*\{[^}]*animation: composer-sync-settle var\(--motion-slow\) var\(--ease-modal\) both[^}]*will-change: transform, opacity/s);
   assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\.is-error small\s*\{[^}]*color: var\(--danger\)/s);
   assert.match(eventComposerStyles.text, /\.invite-dropdown-panel\s*\{[^}]*position: absolute[^}]*max-height: min\(220px, calc\(100dvh - 160px\)\)[^}]*overflow-y: auto/s);
-  assert.match(eventComposerStyles.text, /@media \(max-width: 620px\)[\s\S]*?#eventModal \.event-composer[\s\S]*?width: min\(100vw - 16px, 560px\)/);
-  assert.match(eventComposerStyles.text, /@media \(max-height: 720px\)[\s\S]*?#eventModal \.event-composer\s*\{[^}]*gap: 12px[^}]*padding: 16px 20px/s);
+  assert.match(eventComposerStyles.text, /@media \(max-width: 820px\)[\s\S]*?#eventModal \.event-composer[\s\S]*?width: min\(100vw - 16px, 360px\)/);
+  assert.match(eventComposerStyles.text, /@media \(max-height: 720px\)[\s\S]*?#eventModal \.event-composer\s*\{[^}]*gap: 10px[^}]*padding: 14px 16px/s);
   assert.match(eventComposerStyles.text, /@media \(max-height: 560px\)[\s\S]*?#eventModal \.composer-sync-toggle small\s*\{[^}]*display: block[^}]*font-size: 11px/s);
   assert.match(eventComposerStyles.text, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?#eventModal\[open\] \.event-composer,[\s\S]*?animation-duration: 1ms !important/s);
   assert.doesNotMatch(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow-y:\s*auto/s);
