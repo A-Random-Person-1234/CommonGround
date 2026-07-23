@@ -3085,15 +3085,85 @@ button.free-block:not(:disabled):active {
   will-change: transform, opacity;
 }
 
-.event-card.is-moving:hover,
-.event-card.is-moving:focus-visible,
-.busy-card.is-moving:hover,
-.busy-card.is-moving:focus-visible {
+.event-card.is-moving,
+.busy-card.is-moving,
+.event-card.is-move-committing,
+.busy-card.is-move-committing {
+  overflow: visible;
+}
+
+.event-card.is-move-committing,
+.busy-card.is-move-committing {
+  z-index: 20;
+  cursor: default;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  opacity: 1;
   transform: translate3d(
     var(--event-move-x, 0),
     var(--event-move-y, 0),
     0
   );
+  transition: none;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.24);
+  will-change: transform;
+}
+
+.event-card.is-moving:hover,
+.event-card.is-moving:focus-visible,
+.busy-card.is-moving:hover,
+.busy-card.is-moving:focus-visible,
+.event-card.is-move-committing:hover,
+.event-card.is-move-committing:focus-visible,
+.busy-card.is-move-committing:hover,
+.busy-card.is-move-committing:focus-visible {
+  transform: translate3d(
+    var(--event-move-x, 0),
+    var(--event-move-y, 0),
+    0
+  );
+}
+
+.event-move-time {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 7px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 24px;
+  max-width: min(230px, calc(100vw - 28px));
+  padding: 4px 8px;
+  border: 1px solid color-mix(in srgb, var(--brand) 58%, transparent);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--surface) 94%, #12100e);
+  color: var(--ink);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.26);
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 1;
+  transform: translate3d(-50%, 0, 0) scale(1);
+  transform-origin: center;
+  will-change: transform, opacity;
+  z-index: 24;
+}
+
+.event-move-snap-feedback {
+  position: absolute;
+  inset: -2px;
+  border: 1px solid color-mix(in srgb, var(--brand) 72%, transparent);
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  transform: scale(0.985);
+  transform-origin: center;
+  will-change: transform, opacity;
+  z-index: 23;
 }
 
 .event-card.is-resizing {
@@ -3897,6 +3967,13 @@ button.free-block:not(:disabled):active {
 .free-glow-block:focus-visible::after {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+.event-card.is-moving::after,
+.busy-card.is-moving::after,
+.event-card.is-move-committing::after,
+.busy-card.is-move-committing::after {
+  opacity: 0 !important;
 }
 
 .month-weekday {
