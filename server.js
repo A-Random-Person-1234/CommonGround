@@ -2139,7 +2139,7 @@ function parseGoogleEventTime(value, fallbackToEnd = false) {
 }
 
 function googleCalendarCanWriteEvents(calendar = {}) {
-  return calendar.accessRole === "owner" || calendar.accessRole === "writer";
+  return ["owner", "writer", "writerWithoutPrivateAccess"].includes(calendar.accessRole);
 }
 
 function googleTimedEventRange(event = {}) {
@@ -2150,6 +2150,20 @@ function googleTimedEventRange(event = {}) {
     return null;
   }
   return { start, end };
+}
+
+function googleEventCanMove(event = {}) {
+  return Boolean(
+    googleTimedEventRange(event) &&
+    event.status !== "cancelled" &&
+    event.transparency !== "transparent" &&
+    event.locked !== true &&
+    (
+      event.organizer?.self === true ||
+      event.creator?.self === true ||
+      event.guestsCanModify === true
+    )
+  );
 }
 
 function parseOutlookDateTime(value) {
@@ -2932,9 +2946,7 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
                 events: events
                   .filter((event) => (
                     event?.id &&
-                    event.status !== "cancelled" &&
-                    event.transparency !== "transparent" &&
-                    event.organizer?.self === true &&
+                    googleEventCanMove(event) &&
                     !isSyncedGoogleMirrorEvent(room, event, mirroredIds)
                   ))
                   .map((event) => {
@@ -4120,16 +4132,24 @@ const server = http.createServer(async (req, res) => {
 
       const body = await readJsonBody(req);
       const { calendarId, eventId, start, end } = validateGoogleTimedEventMove(body);
+      const googleTokens = await getFreshTokensForUser(auth.user.id);
+      const calendarList = googleTokens?.access_token
+        ? await fetchCalendarList(googleTokens.access_token)
+        : { calendars: [] };
+      const writableCalendar = (calendarList.calendars || []).find((calendar) => (
+        calendar.id === calendarId && googleCalendarCanWriteEvents(calendar)
+      ));
+      if (!writableCalendar) {
+        sendJson(res, 403, { error: "This Google Calendar is not writable." });
+        return;
+      }
       const googleEvent = await googleCalendarRequest(auth.user.id, calendarId, eventId, {
         method: "GET",
         sendUpdates: null
       });
       if (
         !googleEvent ||
-        googleEvent.status === "cancelled" ||
-        googleEvent.transparency === "transparent" ||
-        googleEvent.organizer?.self !== true ||
-        !googleTimedEventRange(googleEvent)
+        !googleEventCanMove(googleEvent)
       ) {
         sendJson(res, 409, { error: "This Google Calendar event cannot be moved from CommonGround." });
         return;
