@@ -3440,6 +3440,19 @@ function closeExpandedBusyStacks(exception = null) {
 function createSingleBusyCard(segment, dayIndex) {
   const participant = segment.participants[0];
   const isOwnBlock = participant.participantId === currentParticipant?.id;
+  const googleItem = participant.items?.length === 1 &&
+    participant.items[0]?.provider === "google" &&
+    participant.items[0]?.editable === true
+    ? participant.items[0]
+    : null;
+  const canMove = Boolean(
+    isOwnBlock &&
+    googleItem?.googleCalendarId &&
+    googleItem?.googleEventId &&
+    googleItem?.start &&
+    googleItem?.end &&
+    sameDate(new Date(googleItem.start), new Date(googleItem.end))
+  );
   const ownerLabel = participant.ownerName;
   const visibilityLabel = busyVisibilityLabel(participant, isOwnBlock);
   const block = document.createElement("button");
@@ -3458,8 +3471,19 @@ function createSingleBusyCard(segment, dayIndex) {
     isTiny ? "tiny" : "",
     hasInvitedOverlap ? "invited-overlap" : "",
     hasLaneOverlap ? "busy-overlap-lane" : "",
-    laneSizeClass
+    laneSizeClass,
+    canMove ? "can-move" : ""
   ].filter(Boolean).join(" ");
+  block.dataset.canMove = String(canMove);
+  block.dataset.googleCalendarId = googleItem?.googleCalendarId || "";
+  block.dataset.googleEventId = googleItem?.googleEventId || "";
+  block.dataset.eventDate = dateKey(segment.date);
+  block.dataset.dayIndex = String(dayIndex);
+  block.dataset.startMinute = String(Math.round((segment.startHour - calendarStartHour) * 60));
+  block.dataset.durationMinute = String(Math.max(
+    eventResizeMinMinutes,
+    Math.round((segment.endHour - segment.startHour) * 60)
+  ));
   block.style.setProperty("--day-index", dayIndex);
   block.style.setProperty("--start", segment.startHour - calendarStartHour);
   block.style.setProperty("--duration", duration);
@@ -3498,6 +3522,9 @@ function createSingleBusyCard(segment, dayIndex) {
     if (shouldSuppressCalendarClick(event)) return;
     openBusyDetail(segment);
   });
+  if (canMove) {
+    block.addEventListener("pointerdown", startGoogleBusyMove);
+  }
   return block;
 }
 
@@ -3834,6 +3861,7 @@ function dragTargetIsBlocked(target) {
   if (target.closest(".day-header, .calendar-corner")) return true;
   if (target.closest(".event-resize-handle")) return true;
   if (target.closest(".event-card")) return true;
+  if (target.closest(".busy-card.can-move")) return true;
   if (target.closest(".busy-card, .busy-stack-summary")) return false;
   return Boolean(target.closest(
     ".busy-stack-popover, .busy-stack-item, .color-picker-menu, .host-popover, .detail-panel, .modal-card, .vote-button, .chip-action, .icon-button, .add-event-button, input, textarea, select, summary, label"
@@ -4276,14 +4304,35 @@ async function handleEventMoveEnd(event) {
 
   event.preventDefault();
   markCalendarClickSuppressed();
-  const dayEvent = roomEventById(state.eventId);
+  const isGoogleBusy = state.source === "google";
+  const dayEvent = isGoogleBusy ? null : roomEventById(state.eventId);
   const finalDayIndex = Number.isFinite(state.finalDayIndex) ? state.finalDayIndex : state.baseDayIndex;
   const finalStartMinute = Number.isFinite(state.finalStartMinute) ? state.finalStartMinute : state.baseStartMinute;
   const targetDayKey = dateKey(dateFromDayIndex(finalDayIndex));
 
   try {
-    if (!dayEvent || !block) return;
+    if (!block || (!isGoogleBusy && !dayEvent)) return;
     if (targetDayKey === state.dayKey && finalStartMinute === state.baseStartMinute) return;
+
+    if (isGoogleBusy) {
+      const targetDate = dayStartFromDateKey(targetDayKey);
+      const nextStart = new Date(targetDate);
+      nextStart.setHours(0, finalStartMinute, 0, 0);
+      const nextEnd = new Date(nextStart.getTime() + state.baseDurationMinute * 60 * 1000);
+      await fetchJson(`/api/rooms/${currentRoom.code}/google-calendar-events`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          calendarId: state.calendarId,
+          eventId: state.providerEventId,
+          start: nextStart.toISOString(),
+          end: nextEnd.toISOString()
+        })
+      });
+      await loadFreeBusy();
+      render();
+      return;
+    }
 
     const payload = buildEventResizePayload(
       dayEvent,
@@ -4344,6 +4393,51 @@ function startEventMove(event) {
   event.stopPropagation();
   eventMoveState = {
     eventId,
+    block,
+    captureTarget: block,
+    pointerId: event.pointerId,
+    dayKey: block.dataset.eventDate || "",
+    baseDayIndex: Number(block.dataset.dayIndex || 0),
+    finalDayIndex: Number(block.dataset.dayIndex || 0),
+    baseStartMinute: startMinute,
+    finalStartMinute: startMinute,
+    baseDurationMinute: durationMinute,
+    startDragX: event.clientX,
+    startDragY: event.clientY,
+    moveX: event.clientX,
+    moveY: event.clientY,
+    pixelsPerMinute: resolvedCalendarRowHeight() / 60,
+    moved: false
+  };
+  block.setPointerCapture?.(event.pointerId);
+  window.addEventListener("pointermove", handleEventMoveMove);
+  window.addEventListener("pointerup", handleEventMoveEnd);
+  window.addEventListener("pointercancel", handleEventMoveCancel);
+}
+
+function startGoogleBusyMove(event) {
+  const block = event.currentTarget;
+  if (!block || event.button !== undefined && event.button !== 0) return;
+  if (eventResizeState || eventMoveState || dragCreateState) return;
+  if (block.dataset.canMove !== "true") return;
+
+  const startMinute = Number(block.dataset.startMinute);
+  const durationMinute = Number(block.dataset.durationMinute);
+  const calendarId = block.dataset.googleCalendarId;
+  const providerEventId = block.dataset.googleEventId;
+  if (
+    !calendarId ||
+    !providerEventId ||
+    !Number.isFinite(startMinute) ||
+    !Number.isFinite(durationMinute)
+  ) return;
+
+  event.stopPropagation();
+  eventMoveState = {
+    source: "google",
+    eventId: `google:${calendarId}:${providerEventId}`,
+    calendarId,
+    providerEventId,
     block,
     captureTarget: block,
     pointerId: event.pointerId,
