@@ -6196,6 +6196,45 @@ button.free-block:not(:disabled):active {
   line-height: 1;
 }
 
+/* Size calendar labels against the card itself, not the viewport. Week columns
+   can be narrow on laptop screens even when no mobile media query applies. */
+.event-card,
+.busy-card {
+  container-type: inline-size;
+}
+
+.event-card .event-line,
+.busy-card .busy-line {
+  text-overflow: ellipsis;
+}
+
+.event-card.event-15 .event-line-compact,
+.busy-card.event-15 .busy-line-compact {
+  padding-right: 0;
+}
+
+@container (max-width: 190px) {
+  .event-card .event-line:not(.event-line-meta),
+  .busy-card .busy-line:not(.busy-line-time) {
+    padding-right: 0;
+  }
+
+  .event-card:not(.event-15):not(.event-30) .event-line-meta,
+  .busy-card:not(.event-15):not(.event-30) .busy-line-time {
+    position: static;
+    width: 100%;
+    max-width: 100%;
+    padding-right: 0;
+    text-align: left;
+  }
+
+  .event-card.event-30 .event-line-meta,
+  .busy-card.event-30 .busy-line-title,
+  .busy-card.event-30 .busy-line-time {
+    display: none;
+  }
+}
+
 :root:not([data-theme="dark"]) body {
   background:
     radial-gradient(circle at top left, rgba(230, 211, 189, 0.34), transparent 30%),
