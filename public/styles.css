@@ -2790,7 +2790,7 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
 /* Availability cards can also be drag surfaces. Preserve their true column
    bounds while pressed so the full-width drag preview stays aligned, while
    opacity still provides immediate press feedback. */
-button.free-glow-block:not(:disabled):active {
+button.free-block:not(:disabled):active {
   transform: translate3d(0, 0, 0) scale(1);
   opacity: 0.96;
 }
@@ -2865,6 +2865,7 @@ button.free-glow-block:not(:disabled):active {
   font-size: 11px;
 }
 
+.free-block,
 .free-glow-block {
   --free-radius: 8px;
   position: absolute;
@@ -2894,10 +2895,12 @@ button.free-glow-block:not(:disabled):active {
   mix-blend-mode: normal;
 }
 
+.free-block::before,
 .free-glow-block::before {
   content: none;
 }
 
+.free-block.free-15,
 .free-glow-block.free-15 {
   top: calc(var(--start) * var(--row-height) + 1px);
   height: max(9px, calc(var(--duration) * var(--row-height) - 2px));
@@ -2905,33 +2908,50 @@ button.free-glow-block:not(:disabled):active {
   min-height: 0;
 }
 
+.free-block.free-30,
 .free-glow-block.free-30 {
   top: calc(var(--start) * var(--row-height) + var(--calendar-block-half-gap));
   height: max(16px, calc(var(--duration) * var(--row-height) - var(--calendar-block-gap)));
   padding: 4px 8px;
 }
 
+.free-block.free-45,
 .free-glow-block.free-45 {
   top: calc(var(--start) * var(--row-height) + 3px);
   height: max(24px, calc(var(--duration) * var(--row-height) - 6px));
   padding: 6px 10px;
 }
 
+.free-block.free-long,
 .free-glow-block.free-long {
   padding: 9px 12px;
 }
 
+.free-block:hover,
 .free-glow-block:hover,
+.free-block:focus-visible,
 .free-glow-block:focus-visible {
   border-radius: 8px;
 }
 
+.free-block:focus-visible,
 .free-glow-block:focus-visible {
   outline: 2px solid rgba(218, 165, 32, 0.65);
   outline-offset: 2px;
 }
 
+.free-block.is-live-reflowing,
+.free-glow-block.is-live-reflowing {
+  border-color: rgba(218, 165, 32, 0.48);
+  box-shadow:
+    0 0 24px rgba(218, 165, 32, 0.22),
+    inset 0 0 28px rgba(218, 165, 32, 0.12);
+  transform-origin: 50% 0;
+}
+
+.free-block strong,
 .free-glow-block strong,
+.free-block span,
 .free-glow-block span {
   display: block;
   color: color-mix(in srgb, var(--warning) 72%, var(--ink));
@@ -2943,34 +2963,46 @@ button.free-glow-block:not(:disabled):active {
   white-space: nowrap;
 }
 
+.free-block strong,
 .free-glow-block strong {
   font-size: 13px;
   font-weight: 850;
 }
 
+.free-block span,
 .free-glow-block span {
   font-size: 12px;
   font-weight: 750;
 }
 
+.free-block.free-30 span,
 .free-glow-block.free-30 span {
   font-size: 10px;
   line-height: 1.05;
 }
 
+.free-block.free-45 span,
+.free-block.free-long span,
 .free-glow-block.free-45 span,
 .free-glow-block.free-long span {
   line-height: 1.14;
+}
+
+.free-block.free-glow-block--label-hidden {
+  padding-top: 10px;
 }
 
 .free-glow-block--label-hidden {
   padding-top: 10px;
 }
 
+.free-block.free-15.free-glow-block--label-hidden,
 .free-glow-block.free-15.free-glow-block--label-hidden {
   padding: 0;
 }
 
+.free-block.free-30.free-glow-block--label-hidden,
+.free-block.free-45.free-glow-block--label-hidden,
 .free-glow-block.free-30.free-glow-block--label-hidden,
 .free-glow-block.free-45.free-glow-block--label-hidden {
   padding-top: 4px;
@@ -3024,6 +3056,67 @@ button.free-glow-block:not(:disabled):active {
   background: color-mix(in srgb, var(--brand) 78%, #20252d);
   border: 1px solid color-mix(in srgb, var(--brand) 72%, #111827);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+}
+
+.event-card.can-resize {
+  overflow: visible;
+}
+
+.event-card.is-resizing {
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.34);
+}
+
+.event-resize-handle {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  height: 10px;
+  border: 0;
+  background: transparent;
+  cursor: ns-resize;
+  pointer-events: auto;
+  touch-action: none;
+  z-index: 10;
+}
+
+.event-resize-handle-top {
+  top: -4px;
+}
+
+.event-resize-handle-bottom {
+  bottom: -4px;
+}
+
+.event-resize-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  background-color: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(-50%, -50%, 0) scale(0.92);
+  transition:
+    opacity var(--motion-fast) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
+  -webkit-mask: url("/icons/move-vertical.svg") center / contain no-repeat;
+  mask: url("/icons/move-vertical.svg") center / contain no-repeat;
+}
+
+.event-resize-handle:hover::after,
+.event-resize-handle:active::after,
+.event-card.is-resizing .event-resize-handle[data-edge="top"]:hover::after,
+.event-card.is-resizing .event-resize-handle[data-edge="bottom"]:hover::after {
+  opacity: 1;
+  transform: translate3d(-50%, -50%, 0) scale(1);
 }
 
 .busy-card {
@@ -3721,6 +3814,7 @@ button.free-glow-block:not(:disabled):active {
 .busy-card::after,
 .busy-stack-item::after,
 .event-card::after,
+.free-block::after,
 .free-glow-block::after {
   content: attr(data-tooltip);
   position: absolute;
@@ -3751,6 +3845,7 @@ button.free-glow-block:not(:disabled):active {
 :root[data-theme="dark"] .busy-card::after,
 :root[data-theme="dark"] .busy-stack-item::after,
 :root[data-theme="dark"] .event-card::after,
+:root[data-theme="dark"] .free-block::after,
 :root[data-theme="dark"] .free-glow-block::after {
   background: color-mix(in srgb, var(--surface) 96%, rgba(9, 7, 6, 0.94));
   color: var(--ink);
@@ -3762,6 +3857,8 @@ button.free-glow-block:not(:disabled):active {
 .busy-stack-item:focus-visible::after,
 .event-card:hover::after,
 .event-card:focus-visible::after,
+.free-block:hover::after,
+.free-block:focus-visible::after,
 .free-glow-block:hover::after,
 .free-glow-block:focus-visible::after {
   opacity: 1;
@@ -5231,28 +5328,31 @@ button.free-glow-block:not(:disabled):active {
     bottom: 12px;
   }
 
-  .busy-card,
-  .busy-stack-summary,
-  .busy-stack-item,
-  .event-card,
-  .free-glow-block {
-    padding: 6px 7px;
-  }
+.busy-card,
+.busy-stack-summary,
+.busy-stack-item,
+.event-card,
+.free-block,
+.free-glow-block {
+  padding: 6px 7px;
+}
 
-  .busy-card strong,
-  .busy-stack-item strong,
-  .event-card strong,
-  .free-glow-block strong {
-    font-size: 11px;
-  }
+.busy-card strong,
+.busy-stack-item strong,
+.event-card strong,
+.free-block strong,
+.free-glow-block strong {
+  font-size: 11px;
+}
 
-  .busy-card span,
-  .busy-stack-item span,
-  .busy-stack-summary span:not(.busy-stack-tab),
-  .event-card span,
-  .free-glow-block span {
-    display: none;
-  }
+.busy-card span,
+.busy-stack-item span,
+.busy-stack-summary span:not(.busy-stack-tab),
+.event-card span,
+.free-block span,
+.free-glow-block span {
+  display: none;
+}
 
   /* Disabled legacy span-based mobile event-card rules. The active
      div.event-line system is defined once below the responsive block.
@@ -5358,20 +5458,22 @@ button.free-glow-block:not(:disabled):active {
     font-size: 10px;
   }
 
-  .free-glow-block {
-    padding: 10px 11px;
-    border-radius: 12px;
-  }
+.free-block {
+  padding: 10px 11px;
+  border-radius: 12px;
+}
 
-  .free-glow-block strong {
-    display: block;
-    font-size: 12px;
-  }
+.free-block strong,
+.free-glow-block strong {
+  display: block;
+  font-size: 12px;
+}
 
-  .free-glow-block span {
-    display: block;
-    font-size: 11px;
-  }
+.free-block span,
+.free-glow-block span {
+  display: block;
+  font-size: 11px;
+}
 
   .modal-card {
     width: min(560px, calc(100vw - 16px));
@@ -5992,6 +6094,8 @@ button.free-glow-block:not(:disabled):active {
 
 .event-card .event-line,
 .busy-card .busy-line,
+.free-block strong,
+.free-block span,
 .free-glow-block strong,
 .free-glow-block span {
   text-overflow: clip;
@@ -6174,6 +6278,8 @@ button.free-glow-block:not(:disabled):active {
   box-shadow: none;
 }
 
+:root:not([data-theme="dark"]) .free-block strong,
+:root:not([data-theme="dark"]) .free-block span,
 :root:not([data-theme="dark"]) .free-glow-block strong,
 :root:not([data-theme="dark"]) .free-glow-block span {
   color: var(--free-text);
@@ -6239,6 +6345,7 @@ button.free-glow-block:not(:disabled):active {
 :root:not([data-theme="dark"]) .busy-card::after,
 :root:not([data-theme="dark"]) .busy-stack-item::after,
 :root:not([data-theme="dark"]) .event-card::after,
+:root:not([data-theme="dark"]) .free-block::after,
 :root:not([data-theme="dark"]) .free-glow-block::after {
   background: color-mix(in srgb, var(--surface) 96%, rgba(255, 251, 246, 0.88));
   border-color: rgba(61, 45, 34, 0.12);
@@ -6494,6 +6601,7 @@ button.identity-name-button:not(:disabled):active,
 
 .event-card,
 .busy-card,
+.free-block,
 .free-glow-block {
   transition:
     transform var(--motion-fast) var(--ease-standard),
@@ -6505,6 +6613,8 @@ button.identity-name-button:not(:disabled):active,
 .event-card:focus-visible,
 .busy-card:hover,
 .busy-card:focus-visible,
+.free-block:hover,
+.free-block:focus-visible,
 .free-glow-block:hover,
 .free-glow-block:focus-visible {
   transform: translateY(-1px);
@@ -7072,7 +7182,7 @@ button.identity-name-button:not(:disabled):active,
 #eventModal .event-composer {
   display: grid;
   grid-template-rows: auto auto auto auto auto;
-  gap: 20px;
+  gap: 1.25rem;
   padding: 24px;
   border: 1px solid var(--composer-faint);
   border-radius: 16px;
@@ -7143,11 +7253,12 @@ button.identity-name-button:not(:disabled):active,
   font-weight: 600;
   line-height: 1.4;
   letter-spacing: -0.012em;
+  will-change: transform;
 }
 
 #eventModal .composer-title::placeholder {
-  color: var(--composer-muted);
-  opacity: 0.88;
+  color: rgba(255, 255, 255, 0.4);
+  opacity: 1;
 }
 
 #eventModal .composer-title:focus,
@@ -7211,13 +7322,14 @@ button.identity-name-button:not(:disabled):active,
   grid-column: auto;
   display: grid;
   grid-template-columns: minmax(132px, 1.25fr) minmax(88px, 0.8fr) auto minmax(88px, 0.8fr);
-  gap: 0;
+  gap: 0 8px;
   align-items: center;
   min-width: 0;
   padding: 8px;
-  border: 1px solid var(--composer-faint);
+  border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  background: var(--composer-field);
+  background: rgba(255, 255, 255, 0.03);
+  will-change: transform, opacity;
 }
 
 #eventModal.anchored-composer .composer-time-grid {
@@ -7244,6 +7356,7 @@ button.identity-name-button:not(:disabled):active,
   font-weight: 500;
   font-variant-numeric: tabular-nums;
   box-shadow: none;
+  will-change: transform, opacity;
 }
 
 #eventModal .composer-time-grid input:focus {
@@ -7299,7 +7412,7 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-meta-section {
   display: grid;
-  gap: 8px;
+  gap: 1.25rem;
   min-width: 0;
 }
 
@@ -7382,10 +7495,19 @@ button.identity-name-button:not(:disabled):active,
   gap: 16px;
   min-height: 48px;
   border-radius: 8px;
+  padding-right: 4px;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 #eventModal .composer-sync-toggle[role="button"] {
   cursor: pointer;
+}
+
+#eventModal .composer-sync-toggle[role="button"]:hover {
+  background: rgba(255, 255, 255, 0.02);
 }
 
 #eventModal .composer-sync-copy {
@@ -7407,6 +7529,10 @@ button.identity-name-button:not(:disabled):active,
   border: 1px solid var(--composer-faint);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.05);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
 }
 
 #eventModal .mini-toggle-ui::after {
@@ -7416,7 +7542,7 @@ button.identity-name-button:not(:disabled):active,
   height: 16px;
   background: color-mix(in srgb, var(--composer-ink) 78%, var(--surface));
   transition:
-    transform var(--motion-standard) var(--ease-standard),
+    transform var(--motion-fast) var(--ease-standard),
     opacity var(--motion-fast) var(--ease-standard);
   will-change: transform, opacity;
 }
@@ -7432,6 +7558,10 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .mini-toggle:has(input:disabled) .mini-toggle-ui {
   opacity: 0.56;
+}
+
+#eventModal .mini-toggle:active .mini-toggle-ui {
+  transform: scale(0.96);
 }
 
 #eventModal .oauth-spinner {
@@ -7454,7 +7584,7 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-sync-toggle.is-authorizing .oauth-spinner {
   display: block;
-  animation: composer-oauth-spin 700ms var(--ease-standard) infinite;
+  animation: composer-oauth-spin var(--motion-page) var(--ease-standard) infinite;
 }
 
 #eventModal .composer-sync-toggle.is-connected {
@@ -7544,15 +7674,19 @@ button.identity-name-button:not(:disabled):active,
   width: auto;
   min-height: 40px;
   padding: 0 16px;
-  border-radius: 10px;
+  border-radius: 8px;
   font-size: 14px;
   font-weight: 600;
 }
 
 #eventModal #cancelEventSecondary {
   border: 0;
-  background: rgba(255, 255, 255, 0.035);
+  background: transparent;
   color: var(--composer-ink);
+}
+
+#eventModal #cancelEventSecondary:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 
 #eventModal #saveEventButton {
@@ -7954,4 +8088,144 @@ button.identity-name-button:not(:disabled):active,
   .emoji-picker-cell::before {
     transition-duration: 1ms !important;
   }
+}
+
+:root[data-theme="dark"] .calendar-stage,
+:root[data-theme="dark"] .calendar-wrap,
+:root[data-theme="dark"] .calendar-grid,
+:root[data-theme="dark"] .calendar-grid .calendar-cell,
+:root[data-theme="dark"] .calendar-grid .calendar-corner,
+:root[data-theme="dark"] .calendar-grid .day-header,
+:root[data-theme="dark"] .calendar-grid .time-cell {
+  background-color: #121212;
+  background-image: none;
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+:root[data-theme="dark"] .calendar-wrap {
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 0;
+}
+
+:root[data-theme="dark"] .calendar-grid,
+:root[data-theme="dark"] .day-header,
+:root[data-theme="dark"] .calendar-corner,
+:root[data-theme="dark"] .time-cell,
+:root[data-theme="dark"] .calendar-cell {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme="dark"] .calendar-cell {
+  background: transparent;
+}
+
+:root[data-theme="dark"] .calendar-cell.is-today {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+:root[data-theme="dark"] .calendar-cell::before {
+  display: none;
+}
+
+:root[data-theme="dark"] .calendar-period-label {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+:root[data-theme="dark"] .day-header {
+  gap: 2px;
+  text-align: center;
+}
+
+:root[data-theme="dark"] .day-header-weekday {
+  width: 100%;
+  font-size: 12px;
+  line-height: 1;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+}
+
+:root[data-theme="dark"] .day-header-date {
+  width: auto;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  border: 0;
+  line-height: 1;
+  color: #fff;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+:root[data-theme="dark"] .day-header.today,
+:root[data-theme="dark"] .calendar-cell.is-today {
+  background-color: rgba(255, 255, 255, 0.02);
+}
+
+:root[data-theme="dark"] .day-header.today .day-header-date {
+  background: transparent;
+}
+
+:root[data-theme="dark"] .day-header.selected {
+  background-color: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme="dark"] .day-header.selected .day-header-date {
+  color: #fff;
+}
+
+:root[data-theme="dark"] .time-cell {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: right;
+}
+
+:root[data-theme="dark"] .view-switcher {
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+:root[data-theme="dark"] .view-switcher button {
+  width: 28px;
+  height: 28px;
+  font-size: 12px;
+  border-radius: 999px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+:root[data-theme="dark"] .view-switcher button.active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+:root[data-theme="dark"] .host-pill,
+:root[data-theme="dark"] .room-switch-meta {
+  position: static;
+  display: inline-flex;
+  align-items: center;
+  pointer-events: none;
+  min-height: auto;
+  width: auto;
+  height: auto;
+  border-radius: 4px;
+  padding: 2px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.2;
+  opacity: 1;
 }
