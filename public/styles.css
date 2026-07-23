@@ -8349,12 +8349,13 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage .calendar-nav-primary {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   gap: 10px;
+  overflow: hidden;
 }
 
 #roomPage .calendar-nav-actions {
-  flex: 0 1 auto;
+  flex: 0 0 auto;
   justify-content: flex-end;
   gap: 8px;
   flex-wrap: nowrap;
@@ -8450,13 +8451,14 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage .calendar-period-label {
-  flex: 0 1 auto;
+  flex: 1 1 0;
   min-width: 0;
-  max-width: min(360px, 28vw);
+  max-width: none;
   padding: 0 6px;
   color: #fff;
-  font-size: 20px;
+  font-size: clamp(16px, 1.25vw, 20px);
   font-weight: 500;
+  letter-spacing: -0.015em;
   text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -9336,7 +9338,6 @@ button.identity-name-button:not(:disabled):active,
   }
 
   #roomPage .calendar-period-label {
-    max-width: 250px;
     font-size: 18px;
   }
 }
@@ -9362,7 +9363,7 @@ button.identity-name-button:not(:disabled):active,
   }
 
   #roomPage .calendar-period-label {
-    max-width: 180px;
+    font-size: 16px;
   }
 
   #roomPage .participants-card {
@@ -9408,9 +9409,8 @@ button.identity-name-button:not(:disabled):active,
   }
 
   #roomPage .calendar-period-label {
-    max-width: 33vw;
     padding: 0 3px;
-    font-size: 15px;
+    font-size: 14px;
   }
 
   #roomPage .calendar-nav-actions > :not(.calendar-view-menu):not(#settingsButton) {
@@ -9452,6 +9452,17 @@ button.identity-name-button:not(:disabled):active,
   #roomPage .host-popover,
   #roomPage .detail-panel {
     right: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  #roomPage .calendar-today-button,
+  #roomPage #settingsButton {
+    display: none;
+  }
+
+  #roomPage .calendar-period-label {
+    font-size: 13px;
   }
 }
 
