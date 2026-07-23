@@ -422,7 +422,603 @@ try {
   assert.match(
     eventComposerScript.text,
     /calendarGoogleButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?const shouldAuthorize =[\s\S]*?!calendarWriteReady\(\);[\s\S]*?window\.location\.href = googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true \}\);[\s\S]*?setPanelVisibility\(hostPopover, true\);[\s\S]*?syncSettingsCard\?\.scrollIntoView/,
-    "The top-bar control must request full calendar sync …9248 tokens truncated…: hover\) and \(pointer: fine\)\s*\{[\s\S]*?button\.room-switch-tab:not\(:disabled\):hover\s*\{[^}]*opacity:\s*0\.98[^}]*translate3d\(0, -1px, 0\) scale\(1\.01\)/,
+    "The top-bar control must request full calendar sync when needed and open sync settings once connected"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /!settingsButton\.contains\(event\.target\) &&\s*!calendarGoogleButton\?\.contains\(event\.target\) &&/,
+    "Opening connected Google settings from the top bar must not be cancelled by the document click handler"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function dragSelectionRect\(\)[\s\S]*?const width = Math\.max\(dayWidth - 16, 24\);/,
+    "The tentative event anchor must track the real calendar column instead of imposing a wide false rectangle"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function stopDragCreate\(\{ preservePreview = false \} = \{\}\)[\s\S]*?if \(!preservePreview\) clearDragPreview\(\);/,
+    "Drag cleanup must optionally preserve the tentative event while its adjacent composer is open"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function handleDragCreateEnd\([\s\S]*?stopDragCreate\(\{ preservePreview: true \}\);[\s\S]*?openDraggedEventComposer\(anchorRect\);/,
+    "Finishing a drag must keep its provisional event visible behind the adjacent composer"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function positionEventModal\(\)[\s\S]*?const edge = viewportWidth <= 820 \? 8 : 12;[\s\S]*?card\.offsetWidth \|\| 440[\s\S]*?const rightCandidate = anchorRight \+ gap;[\s\S]*?const leftCandidate = anchorLeft - width - gap;[\s\S]*?const rightFits = rightCandidate \+ width <= viewportWidth - edge;[\s\S]*?const leftFits = leftCandidate >= edge;[\s\S]*?eventModal\.dataset\.anchorSide = side;[\s\S]*?--composer-transform-origin/,
+    "The composer must use its measured size to choose an adjacent side and remain inside the viewport"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function closeEventModal\(\)[\s\S]*?delete eventModal\.dataset\.anchorSide;[\s\S]*?removeProperty\("--composer-left"\)[\s\S]*?removeProperty\("--composer-top"\)[\s\S]*?removeProperty\("--composer-transform-origin"\)/,
+    "Closing the composer must remove its transient anchor geometry"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function googleAuthUrl\([^)]*\)[\s\S]*?params\.set\("popup", "1"\);[\s\S]*?params\.set\("popupToken", popupToken\);[\s\S]*?return `\$\{popup \? "\/api\/auth\/google" : "\/auth\/google"\}\?\$\{params\.toString\(\)\}`;/,
+    "Only the event-composer flow should use the popup OAuth endpoint"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function createGoogleAuthPopupToken\(\)[\s\S]*?crypto\.randomUUID\(\)[\s\S]*?crypto\.getRandomValues\(new Uint8Array\(24\)\)/,
+    "Popup request IDs must come from a cryptographically secure browser source"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function openGoogleAuthPopup\(\)[\s\S]*?window\.open\(\s*googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true, popup: true, popupToken \}\),\s*"GoogleAuthPopup",[\s\S]*?width=\$\{width\},height=\$\{height\}/,
+    "Event sync authorization must open a bounded popup without navigating away from the draft"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function handleGoogleAuthPopupMessage\(event\) \{[\s\S]*?event\.origin !== window\.location\.origin[\s\S]*?event\.source !== googleAuthPopup[\s\S]*?message\.type !== "commonground:google-oauth"[\s\S]*?message\.provider !== "google"[\s\S]*?message\.requestId !== googleAuthPopupToken[\s\S]*?!\["success", "error"\]\.includes\(message\.status\)/,
+    "Popup results must be bound to the expected origin, window, provider, type, request, and status"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /if \(message\.status === "error"\) \{[\s\S]*?const safeErrors = \{[\s\S]*?access_denied:[\s\S]*?provider_error:[\s\S]*?calendar_connection_failed:[\s\S]*?safeErrors\[message\.errorCode\] \|\| safeErrors\.calendar_connection_failed/,
+    "Popup error codes must be mapped through trusted user-facing copy"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const refreshed = await refreshRoomData\(\);[\s\S]*?!calendarWriteReady\(\)[\s\S]*?eventGoogleSyncInput\.checked = true/,
+    "A successful popup must refresh server state before enabling event sync"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function activateEventGoogleSyncRow\(event\) \{[\s\S]*?event\.preventDefault\(\);[\s\S]*?openGoogleAuthPopup\(\);[\s\S]*?eventGoogleSyncRow\?\.addEventListener\("click", activateEventGoogleSyncRow\);[\s\S]*?event\.key !== "Enter" && event\.key !== " "[\s\S]*?activateEventGoogleSyncRow\(event\);/,
+    "The disconnected sync row must support pointer and keyboard popup activation"
+  );
+  assert.match(eventComposerScript.text, /window\.addEventListener\("message", handleGoogleAuthPopupMessage\);/);
+  const oauthPopupPage = await publicSession.request("/oauth-popup.html", { accept: "text/html" });
+  assert.match(oauthPopupPage.text, /<script src="\/oauth-popup\.js\?v=20260718-modal" defer><\/script>/);
+  assert.doesNotMatch(
+    oauthPopupPage.text,
+    /<script(?![^>]*\bsrc=)[^>]*>/i,
+    "The OAuth relay must not require an inline-script CSP exception"
+  );
+  assert.match(oauthPopupPage.text, /id="oauthPopupStatus" role="status" aria-live="polite"/);
+  assert.match(oauthPopupPage.text, /id="oauthPopupClose" type="button" hidden/);
+  const oauthPopupScript = await publicSession.request("/oauth-popup.js", { accept: "text/javascript" });
+  assert.match(
+    oauthPopupScript.text,
+    /new URLSearchParams\(window\.location\.hash\.slice\(1\)\)[\s\S]*?window\.history\.replaceState\(null, "", window\.location\.pathname\)/,
+    "The relay must read its result from the fragment and promptly remove it from browser history"
+  );
+  assert.match(
+    oauthPopupScript.text,
+    /provider !== "google"[\s\S]*?!validStatus[\s\S]*?!validRequestId[\s\S]*?!validError/,
+    "The relay must reject malformed or unrecognised OAuth results"
+  );
+  assert.match(
+    oauthPopupScript.text,
+    /const payload = \{\s*type: "commonground:google-oauth",\s*provider: "google",\s*status,\s*requestId\s*\};[\s\S]*?payload\.errorCode = error/,
+    "The relay payload must use the exact typed, request-bound opener contract"
+  );
+  assert.match(oauthPopupScript.text, /window\.opener\.postMessage\(payload, window\.location\.origin\)/);
+  assert.doesNotMatch(oauthPopupScript.text, /postMessage\([^,]+,\s*["']\*["']\s*\)/);
+  assert.match(
+    oauthPopupScript.text,
+    /if \(!window\.opener \|\| window\.opener\.closed\)[\s\S]*?showCloseButton\(\)[\s\S]*?window\.setTimeout\(\(\) => \{\s*window\.close\(\);/,
+    "The relay must remain understandable and closable when its opener is unavailable"
+  );
+  assert.match(eventComposerScript.text, /function updateFullscreenControl\(\)/);
+  assert.match(eventComposerScript.text, /function setButtonLabelWithIcon\(button, label, iconClass\)/);
+  assert.match(eventComposerScript.text, /function setPanelVisibility\(panel, visible/);
+  assert.match(eventComposerScript.text, /function closeDialogWithMotion\(dialog, afterClose\)/);
+  assert.match(
+    eventComposerScript.text,
+    /function formatDayHeader\(day\) \{[\s\S]*?class="day-header-date"[^>]*data-date="\$\{escapeAttribute\(dateKey\(day\.date\)\)\}"[^>]*aria-label="View \$\{escapeAttribute\(fullDate\)\} in week view"/,
+    "Planner headers must render each date number as an accessible button"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const dateButton = header\.querySelector\("\.day-header-date"\);[\s\S]*?dateButton\?\.addEventListener\("click", async \(\) => \{\s*await goToDateInWeek\(day\.date\);/,
+    "Planner date buttons must select the clicked date without leaving week view"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const dateButton = document\.createElement\("button"\);[\s\S]*?dateButton\.className = "month-date-number";[\s\S]*?dateButton\.setAttribute\("aria-label", `View \$\{formatFullDate\(date\)\} in week view`\);[\s\S]*?await openWeek\(\);/,
+    "Month date numbers must open their selected date in week view"
+  );
+  assert.doesNotMatch(eventComposerScript.text, /cell\.setAttribute\("role", "button"\)/);
+  assert.doesNotMatch(eventComposerScript.text, /cell\.tabIndex = 0/);
+  assert.match(
+    eventComposerScript.text,
+    /node\.setAttribute\("aria-label", `View \$\{formatFullDate\(date\)\} in week view`\);[\s\S]*?await goToDateInWeek\(date\);/,
+    "Year date buttons must open their selected date in week view"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function goToDateInWeek\(date\) \{\s*const wasWeekView = currentView === "week";\s*currentFocusDate = startOfDay\(date\);\s*currentView = "week";\s*syncMiniCalendarToFocus\(\);\s*if \(wasWeekView\) \{\s*animateCalendarTransition\(render\);\s*return;\s*\}\s*await refreshCalendarAfterImmediateRender\(\);/,
+    "Date navigation must retain the clicked date as the selection anchor and use week view"
+  );
+  assert.match(eventComposerScript.text, /input\.style\.setProperty\("--inline-name-width", `\$\{targetWidth\}px`\)/);
+  assert.match(
+    eventComposerScript.text,
+    /<button class="identity-name-button"[^>]*>[\s\S]*?<\/button>\s*<details class="color-picker-menu topbar-identity-menu">\s*<summary class="color-picker-trigger topbar-color-trigger" aria-label="Choose your color, current \$\{escapeAttribute\(currentColorOption\.name\)\}">/,
+    "The segmented identity must retain separate name and colour controls"
+  );
+  assert.match(eventComposerScript.text, /let roomSwitcherRenderSignature = "";/);
+  assert.match(
+    eventComposerScript.text,
+    /const renderSignature = JSON\.stringify\(\{[\s\S]*?rooms: rooms\.map[\s\S]*?const expectedChildCount = rooms\.length \+ 1;[\s\S]*?renderSignature === roomSwitcherRenderSignature[\s\S]*?roomSwitcher\.childElementCount === expectedChildCount/,
+    "Unchanged room tiles must keep their DOM and in-progress hover state"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /<span class="room-switch-mark" aria-hidden="true">\s*<span class="ui-icon ui-icon-plus"><\/span>\s*<\/span>/,
+    "The add-room icon must use the same 22px mark container as room icons"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function animateCalendarTransition\(renderAction\) \{\s*renderAction\(\);[\s\S]*?replayMotionClass\(calendarGrid, "is-view-entering", motionFastMs\);\s*\}/,
+    "Calendar view motion must happen after an immediate render"
+  );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /calendarGrid\.classList\.add\("is-view-exiting"\)[\s\S]*?setTimeout/,
+    "Calendar view changes must not wait on a pre-render timeout"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function refreshCalendarAfterImmediateRender\(\) \{\s*const refreshPromise = loadCalendarRangeWithMotion\(\);\s*animateCalendarTransition\(render\);\s*if \(await refreshPromise\) render\(\);\s*\}/,
+    "The target timetable must render before free\/busy refresh completes"
+  );
+  assert.equal(
+    (eventComposerScript.text.match(/await refreshCalendarAfterImmediateRender\(\);/g) || []).length,
+    4,
+    "View, period, Today, and drill-down changes must share the immediate-render path"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const generation = \+\+calendarLoadGeneration;[\s\S]*?if \(generation === calendarLoadGeneration\) \{\s*calendarStatus\?\.classList\.remove\("is-loading"\);/,
+    "An older request must not clear the latest calendar loading state"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /if \(currentView === "year"\) \{\s*freeBusyGeneration \+= 1;\s*const pendingController = freeBusyController;\s*freeBusyController = null;\s*pendingController\?\.abort\(\);/,
+    "Year view must invalidate and release any older free\/busy request"
+  );
+  assert.match(eventComposerScript.text, /function prefersReducedMotion\(\)/);
+  assert.match(eventComposerScript.text, /const motionPressMs = 100;/);
+  assert.match(eventComposerScript.text, /const motionFastMs = 150;/);
+  assert.match(eventComposerScript.text, /const motionStandardMs = 250;/);
+  assert.match(eventComposerScript.text, /const motionSlowMs = 350;/);
+  assert.match(eventComposerScript.text, /const motionPageMs = 400;/);
+  assert.match(eventComposerScript.text, /const panelMotionTimers = new WeakMap\(\);/);
+  assert.match(eventComposerScript.text, /const dialogMotionTimers = new WeakMap\(\);/);
+  assert.match(eventComposerScript.text, /const replayMotionStates = new WeakMap\(\);/);
+  assert.match(
+    eventComposerScript.text,
+    /function resolvedCalendarRowHeight\(\) \{[\s\S]*?querySelector\("\.calendar-cell"\)\?\.getBoundingClientRect\(\)\.height[\s\S]*?Number\.isFinite\(renderedCellHeight\)/,
+    "Drag-create geometry must use the rendered row height, including fullscreen calc/min tracks"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const previousState = nodeStates\.get\(className\);[\s\S]*?if \(previousState\?\.timer\) window\.clearTimeout\(previousState\.timer\);[\s\S]*?const token = Symbol\(className\);[\s\S]*?if \(nodeStates\.get\(className\)\?\.token !== token\) return;/,
+    "Replayed motion must cancel stale timers and reject stale animation frames"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function prepareDialogForOpen\(dialog\) \{[\s\S]*?dialogMotionTimers\.get\(dialog\)[\s\S]*?window\.clearTimeout\(pendingTimer\)[\s\S]*?dialog\.classList\.remove\("is-closing"\)/,
+    "Opening a dialog must cancel any pending close timer"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function closeDialogWithMotion\(dialog, afterClose\) \{[\s\S]*?dialogMotionTimers\.get\(dialog\) !== timer \|\| !dialog\.classList\.contains\("is-closing"\)[\s\S]*?dialogMotionTimers\.set\(dialog, timer\);/,
+    "Dialog close completion must verify timer ownership and closing state"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function openCreateRoomModal\(\) \{[\s\S]*?prepareDialogForOpen\(createRoomModal\);[\s\S]*?createRoomModal\.showModal\(\);/
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function openEventModal\([^)]*\) \{[\s\S]*?prepareDialogForOpen\(eventModal\);[\s\S]*?eventModal\.showModal\(\);/
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function setParticipantsPanelExpanded\(expanded\) \{[\s\S]*?roomPage\?\.classList\.toggle\("sidebar-collapsed", !isExpanded\)[\s\S]*?calendarSidebarButton\?\.setAttribute\("aria-expanded", String\(isExpanded\)\)/,
+    "The application navigation must control the persistent Members sidebar"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const checkbox = document\.createElement\("input"\);[\s\S]*?checkbox\.className = "member-calendar-checkbox";[\s\S]*?checkbox\.type = "checkbox";[\s\S]*?checkbox\.checked = !isHidden;[\s\S]*?checkbox\.addEventListener\("change", \(\) => \{[\s\S]*?hiddenParticipantIds\.(?:delete|add)\(participant\.id\)[\s\S]*?renderCalendar\(\);/,
+    "Members must render as accessible calendar visibility checkboxes backed by the existing participant state"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /memberSearchInput\?\.addEventListener\("input", filterParticipantRows\)/,
+    "The member search field must filter the persistent Members list"
+  );
+  for (const option of expectedParticipantPalette) {
+    assert.ok(
+      eventComposerScript.text.includes(`{ value: "${option.value}", name: "${option.name}" }`),
+      `${option.name} is missing from the participant colour picker`
+    );
+  }
+  assert.match(
+    eventComposerScript.text,
+    /\/\*\s*TODO: Commonground Free Block Rendering - Hidden for current demo[\s\S]*?for \(const segment of freeSegmentsForDate\(day\.date, occupiedSegments\)\) \{[\s\S]*?eventsLayer\.appendChild\(createFreeGlowBlock\(\{ \.\.\.segment, occupiedSegments \}, dayIndex\)\);[\s\S]*?\}\s*\*\//,
+    "The complete Free-block injection loop must remain available but explicitly commented out for the current demo"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /\/\* TODO: Commonground Free Block Rendering - Hidden for current demo \*\/\s*const showFreeBlocks = false;/,
+    "Free-block rendering must be disabled behind an explicit demo flag"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function dragTargetIsBlocked\(target\) \{[\s\S]*?target\.closest\("\.event-card"\)\) return true;/,
+    "Dragging an existing event must never arm the create-event gesture"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function refreshLiveFreeBlocksForResize\([\s\S]*?if \(!showFreeBlocks\) \{[\s\S]*?calendarGrid\.querySelectorAll\("\.free-block"\)\.forEach\(\(block\) => block\.remove\(\)\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?occupiedSegmentsForDate\([\s\S]*?freeSegmentsForDate\([\s\S]*?configureFreeGlowBlock\(/,
+    "Live Free-block reflow must preserve its future implementation while returning immediately in the hidden demo"
+  );
+  assert.match(
+    serverSource,
+    /function syncedGoogleCalendarMirrorIntervals\([\s\S]*?roomEvent\.syncToGoogle !== true[\s\S]*?ownEntry\?\.googleEventId[\s\S]*?isInviteeMirror[\s\S]*?intervals\.push\(\{ start, end \}\)/,
+    "Google mirror ranges must be identified for creators and invited participants"
+  );
+  assert.match(
+    serverSource,
+    /function subtractGoogleMirrorIntervals\([\s\S]*?mirror\.end <= fragment\.start[\s\S]*?mirror\.start > fragment\.start[\s\S]*?mirror\.end < fragment\.end[\s\S]*?return fragments\.filter/,
+    "Google mirror ranges must be subtracted without discarding unrelated busy fragments"
+  );
+  assert.match(
+    serverSource,
+    /const mirroredIntervals = syncedGoogleCalendarMirrorIntervals\(room, participant, user\.id\);[\s\S]*?for \(const fragment of subtractGoogleMirrorIntervals\(startDate, endDate, mirroredIntervals\)\)/,
+    "Google free/busy must exclude CommonGround events already rendered by the room"
+  );
+  assert.match(
+    serverSource,
+    /function deterministicGoogleCalendarEventId\([\s\S]*?createHash\("sha256"\)[\s\S]*?return `cg\$\{digest\}`;/,
+    "Google event creation must use a deterministic provider ID"
+  );
+  assert.match(
+    serverSource,
+    /findGoogleCalendarMirrorEvent\(user\.id, "primary", room, event\)[\s\S]*?body: \{ id: deterministicEventId, \.\.\.payload \}[\s\S]*?error\.status !== 409[\s\S]*?method: "PATCH"/,
+    "Google upserts must recover an existing mirror or PATCH the deterministic ID after a conflict"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function scheduleEventResizeUpdate\(\)[\s\S]*?applyEventResizePreview\([\s\S]*?refreshLiveFreeBlocksForResize\(/,
+    "The event and Free-block previews must update in the same animation frame"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function resetEventResizeVisual\(\s*block,\s*startMinute = Number\(block\?\.dataset\.startMinute\),\s*durationMinute = Number\(block\?\.dataset\.durationMinute\)/,
+    "Resize cancellation must be able to restore the original start and duration"
+  );
+  const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerScript.text,
+    /function formatRange\(\{ includeYear = false \} = \{\}\)[\s\S]*?typeof rangeFormatter\.formatRange === "function"[\s\S]*?rangeFormatter\.formatRange\(start, end\)[\s\S]*?sameMonth[\s\S]*?sameYear/,
+    "Week labels must use compact, locale-aware ranges with a compatibility fallback"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function updateCalendarPeriodControls\(\)[\s\S]*?const periodText = calendarPeriodText\(\);[\s\S]*?const accessiblePeriodText = calendarPeriodText\(\{ includeYear: true \}\);[\s\S]*?calendarPeriodLabel\.textContent = periodText;[\s\S]*?calendarPeriodLabel\.title = accessiblePeriodText;[\s\S]*?setAttribute\("aria-label", `Calendar period: \$\{accessiblePeriodText\}`\)/,
+    "The full period must remain available to pointer and assistive-technology users"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-nav-primary\s*\{[^}]*flex:\s*1 1 0;[^}]*overflow:\s*hidden;/s,
+    "The primary navigation must yield only the space needed by fixed actions"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-nav-actions\s*\{[^}]*flex:\s*0 0 auto;/s,
+    "Calendar actions must retain their usable width"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-google-button\s*\{[^}]*min-height:\s*38px;[^}]*border-radius:\s*999px;[^}]*will-change:\s*transform, opacity;/s,
+    "The Google Calendar action must be a compact, tactile top-bar control"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-google-button\.needs-connection,\s*#roomPage \.calendar-google-button\.needs-permission\s*\{[^}]*background:\s*#0b57d0;[^}]*color:\s*#fff;/s,
+    "Disconnected and missing-permission states must remain visually discoverable"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-width: 980px\)\s*\{[\s\S]*?#roomPage \.calendar-google-button\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;[^}]*border-radius:\s*50%;[^}]*\}[\s\S]*?#roomPage \.calendar-google-button > span:last-child\s*\{[^}]*display:\s*none;/s,
+    "Narrow layouts must retain Google connection as a labelled icon button"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-nav-actions > :not\(\.calendar-view-menu\):not\(#settingsButton\):not\(#calendarGoogleButton\)\s*\{\s*display:\s*none;/,
+    "Mobile navigation cleanup must explicitly preserve the Google Calendar action"
+  );
+  const phoneShellMediaStart = eventComposerStyles.text.lastIndexOf("@media (max-width: 480px)");
+  const phoneShellMediaEnd = eventComposerStyles.text.indexOf("@media", phoneShellMediaStart + 1);
+  assert.ok(phoneShellMediaStart >= 0, "The phone app-shell breakpoint is missing");
+  const phoneShellStyles = eventComposerStyles.text.slice(
+    phoneShellMediaStart,
+    phoneShellMediaEnd >= 0 ? phoneShellMediaEnd : undefined
+  );
+  assert.doesNotMatch(
+    phoneShellStyles,
+    /#calendarGoogleButton/,
+    "The Google Calendar action must remain reachable on phone-sized screens"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-period-label\s*\{[^}]*flex:\s*1 1 0;[^}]*max-width:\s*none;[^}]*font-size:\s*clamp\(16px, 1\.25vw, 20px\);/s,
+    "The period label must size itself from the actual available navigation space"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:root\[data-theme="dark"\]\s*\{[^}]*--calendar-bg:\s*#121212;[^}]*--calendar-line:\s*rgba\(255, 255, 255, 0\.05\);/s,
+    "Dark calendar canvases must use the flat #121212 surface and crisp grid line token"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.calendar-wrap\s*\{[^}]*background-color:\s*var\(--calendar-bg\);[^}]*background-image:\s*none;[^}]*box-shadow:\s*none;[^}]*filter:\s*none;[^}]*backdrop-filter:\s*none;/s,
+    "The calendar wrapper must not retain gradient, shadow, filter, or blur effects"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.calendar-grid\s*\{[^}]*background-color:\s*var\(--calendar-bg\);[^}]*background-image:\s*none;[^}]*box-shadow:\s*none;[^}]*filter:\s*none;[^}]*backdrop-filter:\s*none;/s,
+    "The calendar grid must be an opaque flat surface"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\/\* TODO: Commonground Free Block Rendering - Hidden for current demo[\s\S]*?\.free-block\s*\{[\s\S]*?border:\s*1px solid rgba\(218, 165, 32, 0\.3\);[\s\S]*?background:\s*linear-gradient\(180deg, rgba\(218, 165, 32, 0\.05\) 0%, rgba\(218, 165, 32, 0\.02\) 100%\);[\s\S]*?box-shadow:\s*0 0 16px rgba\(218, 165, 32, 0\.12\), inset 0 0 24px rgba\(218, 165, 32, 0\.08\);[\s\S]*?\}\s*\*\//,
+    "The future Free-block presentation must remain documented inside the explicit disabled-demo CSS comment"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.busy-card,\s*\.busy-stack,\s*\.event-card\s*\{[^}]*filter:\s*none;[^}]*backdrop-filter:\s*none;[^}]*mix-blend-mode:\s*normal;/s,
+    "Scheduled and imported calendar blocks must use normal alpha compositing"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-card,\s*\.busy-card\s*\{[^}]*container-type:\s*inline-size/s,
+    "Event labels must react to the width of their own calendar card"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-card \.event-line,\s*\.busy-card \.busy-line\s*\{[^}]*text-overflow:\s*ellipsis/s,
+    "Long event and busy labels must truncate cleanly inside their boxes"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-card\.event-15 \.event-line-compact,\s*\.busy-card\.event-15 \.busy-line-compact\s*\{[^}]*padding-right:\s*0/s,
+    "Single-line 15-minute cards must not reserve a duplicate time column"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@container \(max-width: 190px\)\s*\{[\s\S]*?\.event-card \.event-line:not\(\.event-line-meta\),\s*\.busy-card \.busy-line:not\(\.busy-line-time\)\s*\{[^}]*padding-right:\s*0;[^}]*\}[\s\S]*?\.event-card:not\(\.event-15\):not\(\.event-30\) \.event-line-meta,\s*\.busy-card:not\(\.event-15\):not\(\.event-30\) \.busy-line-time\s*\{[^}]*position:\s*static;[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*text-align:\s*left;[^}]*\}[\s\S]*?\.event-card\.event-30 \.event-line-meta,\s*\.busy-card\.event-30 \.busy-line-title,\s*\.busy-card\.event-30 \.busy-line-time\s*\{[^}]*display:\s*none;/s,
+    "Narrow cards must stack longer ranges and simplify short events without collisions"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-resize-handle\s*\{[^}]*left:\s*8px[^}]*right:\s*8px[^}]*height:\s*10px[^}]*background:\s*transparent[^}]*cursor:\s*ns-resize[^}]*pointer-events:\s*auto/s,
+    "Only the narrow top and bottom resize strips may capture resize gestures"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-resize-handle::after\s*\{[^}]*opacity:\s*0[^}]*will-change:\s*transform, opacity[^}]*mask:\s*url\("\/icons\/move-vertical\.svg"\)/s,
+    "Resize affordances must use the supplied move-vertical icon"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-resize-handle:hover::after[\s\S]*?\{[^}]*opacity:\s*1[^}]*scale\(1\)/,
+    "A resize icon must appear only when its own edge strip is hovered"
+  );
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /\.event-card\.can-resize:hover \.event-resize-handle/,
+    "Hovering an event's sides or body must not reveal both resize affordances"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.emoji-picker-popover\[popover\]\s*\{[^}]*width: 320px[^}]*height: 400px[^}]*border: 1px solid rgba\(255, 255, 255, 0\.08\)[^}]*border-radius: 12px[^}]*background: rgba\(22, 22, 23, 0\.8\)[^}]*backdrop-filter: blur\(20px\)[^}]*box-shadow: 0 12px 40px rgba\(0, 0, 0, 0\.5\)[^}]*will-change: transform, opacity/s,
+    "The emoji popover must retain the requested frosted-glass geometry"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.emoji-picker-grid\s*\{[^}]*grid-template-columns: repeat\(6, 1fr\)[^}]*gap: 8px[^}]*padding: 16px[^}]*overflow-y: auto/s,
+    "The picker must render a six-column, 8px-grid result surface"
+  );
+  assert.match(eventComposerStyles.text, /#emojiPickerSearch::placeholder\s*\{[^}]*color: rgba\(255, 255, 255, 0\.35\)/s);
+  assert.match(
+    eventComposerStyles.text,
+    /\.emoji-picker-cell\s*\{[^}]*font-size: 24px[^}]*transform: translate3d\(0, 0, 0\) scale\(1\)[^}]*will-change: transform, opacity/s
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.emoji-picker-cell::before\s*\{[^}]*border-radius: 8px[^}]*background: rgba\(255, 255, 255, 0\.06\)[^}]*opacity: 0[^}]*transition: opacity var\(--motion-fast\) var\(--ease-standard\)/s
+  );
+  assert.match(eventComposerStyles.text, /\.emoji-picker-empty\s*\{[^}]*font-size: 12px[^}]*text-align: center/s);
+  assert.match(
+    eventComposerStyles.text,
+    /\.home-grid\s*\{[^}]*grid-auto-rows:\s*1fr[^}]*align-items:\s*stretch/s,
+    "Home cards must share equal-height grid tracks"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.action-card\s*\{[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\) auto[^}]*align-content:\s*stretch/s,
+    "Home card controls must share a consistent three-row layout"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.day-header\s*\{[^}]*grid-template-columns:\s*minmax\(0, 1fr\)[^}]*justify-items:\s*center[^}]*text-align:\s*center/s,
+    "Planner weekday labels and date buttons must share one centered axis"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:root\[data-theme="dark"\] \.day-header\.today\s*\{[^}]*background-color:\s*#171717[^}]*\}[\s\S]*?:root\[data-theme="dark"\] \.day-header\.selected\s*\{[^}]*background-color:\s*#121212[^}]*\}[\s\S]*?:root\[data-theme="dark"\] \.day-header\.today\.selected\s*\{[^}]*background-color:\s*#171717/s,
+    "Sticky dark-mode day headers must remain opaque over scrolled event blocks"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.day-header-date\s*\{[^}]*display:\s*grid[^}]*place-items:\s*center[^}]*width:\s*34px[^}]*height:\s*34px[^}]*border-radius:\s*999px/s,
+    "Planner date buttons must keep a uniform circular hit target"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.day-header-date:focus-visible\s*\{[^}]*outline:\s*2px solid[^}]*outline-offset:\s*2px/s,
+    "Planner date buttons must retain a visible focus indicator in every date state"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.month-date-number\s*\{[^}]*appearance:\s*none[^}]*width:\s*24px[^}]*min-width:\s*24px[^}]*height:\s*24px[^}]*min-height:\s*24px[^}]*cursor:\s*pointer/s,
+    "Month date buttons must retain a compact, uniform native-button footprint"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.topbar-identity\s*\{[^}]*--identity-control-height:\s*36px[^}]*display:\s*inline-flex[^}]*gap:\s*0[^}]*border:\s*1px solid var\(--line\)[^}]*border-radius:\s*999px/s,
+    "The identity controls must render inside one outer pill"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.topbar-identity > \.topbar-identity-menu > \.topbar-color-trigger\s*\{[^}]*width:\s*36px[^}]*border:\s*0[^}]*border-left:\s*1px solid var\(--line\)[^}]*border-radius:\s*0 999px 999px 0/s,
+    "The colour control must remain an independent right-hand segment"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.topbar-identity > input\.inline-name-input\s*\{[^}]*width:\s*clamp\([^}]*--inline-name-width/s,
+    "Inline name editing must retain the name segment width"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-field-row > input,\s*#eventModal \.composer-field-row > textarea\s*\{[^}]*min-height: 36px[^}]*padding: 6px 0[^}]*background: transparent[^}]*resize: none/s,
+    "The sectioned composer fields must remain flat, compact, and non-resizing"
+  );
+  assert.match(eventComposerStyles.text, /\.color-option-list\s*\{[^}]*max-height: calc\(100dvh - 96px\)/s);
+  assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*width: 18px[^}]*height: 18px/s);
+  assert.match(eventComposerStyles.text, /--motion-press:\s*100ms;/);
+  assert.match(eventComposerStyles.text, /--motion-fast:\s*150ms;/);
+  assert.match(eventComposerStyles.text, /--motion-standard:\s*250ms;/);
+  assert.match(eventComposerStyles.text, /--motion-slow:\s*350ms;/);
+  assert.match(eventComposerStyles.text, /--motion-page:\s*400ms;/);
+  assert.match(eventComposerStyles.text, /--ease-standard:\s*cubic-bezier\(0\.32, 0\.72, 0, 1\);/);
+  assert.match(eventComposerStyles.text, /--ease-modal:\s*cubic-bezier\(0\.16, 1, 0\.3, 1\);/);
+  const approvedCurves = [
+    "cubic-bezier(0.16,1,0.3,1)",
+    "cubic-bezier(0.32,0.72,0,1)"
+  ];
+  const usedCurves = [...new Set(
+    stripCssComments(eventComposerStyles.text)
+      .match(/cubic-bezier\([^)]*\)/g)
+      ?.map((curve) => curve.replace(/\s+/g, "")) || []
+  )].sort();
+  assert.deepEqual(usedCurves, approvedCurves, "Only the two approved motion curves may be used");
+  const motionShorthands = [...stripCssComments(eventComposerStyles.text).matchAll(/(?:^|[;{])\s*(?:transition|animation)\s*:\s*([^;{}]+)/gim)];
+  for (const [, shorthand] of motionShorthands) {
+    assert.doesNotMatch(
+      shorthand,
+      /(?:^|[\s,])(?:linear|ease|ease-in|ease-out|ease-in-out)(?=$|[\s,])/i,
+      `Motion shorthand must not use a generic timing keyword: ${shorthand.trim()}`
+    );
+  }
+  assert.match(
+    eventComposerStyles.text,
+    /button:not\(:disabled\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*transition-timing-function:\s*var\(--ease-standard\)[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(0\.96\)/s,
+    "Buttons must compress to scale(.96) on press"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.modal\[open\] \.modal-card\s*\{[^}]*animation:\s*modal-in var\(--motion-slow\) var\(--ease-modal\) both[^}]*will-change:\s*transform, opacity[\s\S]*?@keyframes modal-in\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0[^}]*transform:\s*translate3d\(0, 8px, 0\) scale\(0\.95\)/,
+    "Shared modal entrances must use the restrained 350ms scale(.95) macro motion"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal\[open\] \.event-composer\s*\{[^}]*animation:\s*event-composer-premium-in var\(--motion-slow\) var\(--ease-modal\) both[^}]*will-change:\s*transform, opacity/s,
+    "The event composer must use its restrained 350ms entrance"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@keyframes event-composer-premium-in\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0[^}]*transform:\s*translate3d\(0, 8px, 0\) scale\(0\.95\)/,
+    "The event composer entrance must start close to its final size"
+  );
+  assert.match(eventComposerStyles.text, /\.drag-create-preview::before\s*\{[^}]*height:\s*var\(--preview-base-height[^}]*transform:\s*scaleY\(var\(--preview-scale/s);
+  assert.match(eventComposerStyles.text, /\.drag-create-preview-cap\s*\{[^}]*transform:\s*translate3d\(0, var\(--preview-bottom-y, 0px\), 0\)/s);
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /scale\(0\.9\)/,
+    "Macro entrances must not use the older, exaggerated scale(.90) start"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.color-option-list\s*\{[^}]*translate3d\(0, 8px, 0\) scale\(0\.95\)[^}]*animation:\s*color-menu-in var\(--motion-slow\) var\(--ease-modal\)/s,
+    "Colour popovers must use the shared macro entrance"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.busy-stack-popover\s*\{[^}]*translate3d\(0, 8px, 0\) scale\(0\.95\)[^}]*transform var\(--motion-slow\) var\(--ease-modal\)/s,
+    "Busy-stack popovers must use the shared macro entrance"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.invite-dropdown-panel\s*\{[^}]*translate3d\(0, 8px, 0\) scale\(0\.95\)[^}]*transform var\(--motion-slow\) var\(--ease-modal\)/s,
+    "Invite popovers must use the shared macro entrance"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.month-cell:active:not\(:has\(button:active\)\)\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*transform:\s*translate3d\(0, 0, 0\) scale\(0\.96\)/s,
+    "Clickable month cells must provide tactile press feedback without compounding a child button press"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.detail-invitee-row:not\(\.is-readonly\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*scale\(0\.96\)/s,
+    "Interactive invitee rows must use the shared press response"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.topbar-identity:has\(> \.identity-name-button:active\),\s*\.topbar-identity:has\(> \.topbar-identity-menu > \.topbar-color-trigger:active\)\s*\{[^}]*transition-duration:\s*var\(--motion-press\)[^}]*scale\(0\.96\)/s,
+    "The segmented identity control must press as one visual surface"
+  );
+  assertCompositorOnlyMotion(eventComposerStyles.text);
+  assertTransformOpacityKeyframes(eventComposerStyles.text);
+  assert.match(eventComposerStyles.text, /\.ui-icon\s*\{[^}]*will-change:\s*transform, opacity/s);
+  assert.match(eventComposerStyles.text, /\.icon\s*\{[^}]*will-change:\s*transform, opacity/s);
+  assert.match(eventComposerStyles.text, /\.modal\.is-closing \.modal-card/);
+  assert.match(
+    eventComposerStyles.text,
+    /\.calendar-grid\.is-view-entering\s*\{[^}]*animation:\s*calendar-view-enter var\(--motion-fast\) var\(--ease-standard\) both/s,
+    "The new timetable should settle in quickly after it is already rendered"
+  );
+  assert.doesNotMatch(eventComposerStyles.text, /\.calendar-grid\.is-view-exiting\s*\{/);
+  assert.match(
+    eventComposerStyles.text,
+    /@keyframes calendar-view-enter\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0\.82[^}]*translateY\(2px\) scale\(0\.998\)/,
+    "Calendar entrance must remain readable from its first painted frame"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.room-switch-tab\s*\{[^}]*width:\s*36px[^}]*max-width:\s*36px[^}]*transform var\(--motion-fast\) var\(--ease-standard\)[^}]*opacity var\(--motion-fast\) var\(--ease-standard\)/s,
+    "Room tiles must keep a fixed footprint and use the shared fast hover motion"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(hover: hover\) and \(pointer: fine\)\s*\{[\s\S]*?button\.room-switch-tab:not\(:disabled\):hover\s*\{[^}]*opacity:\s*0\.98[^}]*translate3d\(0, -1px, 0\) scale\(1\.01\)/,
     "Room hover feedback must be compositor-only and limited to hover-capable pointers"
   );
   assert.match(
