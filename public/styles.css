@@ -8398,7 +8398,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage .calendar-google-button:focus-visible {
-  outline: 2px solid rgba(138, 180, 248, 0.8);
+  outline: 2px solid rgba(224, 176, 127, 0.82);
   outline-offset: 2px;
 }
 
@@ -8410,13 +8410,14 @@ button.identity-name-button:not(:disabled):active,
 #roomPage .calendar-google-button.needs-connection,
 #roomPage .calendar-google-button.needs-permission {
   border-color: transparent;
-  background: #0b57d0;
-  color: #fff;
+  background: linear-gradient(135deg, #b98454, #8a5a35);
+  color: #fff9f1;
 }
 
 #roomPage .calendar-google-button.needs-connection:hover,
 #roomPage .calendar-google-button.needs-permission:hover {
-  background: #1769e0;
+  background: linear-gradient(135deg, #b98454, #8a5a35);
+  opacity: 0.94;
 }
 
 #roomPage .calendar-google-button.needs-reconnect {
