@@ -49,8 +49,6 @@ const todayButton = document.querySelector("#todayButton");
 const calendarViewMenu = document.querySelector("#calendarViewMenu");
 const calendarViewLabel = document.querySelector("#calendarViewLabel");
 const calendarSidebarButton = document.querySelector("#calendarSidebarButton");
-const calendarSearchButton = document.querySelector("#calendarSearchButton");
-const calendarRailAddButton = document.querySelector("#calendarRailAddButton");
 const memberSearchInput = document.querySelector("#memberSearchInput");
 const membersSectionToggle = document.querySelector("#membersSectionToggle");
 const miniCalendarTitle = document.querySelector("#miniCalendarTitle");
@@ -6124,11 +6122,6 @@ todayButton?.addEventListener("click", async () => {
 calendarSidebarButton?.addEventListener("click", () => {
   setParticipantsPanelExpanded(participantsSidebar?.dataset.open !== "true");
 });
-calendarSearchButton?.addEventListener("click", () => {
-  setParticipantsPanelExpanded(true);
-  memberSearchInput?.focus();
-});
-calendarRailAddButton?.addEventListener("click", () => addEventButton?.click());
 memberSearchInput?.addEventListener("input", filterParticipantRows);
 membersSectionToggle?.addEventListener("click", () => {
   const expanded = membersSectionToggle.getAttribute("aria-expanded") !== "false";
