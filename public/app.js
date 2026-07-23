@@ -199,6 +199,7 @@ let eventResizeFrame = 0;
 let eventMoveFrame = 0;
 let suppressCalendarClickUntil = 0;
 let participantsDrawerGesture = null;
+const pendingEventMoveKeys = new Set();
 
 /* TODO: Commonground Free Block Rendering - Hidden for current demo */
 const showFreeBlocks = false;
@@ -241,6 +242,7 @@ const motionPageMs = 400;
 const eventResizeSnapMinutes = 15;
 const eventResizeMinMinutes = 15;
 const eventMoveThresholdPixels = 6;
+const eventMoveSnapFeedbackMs = 100;
 const reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 const panelMotionTimers = new WeakMap();
 const dialogMotionTimers = new WeakMap();
@@ -4211,9 +4213,83 @@ function buildEventResizePayload(eventEntry, startMinute, durationMinute, dayKey
 
 function resetEventMoveVisual(block) {
   if (!block) return;
-  block.classList.remove("is-moving");
+  block.querySelectorAll(".event-move-time, .event-move-snap-feedback").forEach((node) => node.remove());
+  block.classList.remove("is-moving", "is-move-committing");
   block.style.removeProperty("--event-move-x");
   block.style.removeProperty("--event-move-y");
+}
+
+function settleEventMoveVisual(block) {
+  if (!block) return;
+  block.querySelectorAll(".event-move-time, .event-move-snap-feedback").forEach((node) => node.remove());
+  block.classList.remove("is-moving");
+  block.classList.add("is-move-committing");
+}
+
+function ensureEventMoveFeedback(state) {
+  if (!state?.block) return {};
+  let timeLabel = state.timeLabel;
+  if (!timeLabel?.isConnected) {
+    timeLabel = document.createElement("span");
+    timeLabel.className = "event-move-time";
+    timeLabel.setAttribute("aria-live", "polite");
+    timeLabel.setAttribute("aria-atomic", "true");
+    state.block.appendChild(timeLabel);
+    state.timeLabel = timeLabel;
+  }
+
+  let snapFeedback = state.snapFeedback;
+  if (!snapFeedback?.isConnected) {
+    snapFeedback = document.createElement("span");
+    snapFeedback.className = "event-move-snap-feedback";
+    snapFeedback.setAttribute("aria-hidden", "true");
+    state.block.appendChild(snapFeedback);
+    state.snapFeedback = snapFeedback;
+  }
+  return { timeLabel, snapFeedback };
+}
+
+function triggerEventMoveSnapFeedback(state) {
+  if (!state || reducedMotionQuery.matches) return;
+  const { timeLabel, snapFeedback } = ensureEventMoveFeedback(state);
+  state.timeAnimation?.cancel?.();
+  state.snapAnimation?.cancel?.();
+  state.timeAnimation = timeLabel?.animate?.([
+    { opacity: 0.72, transform: "translate3d(-50%, 0, 0) scale(0.94)" },
+    { opacity: 1, transform: "translate3d(-50%, 0, 0) scale(1)" }
+  ], {
+    duration: eventMoveSnapFeedbackMs,
+    easing: "cubic-bezier(0.32, 0.72, 0, 1)",
+    fill: "none"
+  });
+  state.snapAnimation = snapFeedback?.animate?.([
+    { opacity: 0.72, transform: "scale(0.985)" },
+    { opacity: 0, transform: "scale(1.015)" }
+  ], {
+    duration: eventMoveSnapFeedbackMs,
+    easing: "cubic-bezier(0.32, 0.72, 0, 1)",
+    fill: "none"
+  });
+}
+
+function updateEventMoveFeedback(state, dayIndex, startMinute) {
+  if (!state?.block) return;
+  const { timeLabel } = ensureEventMoveFeedback(state);
+  const previewDate = dateFromDayIndex(dayIndex);
+  const dayLabel = new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(previewDate);
+  const startHour = calendarStartHour + startMinute / 60;
+  const endHour = calendarStartHour + (startMinute + state.baseDurationMinute) / 60;
+  if (timeLabel) {
+    timeLabel.textContent = `${dayLabel} · ${formatEventRange(startHour, endHour)}`;
+  }
+
+  const snapChanged = state.lastSnapStartMinute !== startMinute;
+  if (state.hasDisplayedMoveTime && snapChanged) {
+    triggerEventMoveSnapFeedback(state);
+  }
+  state.hasDisplayedMoveTime = true;
+  state.lastSnapStartMinute = startMinute;
+  state.lastSnapDayIndex = dayIndex;
 }
 
 function applyEventMovePreview(state, dayIndex, startMinute) {
@@ -4237,6 +4313,21 @@ function applyEventMovePreview(state, dayIndex, startMinute) {
   return { dayIndex: safeDayIndex, startMinute: safeStartMinute };
 }
 
+function resolveEventMovePreview(state) {
+  if (!state?.block?.isConnected) return null;
+  const deltaY = state.moveY - state.startDragY;
+  const candidateStart = state.baseStartMinute + deltaY / state.pixelsPerMinute;
+  const result = applyEventMovePreview(
+    state,
+    dayIndexFromPointer(state.moveX),
+    candidateStart
+  );
+  state.finalDayIndex = result.dayIndex;
+  state.finalStartMinute = result.startMinute;
+  updateEventMoveFeedback(state, result.dayIndex, result.startMinute);
+  return result;
+}
+
 function scheduleEventMoveUpdate() {
   if (eventMoveFrame) return;
   eventMoveFrame = window.requestAnimationFrame(() => {
@@ -4254,14 +4345,7 @@ function scheduleEventMoveUpdate() {
       markCalendarClickSuppressed();
     }
 
-    const candidateStart = state.baseStartMinute + deltaY / state.pixelsPerMinute;
-    const result = applyEventMovePreview(
-      state,
-      dayIndexFromPointer(state.moveX),
-      candidateStart
-    );
-    state.finalDayIndex = result.dayIndex;
-    state.finalStartMinute = result.startMinute;
+    resolveEventMovePreview(state);
   });
 }
 
@@ -4309,17 +4393,15 @@ async function handleEventMoveEnd(event) {
     eventMoveState.moved = true;
     eventMoveState.block?.classList.add("is-moving");
   }
-  scheduleEventMoveUpdate();
-  await new Promise((resolve) => {
-    if (eventMoveFrame) {
-      window.requestAnimationFrame(resolve);
-    } else {
-      resolve();
-    }
-  });
-
   const state = eventMoveState;
   const block = state?.block;
+  if (eventMoveFrame) {
+    window.cancelAnimationFrame(eventMoveFrame);
+    eventMoveFrame = 0;
+  }
+  if (releaseIsMove) {
+    resolveEventMovePreview(state);
+  }
   if (!state?.moved) {
     resetEventMoveVisual(block);
     stopEventMove();
@@ -4331,17 +4413,80 @@ async function handleEventMoveEnd(event) {
   const finalDayIndex = Number.isFinite(state.finalDayIndex) ? state.finalDayIndex : state.baseDayIndex;
   const finalStartMinute = Number.isFinite(state.finalStartMinute) ? state.finalStartMinute : state.baseStartMinute;
   const targetDayKey = dateKey(dateFromDayIndex(finalDayIndex));
+  const roomCodeSnapshot = currentRoom?.code;
+
+  if (!block || !roomCodeSnapshot || (!isGoogleBusy && !dayEvent)) {
+    resetEventMoveVisual(block);
+    stopEventMove();
+    return;
+  }
+  if (targetDayKey === state.dayKey && finalStartMinute === state.baseStartMinute) {
+    resetEventMoveVisual(block);
+    stopEventMove();
+    return;
+  }
+
+  const moveKey = state.moveKey || (
+    isGoogleBusy
+      ? `google:${roomCodeSnapshot}:${state.calendarId}:${state.providerEventId}`
+      : `room:${roomCodeSnapshot}:${state.eventId}`
+  );
+  pendingEventMoveKeys.add(moveKey);
+
+  const targetDate = dayStartFromDateKey(targetDayKey);
+  const nextStart = new Date(targetDate);
+  nextStart.setHours(0, finalStartMinute, 0, 0);
+  const nextEnd = new Date(nextStart.getTime() + state.baseDurationMinute * 60 * 1000);
+  const previousGoogleBusy = googleBusy;
+  const previousRoomEvents = currentRoom.events;
+  let optimisticEvent = null;
+
+  if (isGoogleBusy) {
+    googleBusy = normalizeBusyBlocks(googleBusy.map((busyBlock) => {
+      const items = (busyBlock.items || []).map((item) => {
+        const isMovedItem = item.provider === "google" &&
+          item.googleCalendarId === state.calendarId &&
+          item.googleEventId === state.providerEventId;
+        return isMovedItem
+          ? { ...item, start: nextStart.toISOString(), end: nextEnd.toISOString() }
+          : item;
+      });
+      const movedItem = items.find((item) => (
+        item.provider === "google" &&
+        item.googleCalendarId === state.calendarId &&
+        item.googleEventId === state.providerEventId
+      ));
+      if (!movedItem) return busyBlock;
+      return {
+        ...busyBlock,
+        start: movedItem.start,
+        end: movedItem.end,
+        items
+      };
+    }));
+  } else {
+    const payload = buildEventResizePayload(
+      dayEvent,
+      finalStartMinute,
+      state.baseDurationMinute,
+      targetDayKey
+    );
+    optimisticEvent = { ...dayEvent, start: payload.start, end: payload.end };
+    currentRoom.events = currentRoom.events.map((item) => (
+      item.id === state.eventId ? optimisticEvent : item
+    ));
+  }
+
+  // The pointer capture, moving cursor, and drag transform all end before
+  // persistence begins. Rendering the optimistic local state keeps the block
+  // exactly where it was dropped while Google/CommonGround sync in the background.
+  settleEventMoveVisual(block);
+  stopEventMove();
+  render();
 
   try {
-    if (!block || (!isGoogleBusy && !dayEvent)) return;
-    if (targetDayKey === state.dayKey && finalStartMinute === state.baseStartMinute) return;
-
     if (isGoogleBusy) {
-      const targetDate = dayStartFromDateKey(targetDayKey);
-      const nextStart = new Date(targetDate);
-      nextStart.setHours(0, finalStartMinute, 0, 0);
-      const nextEnd = new Date(nextStart.getTime() + state.baseDurationMinute * 60 * 1000);
-      await fetchJson(`/api/rooms/${currentRoom.code}/google-calendar-events`, {
+      await fetchJson(`/api/rooms/${roomCodeSnapshot}/google-calendar-events`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -4351,8 +4496,12 @@ async function handleEventMoveEnd(event) {
           end: nextEnd.toISOString()
         })
       });
-      await loadFreeBusy();
-      render();
+      if (currentRoom?.code !== roomCodeSnapshot) return;
+      try {
+        if (await loadFreeBusy()) render();
+      } catch (syncRefreshError) {
+        calendarStatus.textContent = syncRefreshError.message;
+      }
       return;
     }
 
@@ -4363,7 +4512,7 @@ async function handleEventMoveEnd(event) {
       targetDayKey
     );
     payload.syncToGoogle = dayEvent.syncToGoogle === true || calendarEventSyncEnabled();
-    const data = await fetchJson(`/api/rooms/${currentRoom.code}/events/${state.eventId}`, {
+    const data = await fetchJson(`/api/rooms/${roomCodeSnapshot}/events/${state.eventId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
@@ -4371,6 +4520,7 @@ async function handleEventMoveEnd(event) {
     if (!data?.event) {
       throw new Error("Could not move event.");
     }
+    if (currentRoom?.code !== roomCodeSnapshot) return;
 
     currentRoom.events = currentRoom.events.map((item) => (
       item.id === state.eventId ? data.event : item
@@ -4383,12 +4533,17 @@ async function handleEventMoveEnd(event) {
       calendarStatus.textContent = syncRefreshError.message;
     }
   } catch (error) {
+    if (currentRoom?.code !== roomCodeSnapshot) return;
     calendarStatus.textContent = error.message;
-    resetEventMoveVisual(block);
+    if (isGoogleBusy) {
+      googleBusy = previousGoogleBusy;
+    } else {
+      currentRoom.events = previousRoomEvents;
+    }
     render();
   } finally {
     resetEventMoveVisual(block);
-    stopEventMove();
+    pendingEventMoveKeys.delete(moveKey);
   }
 }
 
@@ -4408,6 +4563,8 @@ function startEventMove(event) {
   const eventId = block.dataset.eventId;
   const calendarEvent = roomEventById(eventId);
   if (!calendarEvent || calendarEvent.createdByParticipantId !== currentParticipant?.id) return;
+  const moveKey = `room:${currentRoom?.code || ""}:${eventId}`;
+  if (pendingEventMoveKeys.has(moveKey)) return;
   const startMinute = Number(block.dataset.startMinute);
   const durationMinute = Number(block.dataset.durationMinute);
   if (!Number.isFinite(startMinute) || !Number.isFinite(durationMinute)) return;
@@ -4429,6 +4586,10 @@ function startEventMove(event) {
     moveX: event.clientX,
     moveY: event.clientY,
     pixelsPerMinute: resolvedCalendarRowHeight() / 60,
+    moveKey,
+    lastSnapStartMinute: startMinute,
+    lastSnapDayIndex: Number(block.dataset.dayIndex || 0),
+    hasDisplayedMoveTime: false,
     moved: false
   };
   block.setPointerCapture?.(event.pointerId);
@@ -4453,6 +4614,8 @@ function startGoogleBusyMove(event) {
     !Number.isFinite(startMinute) ||
     !Number.isFinite(durationMinute)
   ) return;
+  const moveKey = `google:${currentRoom?.code || ""}:${calendarId}:${providerEventId}`;
+  if (pendingEventMoveKeys.has(moveKey)) return;
 
   event.stopPropagation();
   eventMoveState = {
@@ -4474,6 +4637,10 @@ function startGoogleBusyMove(event) {
     moveX: event.clientX,
     moveY: event.clientY,
     pixelsPerMinute: resolvedCalendarRowHeight() / 60,
+    moveKey,
+    lastSnapStartMinute: startMinute,
+    lastSnapDayIndex: Number(block.dataset.dayIndex || 0),
+    hasDisplayedMoveTime: false,
     moved: false
   };
   block.setPointerCapture?.(event.pointerId);
