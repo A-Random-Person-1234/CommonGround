@@ -3809,6 +3809,7 @@ function isTouchPointer(event) {
 }
 
 function dragTargetIsBlocked(target) {
+  if (target.closest(".day-header, .calendar-corner")) return true;
   if (target.closest(".event-resize-handle")) return true;
   if (target.closest(".event-card")) return true;
   if (target.closest(".busy-card, .busy-stack-summary")) return false;
@@ -4421,7 +4422,6 @@ function renderPlanner(days) {
   calendarGrid.className = `calendar-grid ${currentView}-view`;
   calendarGrid.style.setProperty("--day-count", days.length);
   calendarGrid.style.setProperty("--hour-count", hours.length);
-  const todayIndex = days.findIndex((day) => sameDate(day.date, new Date()));
 
   const corner = document.createElement("div");
   corner.className = "calendar-corner";
@@ -4432,8 +4432,7 @@ function renderPlanner(days) {
   for (const day of days) {
     const header = document.createElement("div");
     const isSelected = sameDate(day.date, currentFocusDate);
-    const isToday = sameDate(day.date, new Date());
-    header.className = `day-header ${isToday ? "today" : ""} ${isSelected ? "selected" : ""}`.trim();
+    header.className = `day-header ${isSelected ? "selected" : ""}`.trim();
     header.innerHTML = formatDayHeader(day);
     const dateButton = header.querySelector(".day-header-date");
     if (isSelected) dateButton?.setAttribute("aria-current", "date");
@@ -4456,9 +4455,6 @@ function renderPlanner(days) {
       cell.dataset.dayIndex = String(dayIndex);
       cell.dataset.dayKey = dateKey(day.date);
       cell.dataset.hour = String(hour);
-      if (dayIndex === todayIndex) {
-        cell.classList.add("is-today");
-      }
       calendarGrid.appendChild(cell);
     }
   }
