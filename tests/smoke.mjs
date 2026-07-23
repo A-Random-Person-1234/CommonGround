@@ -700,6 +700,21 @@ try {
   );
   assert.match(
     eventComposerScript.text,
+    /function createSingleBusyCard\(segment, dayIndex\)[\s\S]*?participant\.items\[0\]\?\.editable === true[\s\S]*?googleItem\?\.googleCalendarId[\s\S]*?googleItem\?\.googleEventId[\s\S]*?block\.addEventListener\("pointerdown", startGoogleBusyMove\);/,
+    "A single native Google event must become movable only when its owner receives editable provider identity"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function startGoogleBusyMove\(event\)[\s\S]*?source: "google"[\s\S]*?calendarId,[\s\S]*?providerEventId,[\s\S]*?handleEventMoveEnd/,
+    "Native Google busy blocks must use the shared thresholded move gesture"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /if \(isGoogleBusy\) \{[\s\S]*?\/google-calendar-events`[\s\S]*?calendarId: state\.calendarId[\s\S]*?eventId: state\.providerEventId[\s\S]*?await loadFreeBusy\(\);[\s\S]*?render\(\);/,
+    "Dropping a native Google event must update Google immediately and refresh availability"
+  );
+  assert.match(
+    eventComposerScript.text,
     /function dragTargetIsBlocked\(target\) \{\s*if \(target\.closest\("\.day-header, \.calendar-corner"\)\) return true;/,
     "The sticky calendar header must remain outside the drag-create surface"
   );
@@ -720,8 +735,18 @@ try {
   );
   assert.match(
     serverSource,
-    /const mirroredIntervals = syncedGoogleCalendarMirrorIntervals\(room, participant, user\.id\);[\s\S]*?for \(const fragment of subtractGoogleMirrorIntervals\(startDate, endDate, mirroredIntervals\)\)/,
-    "Google free/busy must exclude CommonGround events already rendered by the room"
+    /const mirroredIntervals = syncedGoogleCalendarMirrorIntervals\(room, participant, user\.id\);[\s\S]*?const hiddenIntervals = \[[\s\S]*?\.\.\.mirroredIntervals,[\s\S]*?\.\.\.editableEvents\.map[\s\S]*?subtractGoogleMirrorIntervals\(startDate, endDate, hiddenIntervals\)/,
+    "Google free/busy must exclude CommonGround mirrors and owner-enriched events already rendered by the room"
+  );
+  assert.match(
+    serverSource,
+    /participant\.id === viewerParticipantId[\s\S]*?userHasGoogleCalendarWriteAccess\(user\)[\s\S]*?fetchGoogleCalendarEventsForRange[\s\S]*?editable: true,[\s\S]*?googleCalendarId:[\s\S]*?googleEventId:/,
+    "Only the signed-in viewer with write scope may receive movable native Google event identity"
+  );
+  assert.match(
+    serverSource,
+    /roomGoogleCalendarEventsMatch && req\.method === "PATCH"[\s\S]*?requireRoomParticipant[\s\S]*?userHasGoogleCalendarWriteAccess[\s\S]*?validateGoogleTimedEventMove[\s\S]*?organizer\?\.self !== true[\s\S]*?isSyncedGoogleMirrorEvent[\s\S]*?method: "PATCH"[\s\S]*?sendUpdates: "all"/,
+    "The native Google move endpoint must authorize ownership, reject mirrors, and patch timing directly"
   );
   assert.match(
     serverSource,
@@ -863,7 +888,7 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /\.event-card\.is-moving\s*\{[^}]*cursor:\s*grabbing[^}]*opacity:\s*0\.92[^}]*transform:\s*translate3d\([^}]*transition:\s*none[^}]*will-change:\s*transform, opacity/s,
+    /\.event-card\.is-moving,\s*\.busy-card\.is-moving\s*\{[^}]*cursor:\s*grabbing[^}]*opacity:\s*0\.92[^}]*transform:\s*translate3d\([^}]*transition:\s*none[^}]*will-change:\s*transform, opacity/s,
     "Live event movement must use a hardware-accelerated transform without layout animation"
   );
   assert.doesNotMatch(
