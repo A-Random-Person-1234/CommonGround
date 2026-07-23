@@ -706,13 +706,23 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function scheduleEventMoveUpdate\(\)[\s\S]*?Math\.hypot\(deltaX, deltaY\) < eventMoveThresholdPixels[\s\S]*?applyEventMovePreview\([\s\S]*?dayIndexFromPointer\(state\.moveX\)/,
+    /function resolveEventMovePreview\(state\)[\s\S]*?applyEventMovePreview\([\s\S]*?dayIndexFromPointer\(state\.moveX\)[\s\S]*?updateEventMoveFeedback\([\s\S]*?function scheduleEventMoveUpdate\(\)[\s\S]*?Math\.hypot\(deltaX, deltaY\) < eventMoveThresholdPixels[\s\S]*?resolveEventMovePreview\(state\)/,
     "Event moving must wait for a drag threshold and preview snapped time/day changes"
   );
   assert.match(
     eventComposerScript.text,
-    /async function handleEventMoveEnd\(event\)[\s\S]*?const releaseIsMove =[\s\S]*?markCalendarClickSuppressed\(\);[\s\S]*?scheduleEventMoveUpdate\(\);[\s\S]*?await new Promise/,
-    "A completed drag must suppress its synthetic click before yielding to an animation frame"
+    /function updateEventMoveFeedback\(state, dayIndex, startMinute\)[\s\S]*?formatEventRange\(startHour, endHour\)[\s\S]*?lastSnapStartMinute !== startMinute[\s\S]*?triggerEventMoveSnapFeedback\(state\)/,
+    "A moving event must show its snapped live time and tick once per 15-minute boundary"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function triggerEventMoveSnapFeedback\(state\)[\s\S]*?duration: eventMoveSnapFeedbackMs[\s\S]*?cubic-bezier\(0\.32, 0\.72, 0, 1\)[\s\S]*?scale\(0\.985\)[\s\S]*?scale\(1\.015\)/,
+    "Each snapped interval must receive a fast transform/opacity click-like pulse"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function handleEventMoveEnd\(event\)[\s\S]*?const releaseIsMove =[\s\S]*?markCalendarClickSuppressed\(\);[\s\S]*?cancelAnimationFrame\(eventMoveFrame\)[\s\S]*?resolveEventMovePreview\(state\)[\s\S]*?settleEventMoveVisual\(block\);[\s\S]*?stopEventMove\(\);[\s\S]*?render\(\);[\s\S]*?await fetchJson/,
+    "Pointer release must suppress clicks, resolve the final snap, settle visually, and detach drag tracking before persistence"
   );
   assert.match(
     eventComposerScript.text,
@@ -733,6 +743,11 @@ try {
     eventComposerScript.text,
     /function startGoogleBusyMove\(event\)[\s\S]*?source: "google"[\s\S]*?calendarId,[\s\S]*?providerEventId,[\s\S]*?handleEventMoveEnd/,
     "Native Google busy blocks must use the shared thresholded move gesture"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const pendingEventMoveKeys = new Set\(\);[\s\S]*?pendingEventMoveKeys\.add\(moveKey\)[\s\S]*?pendingEventMoveKeys\.delete\(moveKey\)/,
+    "An event must reject a second move while its optimistic background save is pending"
   );
   assert.match(
     eventComposerScript.text,
@@ -921,6 +936,21 @@ try {
     eventComposerStyles.text,
     /\.event-card\.is-moving,\s*\.busy-card\.is-moving\s*\{[^}]*cursor:\s*grabbing[^}]*opacity:\s*0\.92[^}]*transform:\s*translate3d\([^}]*transition:\s*none[^}]*will-change:\s*transform, opacity/s,
     "Live event movement must use a hardware-accelerated transform without layout animation"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-card\.is-move-committing,\s*\.busy-card\.is-move-committing\s*\{[^}]*cursor:\s*default[^}]*pointer-events:\s*none[^}]*opacity:\s*1[^}]*transform:\s*translate3d\([^}]*transition:\s*none[^}]*will-change:\s*transform/s,
+    "A released event must immediately leave the grabbing state while preserving its dropped position"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-move-time\s*\{[^}]*bottom:\s*calc\(100% \+ 7px\)[^}]*border:[^}]*var\(--brand\)[^}]*white-space:\s*nowrap[^}]*transform:\s*translate3d\(-50%, 0, 0\) scale\(1\)[^}]*will-change:\s*transform, opacity/s,
+    "The drag-time badge must remain legible and hardware accelerated above every event size"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-move-snap-feedback\s*\{[^}]*inset:\s*-2px[^}]*opacity:\s*0[^}]*transform:\s*scale\(0\.985\)[^}]*will-change:\s*transform, opacity/s,
+    "The snap tick must use an isolated transform/opacity feedback layer"
   );
   assert.doesNotMatch(
     eventComposerStyles.text,
