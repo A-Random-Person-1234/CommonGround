@@ -248,8 +248,21 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260723-date-header"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260724-app-icon"/);
   assert.match(home.text, /src="\/app\.js\?v=20260723-date-header"/);
+  assert.match(home.text, /<meta name="theme-color" content="#101c31" \/>/);
+  assert.match(home.text, /<link rel="icon" type="image\/png" href="\/icons\/CommonGroundAppIcon\.png\?v=20260724" \/>/);
+  assert.match(home.text, /<link rel="apple-touch-icon" href="\/icons\/CommonGroundAppIcon\.png\?v=20260724" \/>/);
+  assert.equal(
+    (home.text.match(/src="\/icons\/CommonGroundAppIcon\.png"/g) || []).length,
+    3,
+    "The home, room-entry, and calendar product lockups must use the CommonGround icon"
+  );
+  assert.match(
+    home.text,
+    /<div class="calendar-product" aria-label="CommonGround calendar">[\s\S]*?<img class="calendar-product-mark app-brand-icon"[\s\S]*?<span class="calendar-product-name">CommonGround<\/span>/,
+    "The calendar shell must use the CommonGround product lockup"
+  );
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
   assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
@@ -497,6 +510,7 @@ try {
   assert.match(eventComposerScript.text, /window\.addEventListener\("message", handleGoogleAuthPopupMessage\);/);
   const oauthPopupPage = await publicSession.request("/oauth-popup.html", { accept: "text/html" });
   assert.match(oauthPopupPage.text, /<script src="\/oauth-popup\.js\?v=20260718-modal" defer><\/script>/);
+  assert.match(oauthPopupPage.text, /<img class="mark" src="\/icons\/CommonGroundAppIcon\.png" alt="" width="46" height="46" \/>/);
   assert.doesNotMatch(
     oauthPopupPage.text,
     /<script(?![^>]*\bsrc=)[^>]*>/i,
@@ -695,6 +709,16 @@ try {
   );
   assert.match(
     eventComposerScript.text,
+    /async function handleEventMoveEnd\(event\)[\s\S]*?const releaseIsMove =[\s\S]*?markCalendarClickSuppressed\(\);[\s\S]*?scheduleEventMoveUpdate\(\);[\s\S]*?await new Promise/,
+    "A completed drag must suppress its synthetic click before yielding to an animation frame"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const participantKey = participants[\s\S]*?item\.sourceId \|\| busyItemStableKey\(item\)[\s\S]*?return `\$\{participant\.participantId\}:\$\{itemKey\}`;/,
+    "Adjacent Google events must retain distinct busy blocks so each event remains draggable"
+  );
+  assert.match(
+    eventComposerScript.text,
     /async function handleEventMoveEnd\(event\)[\s\S]*?buildEventResizePayload\([\s\S]*?payload\.syncToGoogle = dayEvent\.syncToGoogle === true \|\| calendarEventSyncEnabled\(\);[\s\S]*?method: "PATCH"[\s\S]*?currentRoom\.events = currentRoom\.events\.map[\s\S]*?loadFreeBusy\(\)/,
     "Dropping an event must immediately persist the full payload, enable configured Google sync, and refresh busy data"
   );
@@ -745,7 +769,12 @@ try {
   );
   assert.match(
     serverSource,
-    /roomGoogleCalendarEventsMatch && req\.method === "PATCH"[\s\S]*?requireRoomParticipant[\s\S]*?userHasGoogleCalendarWriteAccess[\s\S]*?validateGoogleTimedEventMove[\s\S]*?organizer\?\.self !== true[\s\S]*?isSyncedGoogleMirrorEvent[\s\S]*?method: "PATCH"[\s\S]*?sendUpdates: "all"/,
+    /function googleCalendarCanWriteEvents\(calendar = \{\}\)[\s\S]*?writerWithoutPrivateAccess[\s\S]*?function googleEventCanMove\(event = \{\}\)[\s\S]*?event\.locked !== true[\s\S]*?event\.guestsCanModify === true/,
+    "Google move eligibility must include writable Workspace calendars and reject locked events"
+  );
+  assert.match(
+    serverSource,
+    /roomGoogleCalendarEventsMatch && req\.method === "PATCH"[\s\S]*?requireRoomParticipant[\s\S]*?userHasGoogleCalendarWriteAccess[\s\S]*?validateGoogleTimedEventMove[\s\S]*?fetchCalendarList[\s\S]*?googleCalendarCanWriteEvents[\s\S]*?!googleEventCanMove\(googleEvent\)[\s\S]*?isSyncedGoogleMirrorEvent[\s\S]*?method: "PATCH"[\s\S]*?sendUpdates: "all"/,
     "The native Google move endpoint must authorize ownership, reject mirrors, and patch timing directly"
   );
   assert.match(
@@ -1199,13 +1228,20 @@ try {
     const icon = await publicSession.request(`/icons/${iconAsset}`, { accept: "image/svg+xml" });
     assert.match(icon.text, /<svg[^>]*viewBox="0 0 24 24"/);
   }
+  const commonGroundIcon = await publicSession.request("/icons/CommonGroundAppIcon.png", { accept: "image/png" });
+  assert.match(commonGroundIcon.response.headers.get("content-type") || "", /^image\/png/);
+  assert.ok(commonGroundIcon.text.length > 100_000, "The CommonGround app icon asset is unexpectedly small");
   const contentSecurityPolicy = home.response.headers.get("content-security-policy");
   assert.ok(contentSecurityPolicy, "CSP header is missing");
   assert.doesNotMatch(contentSecurityPolicy, /script-src[^;]*'unsafe-inline'/);
   assert.equal(home.response.headers.get("x-content-type-options"), "nosniff");
   assert.ok(home.response.headers.get("referrer-policy"), "Referrer-Policy header is missing");
-  await publicSession.request("/privacy", { accept: "text/html" });
-  await publicSession.request("/terms", { accept: "text/html" });
+  const privacyPage = await publicSession.request("/privacy", { accept: "text/html" });
+  const termsPage = await publicSession.request("/terms", { accept: "text/html" });
+  for (const legalPage of [privacyPage, termsPage]) {
+    assert.match(legalPage.text, /<link rel="icon" type="image\/png" href="\/icons\/CommonGroundAppIcon\.png\?v=20260724" \/>/);
+    assert.match(legalPage.text, /<img class="mark app-brand-icon" src="\/icons\/CommonGroundAppIcon\.png" alt="" width="46" height="46" \/>/);
+  }
   await publicSession.request("/api/auth/google", { method: "POST", expected: 405 });
   await publicSession.request("/api/auth/google?popup=1", { expected: 400 });
   const popupRequestId = "a1B2_c3D4-e5F6_g7H8-i9J0_k1L2-m3N4";
