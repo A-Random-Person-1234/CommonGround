@@ -2138,6 +2138,20 @@ function parseGoogleEventTime(value, fallbackToEnd = false) {
   return null;
 }
 
+function googleCalendarCanWriteEvents(calendar = {}) {
+  return calendar.accessRole === "owner" || calendar.accessRole === "writer";
+}
+
+function googleTimedEventRange(event = {}) {
+  if (!event.start?.dateTime || !event.end?.dateTime) return null;
+  const start = parseGoogleEventTime(event.start);
+  const end = parseGoogleEventTime(event.end, true);
+  if (!start || !end || Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    return null;
+  }
+  return { start, end };
+}
+
 function parseOutlookDateTime(value) {
   if (!value) return null;
   if (typeof value === "string") return new Date(value);
@@ -2351,6 +2365,33 @@ async function googleCalendarRequest(
   }
 
   return payload;
+}
+
+async function fetchGoogleCalendarEventsForRange(userId, calendarId, timeMin, timeMax) {
+  const items = [];
+  let pageToken = null;
+  let pageCount = 0;
+
+  do {
+    const payload = await googleCalendarRequest(userId, calendarId, null, {
+      method: "GET",
+      sendUpdates: null,
+      query: {
+        timeMin: timeMin.toISOString(),
+        timeMax: timeMax.toISOString(),
+        singleEvents: true,
+        showDeleted: false,
+        orderBy: "startTime",
+        maxResults: 2500,
+        pageToken
+      }
+    });
+    items.push(...(payload?.items || []));
+    pageToken = payload?.nextPageToken || null;
+    pageCount += 1;
+  } while (pageToken && pageCount < 20);
+
+  return items;
 }
 
 async function outlookCalendarRequest(userId, eventId, { method = "GET", body = null, sendUpdates = null } = {}) {
@@ -2823,7 +2864,8 @@ async function fetchCalendarList(accessToken) {
       id: calendar.id,
       summary: calendar.summaryOverride || calendar.summary || "Google Calendar",
       primary: Boolean(calendar.primary),
-      backgroundColor: calendar.backgroundColor
+      backgroundColor: calendar.backgroundColor,
+      accessRole: calendar.accessRole || null
     }));
 
   calendars.sort((left, right) => Number(right.primary) - Number(left.primary));
@@ -2852,7 +2894,7 @@ async function fetchOutlookCalendarList(accessToken) {
   }
 }
 
-async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax) {
+async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, viewerParticipantId = null) {
   const fallbackStart = new Date();
   fallbackStart.setHours(0, 0, 0, 0);
   const fallbackEnd = new Date(fallbackStart);
@@ -2871,6 +2913,53 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax) {
       const googleCalendarList = await fetchCalendarList(tokens.access_token);
       const calendars = (googleCalendarList.calendars || []).slice(0, 50);
       const mirroredIntervals = syncedGoogleCalendarMirrorIntervals(room, participant, user.id);
+      const editableEventsByCalendar = new Map();
+      const canExposeEditableGoogleEvents = (
+        participant.id === viewerParticipantId &&
+        userHasGoogleCalendarWriteAccess(user)
+      );
+
+      if (canExposeEditableGoogleEvents) {
+        const mirroredIds = syncedGoogleCalendarMirrorIds(room, user.id);
+        const writableCalendars = calendars.filter(googleCalendarCanWriteEvents);
+        for (let offset = 0; offset < writableCalendars.length; offset += 4) {
+          const batch = writableCalendars.slice(offset, offset + 4);
+          const results = await Promise.all(batch.map(async (calendar) => {
+            try {
+              const events = await fetchGoogleCalendarEventsForRange(user.id, calendar.id, start, end);
+              return {
+                calendarId: calendar.id,
+                events: events
+                  .filter((event) => (
+                    event?.id &&
+                    event.status !== "cancelled" &&
+                    event.transparency !== "transparent" &&
+                    event.organizer?.self === true &&
+                    !isSyncedGoogleMirrorEvent(room, event, mirroredIds)
+                  ))
+                  .map((event) => {
+                    const range = googleTimedEventRange(event);
+                    if (!range) return null;
+                    return {
+                      calendarId: calendar.id,
+                      eventId: String(event.id),
+                      start: range.start.toISOString(),
+                      end: range.end.toISOString()
+                    };
+                  })
+                  .filter(Boolean)
+              };
+            } catch {
+              return { calendarId: calendar.id, events: [] };
+            }
+          }));
+
+          for (const result of results) {
+            editableEventsByCalendar.set(result.calendarId, result.events);
+          }
+        }
+      }
+
       const response = await fetchWithTimeout("https://www.googleapis.com/calendar/v3/freeBusy", {
         method: "POST",
         headers: {
@@ -2888,11 +2977,46 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax) {
         throw httpError(response.status, payload.error?.message || "Could not fetch Google calendar availability.");
       }
       for (const calendar of calendars) {
+        const editableEvents = editableEventsByCalendar.get(calendar.id) || [];
+        for (const editableEvent of editableEvents) {
+          busy.push({
+            start: editableEvent.start,
+            end: editableEvent.end,
+            participantId: participant.id,
+            ownerName: participant.displayName,
+            color: participant.color,
+            busy: true,
+            calendarId: "google",
+            calendarColor: participant.color,
+            items: [{
+              sourceId: googleItemSourceId(editableEvent.calendarId, editableEvent.eventId),
+              provider: "google",
+              title: "",
+              location: "",
+              description: "",
+              visibility: "busy",
+              sharedWithParticipantIds: [],
+              editable: true,
+              googleCalendarId: editableEvent.calendarId,
+              googleEventId: editableEvent.eventId,
+              start: editableEvent.start,
+              end: editableEvent.end
+            }]
+          });
+        }
+
+        const hiddenIntervals = [
+          ...mirroredIntervals,
+          ...editableEvents.map((event) => ({
+            start: new Date(event.start).getTime(),
+            end: new Date(event.end).getTime()
+          }))
+        ];
         for (const interval of payload.calendars?.[calendar.id]?.busy || []) {
           const startDate = new Date(interval.start);
           const endDate = new Date(interval.end);
           if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) continue;
-          for (const fragment of subtractGoogleMirrorIntervals(startDate, endDate, mirroredIntervals)) {
+          for (const fragment of subtractGoogleMirrorIntervals(startDate, endDate, hiddenIntervals)) {
             const fragmentStart = new Date(fragment.start).toISOString();
             const fragmentEnd = new Date(fragment.end).toISOString();
             const digest = crypto.createHash("sha256")
@@ -3041,7 +3165,7 @@ async function fetchRoomFreeBusy(room, timeMin, timeMax, viewerParticipantId) {
     if (!user) continue;
 
     try {
-      const result = await fetchUserFreeBusy(room, user, participant, start, end);
+      const result = await fetchUserFreeBusy(room, user, participant, start, end, viewerParticipantId);
       if (result.connected) connectedCount += 1;
       busy.push(...result.busy);
     } catch (error) {
@@ -3218,6 +3342,30 @@ function validateEventInput(body, existingEvent = null) {
   };
 }
 
+function requiredOpaqueGoogleId(value, field) {
+  if (typeof value !== "string" || !value.trim() || value.length > 2048) {
+    throw httpError(400, `${field} is required.`);
+  }
+  return value.trim();
+}
+
+function validateGoogleTimedEventMove(body = {}) {
+  const calendarId = requiredOpaqueGoogleId(body.calendarId, "Google calendar ID");
+  const eventId = requiredOpaqueGoogleId(body.eventId, "Google event ID");
+  const start = new Date(body.start);
+  const end = new Date(body.end);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    throw httpError(400, "Event start and end are required.");
+  }
+  if (end <= start) {
+    throw httpError(400, "Event end must be after start.");
+  }
+  if (end.getTime() - start.getTime() > 366 * 24 * 60 * 60 * 1000) {
+    throw httpError(400, "Events cannot be longer than 366 days.");
+  }
+  return { calendarId, eventId, start, end };
+}
+
 function normalizeInviteeParticipantIds(room, inviteeParticipantIds, creatorParticipantId) {
   const requestedIds = Array.isArray(inviteeParticipantIds) ? inviteeParticipantIds : [];
   const validIds = new Set(room.participants.map((participant) => participant.id));
@@ -3340,6 +3488,7 @@ const server = http.createServer(async (req, res) => {
   const roomParticipantPatchMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/participants\/([^/]+)$/);
   const roomParticipantDeleteMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/participants\/([^/]+)$/);
   const roomFreeBusyMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/freebusy$/);
+  const roomGoogleCalendarEventsMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/google-calendar-events$/);
   const roomEventsMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/events$/);
   const roomEventMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/events\/([^/]+)$/);
   const roomEventRespondMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/events\/([^/]+)\/respond$/);
@@ -3950,6 +4099,78 @@ const server = http.createServer(async (req, res) => {
       auth.room.updatedAt = nowIso();
       saveStore();
       sendJson(res, 200, buildRoomResponse(auth.room, auth.session, auth.participant));
+      return;
+    }
+
+    if (roomGoogleCalendarEventsMatch && req.method === "PATCH") {
+      if (!enforceRateLimit(req, res, "google-event-update", 120, 60 * 60 * 1000)) return;
+      const auth = requireRoomParticipant(req, res, roomGoogleCalendarEventsMatch[1]);
+      if (!auth) return;
+      if (!auth.user || auth.participant.userId !== auth.user.id) {
+        sendJson(res, 401, { error: "Sign in with Google Calendar before moving this event." });
+        return;
+      }
+      if (!userHasGoogleCalendarWriteAccess(auth.user)) {
+        sendJson(res, 409, {
+          error: "Reconnect Google Calendar and grant event access before moving this event.",
+          needsReconnect: true
+        });
+        return;
+      }
+
+      const body = await readJsonBody(req);
+      const { calendarId, eventId, start, end } = validateGoogleTimedEventMove(body);
+      const googleEvent = await googleCalendarRequest(auth.user.id, calendarId, eventId, {
+        method: "GET",
+        sendUpdates: null
+      });
+      if (
+        !googleEvent ||
+        googleEvent.status === "cancelled" ||
+        googleEvent.transparency === "transparent" ||
+        googleEvent.organizer?.self !== true ||
+        !googleTimedEventRange(googleEvent)
+      ) {
+        sendJson(res, 409, { error: "This Google Calendar event cannot be moved from CommonGround." });
+        return;
+      }
+
+      const mirroredIds = syncedGoogleCalendarMirrorIds(auth.room, auth.user.id);
+      if (isSyncedGoogleMirrorEvent(auth.room, googleEvent, mirroredIds)) {
+        sendJson(res, 409, { error: "Move this CommonGround event instead of its Google Calendar copy." });
+        return;
+      }
+
+      const startTimeZone = googleEvent.start?.timeZone || null;
+      const endTimeZone = googleEvent.end?.timeZone || startTimeZone;
+      const updatedGoogleEvent = await googleCalendarRequest(auth.user.id, calendarId, eventId, {
+        method: "PATCH",
+        body: {
+          start: {
+            dateTime: start.toISOString(),
+            ...(startTimeZone ? { timeZone: startTimeZone } : {})
+          },
+          end: {
+            dateTime: end.toISOString(),
+            ...(endTimeZone ? { timeZone: endTimeZone } : {})
+          }
+        },
+        sendUpdates: "all"
+      });
+      const updatedRange = googleTimedEventRange(updatedGoogleEvent) || { start, end };
+      auth.participant.lastSyncedAt = nowIso();
+      auth.participant.lastSyncError = null;
+      auth.room.updatedAt = nowIso();
+      saveStore();
+      sendJson(res, 200, {
+        ok: true,
+        event: {
+          googleCalendarId: calendarId,
+          googleEventId: String(updatedGoogleEvent?.id || eventId),
+          start: updatedRange.start.toISOString(),
+          end: updatedRange.end.toISOString()
+        }
+      });
       return;
     }
 
