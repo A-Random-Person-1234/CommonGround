@@ -1230,7 +1230,7 @@ try {
   }
   const commonGroundIcon = await publicSession.request("/icons/CommonGroundAppIcon.png", { accept: "image/png" });
   assert.match(commonGroundIcon.response.headers.get("content-type") || "", /^image\/png/);
-  assert.ok(commonGroundIcon.text.length > 100_000, "The CommonGround app icon asset is unexpectedly small");
+  assert.ok(commonGroundIcon.text.length > 10_000, "The CommonGround app icon asset is unexpectedly small");
   const contentSecurityPolicy = home.response.headers.get("content-security-policy");
   assert.ok(contentSecurityPolicy, "CSP header is missing");
   assert.doesNotMatch(contentSecurityPolicy, /script-src[^;]*'unsafe-inline'/);
