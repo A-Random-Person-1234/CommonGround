@@ -248,8 +248,8 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260723-google-connect-gold"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260723-google-connect"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260723-date-header"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260723-date-header"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
   assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
@@ -675,6 +675,11 @@ try {
   );
   assert.match(
     eventComposerScript.text,
+    /function dragTargetIsBlocked\(target\) \{\s*if \(target\.closest\("\.day-header, \.calendar-corner"\)\) return true;/,
+    "The sticky calendar header must remain outside the drag-create surface"
+  );
+  assert.match(
+    eventComposerScript.text,
     /function refreshLiveFreeBlocksForResize\([\s\S]*?if \(!showFreeBlocks\) \{[\s\S]*?calendarGrid\.querySelectorAll\("\.free-block"\)\.forEach\(\(block\) => block\.remove\(\)\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?occupiedSegmentsForDate\([\s\S]*?freeSegmentsForDate\([\s\S]*?configureFreeGlowBlock\(/,
     "Live Free-block reflow must preserve its future implementation while returning immediately in the hidden demo"
   );
@@ -873,8 +878,23 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /:root\[data-theme="dark"\] \.day-header\.today\s*\{[^}]*background-color:\s*#171717[^}]*\}[\s\S]*?:root\[data-theme="dark"\] \.day-header\.selected\s*\{[^}]*background-color:\s*#121212[^}]*\}[\s\S]*?:root\[data-theme="dark"\] \.day-header\.today\.selected\s*\{[^}]*background-color:\s*#171717/s,
-    "Sticky dark-mode day headers must remain opaque over scrolled event blocks"
+    /\.calendar-corner,\s*\.day-header\s*\{[^}]*position:\s*sticky[^}]*top:\s*0[^}]*z-index:\s*30[^}]*background-color:\s*var\(--calendar-bg\)/s,
+    "The calendar header must remain an opaque sticky layer above scrolled event blocks"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.day-header\.selected \.day-header-date\s*\{[^}]*background:\s*transparent[^}]*color:\s*var\(--brand-strong\)/s,
+    "Only the selected date number must use the universal CommonGround gold"
+  );
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /#roomPage \.day-header\.today \.day-header-date\s*\{[^}]*#0b57d0/s,
+    "The real-world current date must not retain a separate blue marker"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const isSelected = sameDate\(day\.date, currentFocusDate\);\s*header\.className = `day-header \$\{isSelected \? "selected" : ""\}`\.trim\(\);[\s\S]*?if \(isSelected\) dateButton\?\.setAttribute\("aria-current", "date"\);/s,
+    "The planner must derive exactly one selected date from the current focus date"
   );
   assert.match(
     eventComposerStyles.text,
