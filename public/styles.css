@@ -3052,12 +3052,14 @@ button.free-block:not(:disabled):active {
   overflow: visible;
 }
 
-.event-card.can-move {
+.event-card.can-move,
+.busy-card.can-move {
   cursor: grab;
   touch-action: none;
 }
 
-.event-card.is-moving {
+.event-card.is-moving,
+.busy-card.is-moving {
   z-index: 20;
   cursor: grabbing;
   user-select: none;
@@ -3075,7 +3077,9 @@ button.free-block:not(:disabled):active {
 }
 
 .event-card.is-moving:hover,
-.event-card.is-moving:focus-visible {
+.event-card.is-moving:focus-visible,
+.busy-card.is-moving:hover,
+.busy-card.is-moving:focus-visible {
   transform: translate3d(
     var(--event-move-x, 0),
     var(--event-move-y, 0),
