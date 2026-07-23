@@ -3052,6 +3052,37 @@ button.free-block:not(:disabled):active {
   overflow: visible;
 }
 
+.event-card.can-move {
+  cursor: grab;
+  touch-action: none;
+}
+
+.event-card.is-moving {
+  z-index: 20;
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+  opacity: 0.92;
+  transform: translate3d(
+    var(--event-move-x, 0),
+    var(--event-move-y, 0),
+    0
+  );
+  transition: none;
+  box-shadow: 0 14px 30px rgba(0, 0, 0, 0.38);
+  will-change: transform, opacity;
+}
+
+.event-card.is-moving:hover,
+.event-card.is-moving:focus-visible {
+  transform: translate3d(
+    var(--event-move-x, 0),
+    var(--event-move-y, 0),
+    0
+  );
+}
+
 .event-card.is-resizing {
   user-select: none;
   -webkit-user-select: none;
@@ -9500,8 +9531,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 @media (max-width: 480px) {
-  #roomPage .calendar-today-button,
-  #roomPage #settingsButton {
+  #roomPage .calendar-today-button {
     display: none;
   }
 
