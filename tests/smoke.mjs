@@ -248,7 +248,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260723-google-connect"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260723-google-connect-gold"/);
   assert.match(home.text, /src="\/app\.js\?v=20260723-google-connect"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
@@ -741,8 +741,8 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.calendar-google-button\.needs-connection,\s*#roomPage \.calendar-google-button\.needs-permission\s*\{[^}]*background:\s*#0b57d0;[^}]*color:\s*#fff;/s,
-    "Disconnected and missing-permission states must remain visually discoverable"
+    /#roomPage \.calendar-google-button\.needs-connection,\s*#roomPage \.calendar-google-button\.needs-permission\s*\{[^}]*background:\s*linear-gradient\(135deg, #b98454, #8a5a35\);[^}]*color:\s*#fff9f1;/s,
+    "Disconnected and missing-permission states must use CommonGround's established gold primary treatment"
   );
   assert.match(
     eventComposerStyles.text,
