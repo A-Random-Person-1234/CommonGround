@@ -173,7 +173,7 @@ function applySecurityHeaders(res) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self'"
+    "connect-src 'self' https://unpkg.com"
   ].join("; "));
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
@@ -2176,6 +2176,54 @@ function syncedGoogleCalendarMirrorIds(room, userId) {
   return ids;
 }
 
+function syncedGoogleCalendarMirrorIntervals(room, participant, userId) {
+  const intervals = [];
+  for (const roomEvent of room.events || []) {
+    if (roomEvent.syncToGoogle !== true) continue;
+
+    const syncEntries = normalizeGoogleCalendarSync(roomEvent.googleCalendarSync || roomEvent.googleSync);
+    const ownEntry = syncEntries[userId];
+    const syncedByCreator = Object.values(syncEntries).some((entry) => entry?.googleEventId);
+    const isCreatorMirror = roomEvent.createdByParticipantId === participant?.id && ownEntry?.googleEventId;
+    const isInviteeMirror = (roomEvent.inviteeParticipantIds || []).includes(participant?.id) && syncedByCreator;
+    if (!isCreatorMirror && !isInviteeMirror) continue;
+
+    const start = new Date(roomEvent.start).getTime();
+    const end = new Date(roomEvent.end).getTime();
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) continue;
+    intervals.push({ start, end });
+  }
+
+  return intervals.sort((left, right) => left.start - right.start || left.end - right.end);
+}
+
+function subtractGoogleMirrorIntervals(startDate, endDate, mirrorIntervals = []) {
+  let fragments = [{
+    start: startDate.getTime(),
+    end: endDate.getTime()
+  }];
+
+  for (const mirror of mirrorIntervals) {
+    const next = [];
+    for (const fragment of fragments) {
+      if (mirror.end <= fragment.start || mirror.start >= fragment.end) {
+        next.push(fragment);
+        continue;
+      }
+      if (mirror.start > fragment.start) {
+        next.push({ start: fragment.start, end: Math.min(mirror.start, fragment.end) });
+      }
+      if (mirror.end < fragment.end) {
+        next.push({ start: Math.max(mirror.end, fragment.start), end: fragment.end });
+      }
+    }
+    fragments = next;
+    if (!fragments.length) break;
+  }
+
+  return fragments.filter((fragment) => fragment.end > fragment.start);
+}
+
 function syncedOutlookCalendarMirrorIds(room, userId) {
   const ids = new Set();
   for (const roomEvent of room.events || []) {
@@ -2252,7 +2300,12 @@ async function getFreshMicrosoftTokensForUser(userId) {
   return refreshed;
 }
 
-async function googleCalendarRequest(userId, calendarId, eventId, { method = "GET", body = null, sendUpdates = "none" } = {}) {
+async function googleCalendarRequest(
+  userId,
+  calendarId,
+  eventId,
+  { method = "GET", body = null, sendUpdates = "none", query = null } = {}
+) {
   const tokens = await getFreshTokensForUser(userId);
   if (!tokens?.access_token) {
     const error = new Error("Google Calendar needs reconnecting.");
@@ -2264,6 +2317,14 @@ async function googleCalendarRequest(userId, calendarId, eventId, { method = "GE
   const pathSuffix = eventId ? `/${encodeURIComponent(eventId)}` : "";
   const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodedCalendarId}/events${pathSuffix}`);
   if (sendUpdates) url.searchParams.set("sendUpdates", sendUpdates);
+  for (const [key, rawValue] of Object.entries(query || {})) {
+    const values = Array.isArray(rawValue) ? rawValue : [rawValue];
+    for (const value of values) {
+      if (value !== null && value !== undefined && value !== "") {
+        url.searchParams.append(key, String(value));
+      }
+    }
+  }
 
   const response = await fetchWithTimeout(url, {
     method,
@@ -2475,6 +2536,33 @@ async function deleteGoogleCalendarEntry(userId, entry, sendUpdates = "none") {
   }
 }
 
+function deterministicGoogleCalendarEventId(room, event, userId) {
+  const digest = crypto.createHash("sha256")
+    .update(`commonground|${room.code}|${event.id}|${userId}`)
+    .digest("hex");
+  return `cg${digest}`;
+}
+
+async function findGoogleCalendarMirrorEvent(userId, calendarId, room, event) {
+  const result = await googleCalendarRequest(userId, calendarId || "primary", null, {
+    method: "GET",
+    sendUpdates: null,
+    query: {
+      privateExtendedProperty: [
+        `commonGroundRoomCode=${room.code}`,
+        `commonGroundEventId=${event.id}`
+      ],
+      maxResults: 10,
+      showDeleted: false,
+      singleEvents: true
+    }
+  });
+  return (result?.items || []).find((item) => {
+    const privateProps = item.extendedProperties?.private || {};
+    return privateProps.commonGroundRoomCode === room.code && privateProps.commonGroundEventId === event.id;
+  }) || null;
+}
+
 async function upsertGoogleCalendarEvent(room, event, participant) {
   if (!participant?.userId) return;
   const user = store.users[participant.userId];
@@ -2511,11 +2599,32 @@ async function upsertGoogleCalendarEvent(room, event, participant) {
     }
 
     if (!googleEvent) {
-      googleEvent = await googleCalendarRequest(user.id, "primary", null, {
-        method: "POST",
-        body: payload,
-        sendUpdates
-      });
+      const existingMirror = await findGoogleCalendarMirrorEvent(user.id, "primary", room, event);
+      if (existingMirror?.id) {
+        googleEvent = await googleCalendarRequest(user.id, "primary", existingMirror.id, {
+          method: "PATCH",
+          body: payload,
+          sendUpdates
+        });
+      }
+    }
+
+    if (!googleEvent) {
+      const deterministicEventId = deterministicGoogleCalendarEventId(room, event, user.id);
+      try {
+        googleEvent = await googleCalendarRequest(user.id, "primary", null, {
+          method: "POST",
+          body: { id: deterministicEventId, ...payload },
+          sendUpdates
+        });
+      } catch (error) {
+        if (error.status !== 409) throw error;
+        googleEvent = await googleCalendarRequest(user.id, "primary", deterministicEventId, {
+          method: "PATCH",
+          body: payload,
+          sendUpdates
+        });
+      }
     }
 
     event.googleCalendarSync[user.id] = {
@@ -2761,6 +2870,7 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax) {
       if (!tokens?.access_token) throw httpError(401, "Google Calendar needs reconnecting.");
       const googleCalendarList = await fetchCalendarList(tokens.access_token);
       const calendars = (googleCalendarList.calendars || []).slice(0, 50);
+      const mirroredIntervals = syncedGoogleCalendarMirrorIntervals(room, participant, user.id);
       const response = await fetchWithTimeout("https://www.googleapis.com/calendar/v3/freeBusy", {
         method: "POST",
         headers: {
@@ -2782,32 +2892,36 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax) {
           const startDate = new Date(interval.start);
           const endDate = new Date(interval.end);
           if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || endDate <= startDate) continue;
-          const digest = crypto.createHash("sha256")
-            .update(`${calendar.id}|${interval.start}|${interval.end}`)
-            .digest("hex")
-            .slice(0, 24);
-          busy.push({
-            start: startDate.toISOString(),
-            end: endDate.toISOString(),
-            participantId: participant.id,
-            ownerName: participant.displayName,
-            color: participant.color,
-            busy: true,
-            calendarId: "google",
-            calendarColor: participant.color,
-            items: [{
-              sourceId: `google-freebusy:${digest}`,
-              provider: "google",
-              title: "",
-              location: "",
-              description: "",
-              visibility: "busy",
-              sharedWithParticipantIds: [],
-              editable: false,
-              start: startDate.toISOString(),
-              end: endDate.toISOString()
-            }]
-          });
+          for (const fragment of subtractGoogleMirrorIntervals(startDate, endDate, mirroredIntervals)) {
+            const fragmentStart = new Date(fragment.start).toISOString();
+            const fragmentEnd = new Date(fragment.end).toISOString();
+            const digest = crypto.createHash("sha256")
+              .update(`${calendar.id}|${fragmentStart}|${fragmentEnd}`)
+              .digest("hex")
+              .slice(0, 24);
+            busy.push({
+              start: fragmentStart,
+              end: fragmentEnd,
+              participantId: participant.id,
+              ownerName: participant.displayName,
+              color: participant.color,
+              busy: true,
+              calendarId: "google",
+              calendarColor: participant.color,
+              items: [{
+                sourceId: `google-freebusy:${digest}`,
+                provider: "google",
+                title: "",
+                location: "",
+                description: "",
+                visibility: "busy",
+                sharedWithParticipantIds: [],
+                editable: false,
+                start: fragmentStart,
+                end: fragmentEnd
+              }]
+            });
+          }
         }
       }
       const primary = calendars.find((calendar) => calendar.primary) || calendars[0] || null;
