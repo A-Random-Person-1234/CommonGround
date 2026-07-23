@@ -248,8 +248,8 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260723-calendar-shell"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260723-calendar-shell"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260723-shell-cleanup"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260723-shell-cleanup"/);
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
   assert.match(home.text, /id="joinRoomCode"[^>]*aria-label="Room code"/);
@@ -326,11 +326,19 @@ try {
     /<div class="calendar-grid" id="calendarGrid"><\/div>\s*<footer class="legal-links calendar-legal-links" aria-label="Legal links">/,
     "Legal links must remain below the calendar grid in the scroll flow"
   );
-  assert.match(
-    home.text,
-    /<aside class="calendar-icon-rail" aria-label="Calendar tools">[\s\S]*?aria-label="Keep"[\s\S]*?aria-label="Tasks"[\s\S]*?aria-label="Contacts"[\s\S]*?aria-label="Maps"[\s\S]*?id="calendarRailAddButton"/,
-    "The calendar shell must retain the thin right-hand tool rail"
-  );
+  for (const removedShellControl of [
+    /id="calendarSearchButton"/,
+    /class="[^"]*\bnav-help-button\b/,
+    /class="calendar-upgrade-button"/,
+    /class="[^"]*\bnav-app-grid-button\b/,
+    /<span>Booking pages<\/span>/,
+    /class="other-calendars"/,
+    /Holidays in United Kingdom/,
+    /class="calendar-icon-rail"/,
+    /id="calendarRailAddButton"/
+  ]) {
+    assert.doesNotMatch(home.text, removedShellControl, "Removed calendar-shell controls must not remain in the DOM");
+  }
   assert.match(
     home.text,
     /<div class="topbar-identity" id="topbarIdentity" role="group" aria-label="Your room identity"><\/div>/,
@@ -941,7 +949,8 @@ try {
   assert.match(eventComposerStyles.text, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?#eventModal\[open\] \.event-composer,[\s\S]*?animation-duration: 1ms !important/s);
   assert.doesNotMatch(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow-y:\s*auto/s);
   assert.doesNotMatch(eventComposerStyles.text, /#eventModal \.event-composer\s*\{[^}]*overflow-y:\s*auto/s);
-  assert.match(eventComposerStyles.text, /#roomPage\.calendar-app-shell\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*var\(--shell-sidebar-width\) minmax\(0, 1fr\) var\(--shell-rail-width\)[^}]*grid-template-areas:\s*"nav nav nav"\s*"sidebar content rail"/s);
+  assert.match(eventComposerStyles.text, /#roomPage\.calendar-app-shell\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*var\(--shell-sidebar-width\) minmax\(0, 1fr\)[^}]*grid-template-areas:\s*"nav nav"\s*"sidebar content"/s);
+  assert.doesNotMatch(eventComposerStyles.text, /--shell-rail-width|grid-area:\s*rail|calendar-icon-rail/);
   assert.match(eventComposerStyles.text, /#roomPage \.calendar-app-nav\s*\{[^}]*grid-area:\s*nav[^}]*height:\s*var\(--shell-nav-height\)[^}]*background:\s*var\(--shell-panel\)/s);
   assert.match(eventComposerStyles.text, /#roomPage \.calendar-legal-links\s*\{[^}]*position:\s*static[^}]*margin:\s*14px 14px 16px auto/s);
   assert.match(eventComposerStyles.text, /#roomPage \.calendar-grid\s*\{[^}]*min-height:\s*calc\(100% \+ 1px\)/s);
@@ -966,11 +975,6 @@ try {
     eventComposerStyles.text,
     /#roomPage \.member-calendar-checkbox:checked \+ \.member-checkbox-visual\s*\{[^}]*border-color:\s*var\(--member-color\)[^}]*background:\s*var\(--member-color\)/s,
     "Member checkboxes must expose a distinct per-member checked state"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /#roomPage \.calendar-icon-rail\s*\{[^}]*grid-area:\s*rail[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*border-left:\s*1px solid var\(--shell-line\)/s,
-    "The right calendar tool rail must occupy its own fixed shell column"
   );
   assert.match(
     eventComposerStyles.text,
