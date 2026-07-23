@@ -2700,24 +2700,14 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   outline-offset: 2px;
 }
 
-.day-header.today .day-header-date {
-  background: var(--brand);
-  color: #fff;
-}
-
 .day-header.selected {
-  background: color-mix(in srgb, var(--brand) 9%, var(--surface));
-  border-bottom: 3px solid color-mix(in srgb, var(--brand) 82%, transparent);
+  background: var(--calendar-bg);
+  border-bottom: 1px solid var(--calendar-line);
   box-shadow: none;
 }
 
 .day-header.selected .day-header-date {
   color: var(--brand-strong);
-}
-
-.day-header.today.selected .day-header-date {
-  color: #fff;
-  box-shadow: none;
 }
 
 .time-cell {
@@ -6312,11 +6302,6 @@ button.free-block:not(:disabled):active {
     var(--calendar-bg);
 }
 
-:root:not([data-theme="dark"]) .day-header.today .day-header-date {
-  background: color-mix(in srgb, var(--brand) 88%, #8b613f);
-  box-shadow: none;
-}
-
 :root:not([data-theme="dark"]) .free-block strong,
 :root:not([data-theme="dark"]) .free-block span,
 :root:not([data-theme="dark"]) .free-glow-block strong,
@@ -8167,10 +8152,6 @@ button.identity-name-button:not(:disabled):active,
   background: transparent;
 }
 
-:root[data-theme="dark"] .calendar-cell.is-today {
-  background-color: rgba(255, 255, 255, 0.02);
-}
-
 :root[data-theme="dark"] .calendar-cell::before {
   display: none;
 }
@@ -8209,29 +8190,13 @@ button.identity-name-button:not(:disabled):active,
   font-weight: 700;
 }
 
-:root[data-theme="dark"] .day-header.today {
-  background-color: #171717;
-}
-
-:root[data-theme="dark"] .calendar-cell.is-today {
-  background-color: rgba(255, 255, 255, 0.02);
-}
-
-:root[data-theme="dark"] .day-header.today .day-header-date {
-  background: transparent;
-}
-
 :root[data-theme="dark"] .day-header.selected {
   background-color: #121212;
   border-bottom: 1px solid rgba(255, 255, 255, 0.04);
 }
 
-:root[data-theme="dark"] .day-header.today.selected {
-  background-color: #171717;
-}
-
 :root[data-theme="dark"] .day-header.selected .day-header-date {
-  color: #fff;
+  color: var(--brand-strong);
 }
 
 :root[data-theme="dark"] .time-cell {
@@ -9349,17 +9314,9 @@ button.identity-name-button:not(:disabled):active,
   font-weight: 500;
 }
 
-#roomPage .day-header.today .day-header-date {
-  background: #0b57d0;
-  color: #fff;
-}
-
-#roomPage .day-header.selected:not(.today) .day-header-date {
-  color: #8ab4f8;
-}
-
-#roomPage .calendar-cell.is-today {
-  background: rgba(138, 180, 248, 0.025);
+#roomPage .day-header.selected .day-header-date {
+  background: transparent;
+  color: var(--brand-strong);
 }
 
 #roomPage .time-cell {
