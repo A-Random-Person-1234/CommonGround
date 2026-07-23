@@ -3836,7 +3836,7 @@ function dragSelectionRect() {
   const rowHeight = resolvedCalendarRowHeight();
   const left = rect.left + dayWidth * dragCreateState.dayIndex + 8;
   const top = rect.top + (selection.startHour - calendarStartHour) * rowHeight + 8;
-  const width = Math.max(dayWidth - 16, 120);
+  const width = Math.max(dayWidth - 16, 24);
   const height = Math.max((selection.endHour - selection.startHour) * rowHeight - 12, 24);
   return { left, top, width, height };
 }
@@ -3913,7 +3913,7 @@ function openDraggedEventComposer(anchorRect) {
   openEventModal("create", { anchorRect });
 }
 
-function stopDragCreate() {
+function stopDragCreate({ preservePreview = false } = {}) {
   if (dragCreateState?.captureTarget?.hasPointerCapture?.(dragCreateState.pointerId)) {
     dragCreateState.captureTarget.releasePointerCapture(dragCreateState.pointerId);
   }
@@ -3921,7 +3921,7 @@ function stopDragCreate() {
   window.removeEventListener("pointerup", handleDragCreateEnd);
   window.removeEventListener("pointercancel", handleDragCreateCancel);
   dragCreateState = null;
-  clearDragPreview();
+  if (!preservePreview) clearDragPreview();
 }
 
 function resetEventResizeVisual(
@@ -4331,7 +4331,7 @@ function handleDragCreateEnd(event) {
   const anchorRect = dragSelectionRect();
   const snapshot = { ...dragCreateState };
   markCalendarClickSuppressed();
-  stopDragCreate();
+  stopDragCreate({ preservePreview: true });
   dragCreateState = snapshot;
   openDraggedEventComposer(anchorRect);
   dragCreateState = null;
@@ -5618,20 +5618,53 @@ function positionEventModal() {
   const card = eventModal.querySelector(".modal-card");
   if (!card) return;
 
-  const width = Math.min(560, window.innerWidth - 24);
-  const height = Math.min(card.offsetHeight || 520, window.innerHeight - 24);
-  let left = eventModalAnchorRect.left;
-  let top = eventModalAnchorRect.top;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const edge = viewportWidth <= 820 ? 8 : 12;
+  const gap = 12;
+  const width = Math.min(card.offsetWidth || 440, viewportWidth - edge * 2);
+  const height = Math.min(card.offsetHeight || 480, viewportHeight - edge * 2);
+  const anchorLeft = Math.max(edge, Math.min(viewportWidth - edge, eventModalAnchorRect.left));
+  const anchorRight = Math.max(anchorLeft, Math.min(
+    viewportWidth - edge,
+    eventModalAnchorRect.left + eventModalAnchorRect.width
+  ));
+  const anchorTop = Math.max(edge, Math.min(viewportHeight - edge, eventModalAnchorRect.top));
+  const anchorBottom = Math.max(anchorTop, Math.min(
+    viewportHeight - edge,
+    eventModalAnchorRect.top + eventModalAnchorRect.height
+  ));
+  const rightCandidate = anchorRight + gap;
+  const leftCandidate = anchorLeft - width - gap;
+  const rightFits = rightCandidate + width <= viewportWidth - edge;
+  const leftFits = leftCandidate >= edge;
+  const rightSpace = viewportWidth - edge - anchorRight;
+  const leftSpace = anchorLeft - edge;
 
-  if (left + width > window.innerWidth - 12) {
-    left = window.innerWidth - width - 12;
-  }
-  if (top + height > window.innerHeight - 12) {
-    top = Math.max(12, eventModalAnchorRect.top + eventModalAnchorRect.height - height);
+  let side = "right";
+  let left = rightCandidate;
+  if (!rightFits && leftFits) {
+    side = "left";
+    left = leftCandidate;
+  } else if (!rightFits && !leftFits) {
+    side = rightSpace >= leftSpace ? "right" : "left";
+    const nearAnchor = side === "right" ? rightCandidate : leftCandidate;
+    left = Math.max(edge, Math.min(viewportWidth - width - edge, nearAnchor));
   }
 
-  eventModal.style.setProperty("--composer-left", `${Math.max(12, left)}px`);
-  eventModal.style.setProperty("--composer-top", `${Math.max(12, top)}px`);
+  const anchorCenterY = anchorTop + (anchorBottom - anchorTop) / 2;
+  const top = Math.max(edge, Math.min(
+    viewportHeight - height - edge,
+    anchorCenterY - height / 2
+  ));
+  const transformOrigin = rightFits || leftFits
+    ? `${side === "right" ? "left" : "right"} center`
+    : "center center";
+
+  eventModal.dataset.anchorSide = side;
+  eventModal.style.setProperty("--composer-left", `${left}px`);
+  eventModal.style.setProperty("--composer-top", `${top}px`);
+  eventModal.style.setProperty("--composer-transform-origin", transformOrigin);
 }
 
 function updateEventGoogleSyncControl() {
@@ -5769,6 +5802,10 @@ function closeEventModal() {
     eventModalInitialState = "";
     eventModalAnchorRect = null;
     eventModal.classList.remove("anchored-composer");
+    delete eventModal.dataset.anchorSide;
+    eventModal.style.removeProperty("--composer-left");
+    eventModal.style.removeProperty("--composer-top");
+    eventModal.style.removeProperty("--composer-transform-origin");
     setEventFormFeedback();
   });
 }
@@ -6330,7 +6367,10 @@ eventGoogleSyncRow?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" && event.key !== " ") return;
   activateEventGoogleSyncRow(event);
 });
-eventAllDayInput?.addEventListener("change", () => setAllDayMode(eventAllDayInput.checked));
+eventAllDayInput?.addEventListener("change", () => {
+  setAllDayMode(eventAllDayInput.checked);
+  requestAnimationFrame(positionEventModal);
+});
 eventDateInput?.addEventListener("change", () => {
   if (!eventAllDayInput?.checked || !eventEndDateInput) return;
   if (!eventEndDateInput.value || eventEndDateInput.value < eventDateInput.value) {
