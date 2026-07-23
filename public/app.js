@@ -45,6 +45,18 @@ const calendarStatus = document.querySelector("#calendarStatus");
 const calendarPeriodLabel = document.querySelector("#calendarPeriodLabel");
 const prevPeriodButton = document.querySelector("#prevPeriodButton");
 const nextPeriodButton = document.querySelector("#nextPeriodButton");
+const todayButton = document.querySelector("#todayButton");
+const calendarViewMenu = document.querySelector("#calendarViewMenu");
+const calendarViewLabel = document.querySelector("#calendarViewLabel");
+const calendarSidebarButton = document.querySelector("#calendarSidebarButton");
+const calendarSearchButton = document.querySelector("#calendarSearchButton");
+const calendarRailAddButton = document.querySelector("#calendarRailAddButton");
+const memberSearchInput = document.querySelector("#memberSearchInput");
+const membersSectionToggle = document.querySelector("#membersSectionToggle");
+const miniCalendarTitle = document.querySelector("#miniCalendarTitle");
+const miniCalendarGrid = document.querySelector("#miniCalendarGrid");
+const miniCalendarPrevious = document.querySelector("#miniCalendarPrevious");
+const miniCalendarNext = document.querySelector("#miniCalendarNext");
 const roomSwitcher = document.querySelector("#roomSwitcher");
 const participantStrip = document.querySelector("#participantStrip");
 const calendarGrid = document.querySelector("#calendarGrid");
@@ -162,6 +174,7 @@ let currentIsHost = false;
 let googleBusy = [];
 let currentView = "week";
 let currentFocusDate = new Date();
+let miniCalendarCursor = new Date(currentFocusDate.getFullYear(), currentFocusDate.getMonth(), 1);
 let refreshTimer = null;
 let notificationPollTimer = null;
 let selectedEventId = null;
@@ -184,6 +197,9 @@ let dragPreviewFrame = 0;
 let eventResizeFrame = 0;
 let suppressCalendarClickUntil = 0;
 let participantsDrawerGesture = null;
+
+/* TODO: Commonground Free Block Rendering - Hidden for current demo */
+const showFreeBlocks = false;
 
 function setButtonLabelWithIcon(button, label, iconClass) {
   if (!button) return;
@@ -571,6 +587,57 @@ function formatRange() {
 
 function formatMonthYear(date) {
   return new Intl.DateTimeFormat(undefined, { month: "long", year: "numeric" }).format(date);
+}
+
+function currentTimezoneLabel(date = new Date()) {
+  const totalMinutes = -date.getTimezoneOffset();
+  const sign = totalMinutes >= 0 ? "+" : "-";
+  const absoluteMinutes = Math.abs(totalMinutes);
+  const hoursPart = String(Math.floor(absoluteMinutes / 60)).padStart(2, "0");
+  const minutesPart = absoluteMinutes % 60;
+  return `GMT${sign}${hoursPart}${minutesPart ? `:${String(minutesPart).padStart(2, "0")}` : ""}`;
+}
+
+function syncMiniCalendarToFocus() {
+  miniCalendarCursor = new Date(currentFocusDate.getFullYear(), currentFocusDate.getMonth(), 1);
+}
+
+function renderMiniCalendar() {
+  if (!miniCalendarGrid || !miniCalendarTitle) return;
+  miniCalendarTitle.textContent = formatMonthYear(miniCalendarCursor);
+  miniCalendarGrid.innerHTML = "";
+
+  for (const day of dayNames) {
+    const weekday = document.createElement("span");
+    weekday.className = "mini-calendar-weekday";
+    weekday.textContent = day.short.slice(0, 1);
+    weekday.setAttribute("aria-hidden", "true");
+    miniCalendarGrid.appendChild(weekday);
+  }
+
+  const monthStart = new Date(miniCalendarCursor.getFullYear(), miniCalendarCursor.getMonth(), 1);
+  const gridStart = startOfWeek(monthStart);
+  const today = new Date();
+
+  for (let index = 0; index < 42; index += 1) {
+    const date = addDays(gridStart, index);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = [
+      "mini-calendar-day",
+      date.getMonth() !== monthStart.getMonth() ? "is-outside-month" : "",
+      sameDate(date, today) ? "is-today" : "",
+      sameDate(date, currentFocusDate) ? "is-selected" : ""
+    ].filter(Boolean).join(" ");
+    button.textContent = String(date.getDate());
+    button.setAttribute("aria-label", `Open week of ${formatFullDate(date)}`);
+    if (sameDate(date, currentFocusDate)) button.setAttribute("aria-current", "date");
+    button.addEventListener("click", async () => {
+      miniCalendarCursor = new Date(date.getFullYear(), date.getMonth(), 1);
+      await goToDateInWeek(date);
+    });
+    miniCalendarGrid.appendChild(button);
+  }
 }
 
 function formatFullDate(date) {
@@ -1731,7 +1798,12 @@ function applyParticipantPatchLocally(participantId, patch) {
 }
 
 async function setCurrentView(view) {
-  if (!view || currentView === view) return;
+  if (!view) return;
+  if (calendarViewMenu) calendarViewMenu.open = false;
+  if (currentView === view) {
+    updateViewButtons();
+    return;
+  }
   currentView = view;
   await refreshCalendarAfterImmediateRender();
 }
@@ -1781,6 +1853,7 @@ async function shiftCalendarPeriod(direction) {
     currentFocusDate = startOfDay(addDays(currentFocusDate, step * 7));
   }
 
+  syncMiniCalendarToFocus();
   await refreshCalendarAfterImmediateRender();
 }
 
@@ -1799,6 +1872,7 @@ async function goToDateInWeek(date) {
   const wasWeekView = currentView === "week";
   currentFocusDate = startOfDay(date);
   currentView = "week";
+  syncMiniCalendarToFocus();
   if (wasWeekView) {
     animateCalendarTransition(render);
     return;
@@ -1814,6 +1888,10 @@ function shouldIgnoreViewShortcut(target) {
 function updateViewButtons() {
   for (const button of viewSwitcher.querySelectorAll("[data-view]")) {
     button.classList.toggle("active", button.dataset.view === currentView);
+    button.setAttribute("aria-pressed", String(button.dataset.view === currentView));
+  }
+  if (calendarViewLabel) {
+    calendarViewLabel.textContent = `${currentView.slice(0, 1).toUpperCase()}${currentView.slice(1)}`;
   }
 }
 
@@ -2260,45 +2338,51 @@ function renderParticipants() {
   pruneHiddenParticipantIds({ persist: true });
   for (const participant of currentRoom?.participants || []) {
     const isHidden = hiddenParticipantIds.has(participant.id);
-    const visibilityAction = isHidden ? "Show" : "Hide";
-    const chip = document.createElement("div");
-    chip.className = [
+    const row = document.createElement("div");
+    row.className = [
       "participant-chip",
+      "member-calendar-row",
       participant.connected ? "" : "faded",
       isHidden ? "is-hidden" : ""
     ].filter(Boolean).join(" ");
-    chip.style.setProperty("--chip-color", participant.color);
-    chip.tabIndex = 0;
-    chip.setAttribute("role", "button");
-    chip.setAttribute("aria-pressed", String(!isHidden));
-    chip.setAttribute("aria-label", `${visibilityAction} ${participant.displayName}'s calendar`);
-    chip.title = `${visibilityAction} ${participant.displayName}'s calendar`;
+    row.style.setProperty("--chip-color", participant.color);
+    row.style.setProperty("--member-color", participant.color);
+    row.dataset.memberName = normalizedTextKey(participant.displayName);
 
-    const toggleVisibility = () => {
-      if (hiddenParticipantIds.has(participant.id)) {
+    const label = document.createElement("label");
+    label.className = "member-calendar-label";
+
+    const checkbox = document.createElement("input");
+    checkbox.className = "member-calendar-checkbox";
+    checkbox.type = "checkbox";
+    checkbox.checked = !isHidden;
+    checkbox.value = participant.id;
+    checkbox.dataset.participantId = participant.id;
+    checkbox.setAttribute("aria-label", `Show ${participant.displayName}'s calendar`);
+    checkbox.addEventListener("change", () => {
+      if (checkbox.checked) {
         hiddenParticipantIds.delete(participant.id);
       } else {
         hiddenParticipantIds.add(participant.id);
       }
       saveHiddenParticipantIds();
-      render();
-    };
-
-    chip.addEventListener("click", toggleVisibility);
-    chip.addEventListener("keydown", (event) => {
-      if (event.key === "Enter" || event.key === " ") {
-        event.preventDefault();
-        toggleVisibility();
-      }
+      renderParticipants();
+      renderCalendar();
     });
 
-    chip.innerHTML = `
-      <span class="participant-dot"></span>
-      <div class="participant-copy">
-        <strong>${escapeHtml(participant.displayName)}</strong>
-      </div>
-      ${isHidden ? `<span class="participant-visibility-state">Hidden</span>` : ""}
+    const checkmark = document.createElement("span");
+    checkmark.className = "member-checkbox-visual";
+    checkmark.setAttribute("aria-hidden", "true");
+
+    const copy = document.createElement("span");
+    copy.className = "participant-copy member-calendar-copy";
+    copy.innerHTML = `
+      <strong>${escapeHtml(participant.displayName)}</strong>
+      <small>${escapeHtml(participantStatusText(participant))}</small>
     `;
+
+    label.append(checkbox, checkmark, copy);
+    row.appendChild(label);
 
     if (currentIsHost && !participant.isCurrent) {
       const removeButton = document.createElement("button");
@@ -2313,10 +2397,19 @@ function renderParticipants() {
       removeButton.addEventListener("keydown", (event) => {
         event.stopPropagation();
       });
-      chip.appendChild(removeButton);
+      row.appendChild(removeButton);
     }
 
-    participantStrip.appendChild(chip);
+    participantStrip.appendChild(row);
+  }
+  filterParticipantRows();
+}
+
+function filterParticipantRows() {
+  if (!participantStrip) return;
+  const query = normalizedTextKey(memberSearchInput?.value);
+  for (const row of participantStrip.querySelectorAll(".member-calendar-row")) {
+    row.hidden = Boolean(query && !String(row.dataset.memberName || "").includes(query));
   }
 }
 
@@ -2324,7 +2417,9 @@ function setParticipantsPanelExpanded(expanded) {
   if (!participantsSidebar) return;
   const isExpanded = Boolean(expanded);
   participantsSidebar.classList.toggle("is-open", isExpanded);
+  roomPage?.classList.toggle("sidebar-collapsed", !isExpanded);
   participantsSidebar.dataset.open = String(isExpanded);
+  calendarSidebarButton?.setAttribute("aria-expanded", String(isExpanded));
 }
 
 function renderJoinRequests() {
@@ -3896,6 +3991,10 @@ function refreshLiveFreeBlocksForResize(
   { live = true, force = false } = {}
 ) {
   if (!state?.dayKey || !Number.isFinite(startMinute) || !Number.isFinite(durationMinute)) return;
+  if (!showFreeBlocks) {
+    calendarGrid.querySelectorAll(".free-block").forEach((block) => block.remove());
+    return;
+  }
   const signature = `${state.dayKey}:${startMinute}:${durationMinute}:${live ? "live" : "settled"}`;
   if (!force && state.liveFreeSignature === signature) return;
   state.liveFreeSignature = signature;
@@ -4256,6 +4355,8 @@ function renderPlanner(days) {
 
   const corner = document.createElement("div");
   corner.className = "calendar-corner";
+  corner.textContent = currentTimezoneLabel(days[0]?.date || currentFocusDate);
+  corner.setAttribute("aria-label", `Time zone ${corner.textContent}`);
   calendarGrid.appendChild(corner);
 
   for (const day of days) {
@@ -4307,9 +4408,12 @@ function renderPlanner(days) {
     const dayEventBlocks = laneItems.filter((item) => item.laneKind === "event");
     const occupiedSegments = occupiedSegmentsForDate(day.date, rawBusySegments, rawEventBlocks);
 
-    for (const segment of freeSegmentsForDate(day.date, occupiedSegments)) {
-      eventsLayer.appendChild(createFreeGlowBlock({ ...segment, occupiedSegments }, dayIndex));
-    }
+    /*
+      TODO: Commonground Free Block Rendering - Hidden for current demo
+      for (const segment of freeSegmentsForDate(day.date, occupiedSegments)) {
+        eventsLayer.appendChild(createFreeGlowBlock({ ...segment, occupiedSegments }, dayIndex));
+      }
+    */
 
     for (const segment of dayBusySegments) {
       const node = segment.participants.length === 1
@@ -4361,7 +4465,7 @@ function renderMonth() {
     const isFreeDay = !(data?.segments?.length) && !events.length;
     const cell = document.createElement("div");
     cell.className = ["month-cell", date.getMonth() !== monthStart.getMonth() ? "muted-month" : "", sameDate(date, today) ? "today" : "", sameDate(date, currentFocusDate) ? "selected" : ""].filter(Boolean).join(" ");
-    if (isFreeDay) {
+    if (showFreeBlocks && isFreeDay) {
       cell.classList.add("free-day");
       cell.title = "Free day";
     }
@@ -4508,6 +4612,7 @@ function render() {
   renderRoomMeta();
   renderRoomSwitcher();
   renderParticipants();
+  renderMiniCalendar();
   refreshStatusLine();
   renderCalendar();
   if (selectedEventId) {
@@ -6011,6 +6116,33 @@ dismissInviteButton?.addEventListener("click", dismissInviteStrip);
 roomCode?.addEventListener("click", copyRoomCode);
 prevPeriodButton?.addEventListener("click", () => shiftCalendarPeriod(-1));
 nextPeriodButton?.addEventListener("click", () => shiftCalendarPeriod(1));
+todayButton?.addEventListener("click", async () => {
+  currentFocusDate = startOfDay(new Date());
+  syncMiniCalendarToFocus();
+  await refreshCalendarAfterImmediateRender();
+});
+calendarSidebarButton?.addEventListener("click", () => {
+  setParticipantsPanelExpanded(participantsSidebar?.dataset.open !== "true");
+});
+calendarSearchButton?.addEventListener("click", () => {
+  setParticipantsPanelExpanded(true);
+  memberSearchInput?.focus();
+});
+calendarRailAddButton?.addEventListener("click", () => addEventButton?.click());
+memberSearchInput?.addEventListener("input", filterParticipantRows);
+membersSectionToggle?.addEventListener("click", () => {
+  const expanded = membersSectionToggle.getAttribute("aria-expanded") !== "false";
+  membersSectionToggle.setAttribute("aria-expanded", String(!expanded));
+  membersSectionToggle.closest(".members-section")?.classList.toggle("is-collapsed", expanded);
+});
+miniCalendarPrevious?.addEventListener("click", () => {
+  miniCalendarCursor = addMonths(miniCalendarCursor, -1);
+  renderMiniCalendar();
+});
+miniCalendarNext?.addEventListener("click", () => {
+  miniCalendarCursor = addMonths(miniCalendarCursor, 1);
+  renderMiniCalendar();
+});
 displayNameInput?.addEventListener("input", scheduleDisplayNameSave);
 renameRoomInput?.addEventListener("input", scheduleRoomNameSave);
 renameRoomEmojiInput?.addEventListener("change", saveRoomEmoji);
@@ -6118,6 +6250,7 @@ window.addEventListener("resize", () => {
 });
 calendarGrid.addEventListener("pointerdown", startDragCreate, true);
 calendarGrid.addEventListener("click", suppressCalendarClickCapture, true);
+setParticipantsPanelExpanded(!window.matchMedia("(max-width: 760px)").matches);
 roomName.addEventListener("dblclick", () => {
   startInlineRoomRename();
 });
