@@ -3125,32 +3125,11 @@ button.free-block:not(:disabled):active {
   );
 }
 
-.event-move-time {
-  position: absolute;
-  left: 50%;
-  bottom: calc(100% + 7px);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 24px;
-  max-width: min(230px, calc(100vw - 28px));
-  padding: 4px 8px;
-  border: 1px solid color-mix(in srgb, var(--brand) 58%, transparent);
-  border-radius: 7px;
-  background: color-mix(in srgb, var(--surface) 94%, #12100e);
-  color: var(--ink);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.26);
-  font-size: 11px;
-  font-weight: 750;
-  line-height: 1;
-  letter-spacing: 0.01em;
-  white-space: nowrap;
-  pointer-events: none;
-  opacity: 1;
-  transform: translate3d(-50%, 0, 0) scale(1);
-  transform-origin: center;
+.event-card.is-moving [data-event-time-line="true"],
+.busy-card.is-moving [data-event-time-line="true"],
+.event-card.is-resizing [data-event-time-line="true"] {
+  transform-origin: left center;
   will-change: transform, opacity;
-  z-index: 24;
 }
 
 .event-move-snap-feedback {

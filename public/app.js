@@ -3510,23 +3510,27 @@ function createSingleBusyCard(segment, dayIndex) {
   block.title = tooltip;
 
   const appendLine = (className, text) => {
-    if (!text) return;
+    if (!text) return null;
     const line = document.createElement("div");
     line.className = `busy-line ${className}`;
     line.textContent = text;
     block.appendChild(line);
+    return line;
   };
 
   if (durationClass === "event-15") {
-    appendLine("busy-line-compact", compactLineWithTime);
+    configureCalendarBlockTimeLine(
+      appendLine("busy-line-compact", compactLineWithTime),
+      { prefix: compactLine || ownerLabel }
+    );
   } else if (durationClass === "event-30") {
     appendLine("busy-line-owner", ownerLabel);
     appendLine("busy-line-title", titleLabel);
-    appendLine("busy-line-time", timeRange);
+    configureCalendarBlockTimeLine(appendLine("busy-line-time", timeRange));
   } else {
     appendLine("busy-line-owner", ownerLabel);
     appendLine("busy-line-title", titleLabel);
-    appendLine("busy-line-time", timeRange);
+    configureCalendarBlockTimeLine(appendLine("busy-line-time", timeRange));
   }
 
   block.addEventListener("click", (event) => {
@@ -3745,25 +3749,32 @@ function createEventBlock(item, dayIndex, dayDate) {
   const compactMeta = [timeRange, item.location].filter(Boolean).join(" · ");
 
   const appendLine = (className, text) => {
-    if (!text) return;
+    if (!text) return null;
     const line = document.createElement("div");
     line.className = `event-line ${className}`;
     line.textContent = text;
     block.appendChild(line);
+    return line;
   };
 
   if (durationClass === "event-15") {
-    appendLine("event-line-compact", fifteenLine);
+    configureCalendarBlockTimeLine(
+      appendLine("event-line-compact", fifteenLine),
+      { prefix: titleText, suffix: item.location || "" }
+    );
   } else if (durationClass === "event-30") {
     appendLine("event-line-title", titleText);
-    appendLine("event-line-meta", compactMeta);
+    configureCalendarBlockTimeLine(
+      appendLine("event-line-meta", compactMeta),
+      { suffix: item.location || "" }
+    );
   } else if (durationClass === "event-45") {
     appendLine("event-line-title", titleText);
-    appendLine("event-line-meta", timeRange);
+    configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
     appendLine("event-line-location", item.location || "");
   } else {
     appendLine("event-line-title", titleText);
-    appendLine("event-line-meta", timeRange);
+    configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
     appendLine("event-line-location", item.location || "");
   }
 
@@ -4036,6 +4047,55 @@ function resetEventResizeVisual(
   if (!block) return;
   if (!Number.isFinite(startMinute) || !Number.isFinite(durationMinute)) return;
   applyEventResizePreview(block, startMinute, durationMinute);
+  restoreCalendarBlockTimeText(block);
+}
+
+function configureCalendarBlockTimeLine(line, { prefix = "", suffix = "" } = {}) {
+  if (!line) return null;
+  line.dataset.eventTimeLine = "true";
+  line.dataset.eventTimePrefix = String(prefix || "");
+  line.dataset.eventTimeSuffix = String(suffix || "");
+  line.dataset.eventTimeOriginal = line.textContent || "";
+  line.setAttribute("aria-live", "polite");
+  line.setAttribute("aria-atomic", "true");
+  return line;
+}
+
+function updateCalendarBlockTimeText(block, startMinute, durationMinute) {
+  const line = block?.querySelector?.('[data-event-time-line="true"]');
+  if (!line) return "";
+
+  const safeStartMinute = clampEventMinutes(
+    snapEventMinutes(startMinute, eventResizeSnapMinutes),
+    0,
+    24 * 60 - eventResizeMinMinutes
+  );
+  const safeDurationMinute = clampEventMinutes(
+    snapEventMinutes(durationMinute, eventResizeSnapMinutes),
+    eventResizeMinMinutes,
+    24 * 60 - safeStartMinute
+  );
+  const startHour = calendarStartHour + safeStartMinute / 60;
+  const endHour = calendarStartHour + (safeStartMinute + safeDurationMinute) / 60;
+  const timeRange = formatEventRange(startHour, endHour);
+  const parts = [
+    line.dataset.eventTimePrefix || "",
+    timeRange,
+    line.dataset.eventTimeSuffix || ""
+  ].filter(Boolean);
+
+  line.textContent = parts.join(" \u00b7 ");
+  block.dataset.previewTimeRange = timeRange;
+  return timeRange;
+}
+
+function restoreCalendarBlockTimeText(block) {
+  const line = block?.querySelector?.('[data-event-time-line="true"]');
+  if (!line) return;
+  if (line.hasAttribute("data-event-time-original")) {
+    line.textContent = line.dataset.eventTimeOriginal || "";
+  }
+  delete block.dataset.previewTimeRange;
 }
 
 function applyEventResizePreview(block, startMinute, durationMinute) {
@@ -4067,6 +4127,7 @@ function applyEventResizePreview(block, startMinute, durationMinute) {
     "event-tiny"
   );
   block.classList.add(sizeClass, durationClass);
+  updateCalendarBlockTimeText(block, snappedStart, snappedDuration);
   return { startMinute: snappedStart, durationMinute: snappedDuration };
 }
 
@@ -4213,7 +4274,8 @@ function buildEventResizePayload(eventEntry, startMinute, durationMinute, dayKey
 
 function resetEventMoveVisual(block) {
   if (!block) return;
-  block.querySelectorAll(".event-move-time, .event-move-snap-feedback").forEach((node) => node.remove());
+  block.querySelectorAll(".event-move-snap-feedback").forEach((node) => node.remove());
+  restoreCalendarBlockTimeText(block);
   block.classList.remove("is-moving", "is-move-committing");
   block.style.removeProperty("--event-move-x");
   block.style.removeProperty("--event-move-y");
@@ -4221,22 +4283,14 @@ function resetEventMoveVisual(block) {
 
 function settleEventMoveVisual(block) {
   if (!block) return;
-  block.querySelectorAll(".event-move-time, .event-move-snap-feedback").forEach((node) => node.remove());
+  block.querySelectorAll(".event-move-snap-feedback").forEach((node) => node.remove());
   block.classList.remove("is-moving");
   block.classList.add("is-move-committing");
 }
 
 function ensureEventMoveFeedback(state) {
   if (!state?.block) return {};
-  let timeLabel = state.timeLabel;
-  if (!timeLabel?.isConnected) {
-    timeLabel = document.createElement("span");
-    timeLabel.className = "event-move-time";
-    timeLabel.setAttribute("aria-live", "polite");
-    timeLabel.setAttribute("aria-atomic", "true");
-    state.block.appendChild(timeLabel);
-    state.timeLabel = timeLabel;
-  }
+  const timeLine = state.block.querySelector('[data-event-time-line="true"]');
 
   let snapFeedback = state.snapFeedback;
   if (!snapFeedback?.isConnected) {
@@ -4246,17 +4300,17 @@ function ensureEventMoveFeedback(state) {
     state.block.appendChild(snapFeedback);
     state.snapFeedback = snapFeedback;
   }
-  return { timeLabel, snapFeedback };
+  return { timeLine, snapFeedback };
 }
 
 function triggerEventMoveSnapFeedback(state) {
   if (!state || reducedMotionQuery.matches) return;
-  const { timeLabel, snapFeedback } = ensureEventMoveFeedback(state);
+  const { timeLine, snapFeedback } = ensureEventMoveFeedback(state);
   state.timeAnimation?.cancel?.();
   state.snapAnimation?.cancel?.();
-  state.timeAnimation = timeLabel?.animate?.([
-    { opacity: 0.72, transform: "translate3d(-50%, 0, 0) scale(0.94)" },
-    { opacity: 1, transform: "translate3d(-50%, 0, 0) scale(1)" }
+  state.timeAnimation = timeLine?.animate?.([
+    { opacity: 0.76, transform: "translate3d(0, 0, 0) scale(0.96)" },
+    { opacity: 1, transform: "translate3d(0, 0, 0) scale(1)" }
   ], {
     duration: eventMoveSnapFeedbackMs,
     easing: "cubic-bezier(0.32, 0.72, 0, 1)",
@@ -4274,14 +4328,8 @@ function triggerEventMoveSnapFeedback(state) {
 
 function updateEventMoveFeedback(state, dayIndex, startMinute) {
   if (!state?.block) return;
-  const { timeLabel } = ensureEventMoveFeedback(state);
-  const previewDate = dateFromDayIndex(dayIndex);
-  const dayLabel = new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(previewDate);
-  const startHour = calendarStartHour + startMinute / 60;
-  const endHour = calendarStartHour + (startMinute + state.baseDurationMinute) / 60;
-  if (timeLabel) {
-    timeLabel.textContent = `${dayLabel} · ${formatEventRange(startHour, endHour)}`;
-  }
+  ensureEventMoveFeedback(state);
+  updateCalendarBlockTimeText(state.block, startMinute, state.baseDurationMinute);
 
   const snapChanged = state.lastSnapStartMinute !== startMinute;
   if (state.hasDisplayedMoveTime && snapChanged) {
@@ -4747,7 +4795,10 @@ async function handleEventResizeEnd(event) {
   try {
     if (!dayEvent || !block) return;
 
-    if (finalStartMinute === state.baseStartMinute && finalDurationMinute === state.baseDurationMinute) return;
+    if (finalStartMinute === state.baseStartMinute && finalDurationMinute === state.baseDurationMinute) {
+      resetEventResizeVisual(block, state.baseStartMinute, state.baseDurationMinute);
+      return;
+    }
 
     const payload = buildEventResizePayload(dayEvent, finalStartMinute, finalDurationMinute, state.dayKey);
     const data = await fetchJson(`/api/rooms/${currentRoom.code}/events/${state.eventId}`, {

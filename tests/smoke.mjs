@@ -719,8 +719,38 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function updateEventMoveFeedback\(state, dayIndex, startMinute\)[\s\S]*?formatEventRange\(startHour, endHour\)[\s\S]*?lastSnapStartMinute !== startMinute[\s\S]*?triggerEventMoveSnapFeedback\(state\)/,
-    "A moving event must show its snapped live time and tick once per 15-minute boundary"
+    /function updateCalendarBlockTimeText\(block, startMinute, durationMinute\)[\s\S]*?\[data-event-time-line="true"\][\s\S]*?formatEventRange\(startHour, endHour\)[\s\S]*?line\.textContent = parts\.join\(" \\u00b7 "\)/,
+    "The existing time line inside each event block must render its snapped live range"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function updateEventMoveFeedback\(state, dayIndex, startMinute\)[\s\S]*?updateCalendarBlockTimeText\(state\.block, startMinute, state\.baseDurationMinute\)[\s\S]*?lastSnapStartMinute !== startMinute[\s\S]*?triggerEventMoveSnapFeedback\(state\)/,
+    "A moving event must update its in-card time and tick once per 15-minute boundary"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function createSingleBusyCard\(segment, dayIndex\)[\s\S]*?configureCalendarBlockTimeLine\([\s\S]*?busy-line-compact[\s\S]*?configureCalendarBlockTimeLine\(appendLine\("busy-line-time"[\s\S]*?function createBusyStack/,
+    "Google event blocks must tag their existing compact and full time lines for live updates"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /configureCalendarBlockTimeLine\([\s\S]*?event-line-compact[\s\S]*?configureCalendarBlockTimeLine\([\s\S]*?event-line-meta[\s\S]*?function configureFreeGlowBlock/,
+    "CommonGround event blocks must tag their existing compact and full time lines for live updates"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function applyEventResizePreview\(block, startMinute, durationMinute\)[\s\S]*?updateCalendarBlockTimeText\(block, snappedStart, snappedDuration\)/,
+    "Top and bottom resizing must update the same in-card time range"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function resetEventMoveVisual\(block\)[\s\S]*?restoreCalendarBlockTimeText\(block\)/,
+    "Cancelled or no-op event movement must restore the card's original time text"
+  );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /event-move-time/,
+    "Event dragging must not create a separate floating time popup"
   );
   assert.match(
     eventComposerScript.text,
@@ -955,10 +985,15 @@ try {
     /\.event-card\.is-move-committing,\s*\.busy-card\.is-move-committing\s*\{[^}]*cursor:\s*default[^}]*pointer-events:\s*none[^}]*opacity:\s*1[^}]*transform:\s*translate3d\([^}]*transition:\s*none[^}]*will-change:\s*transform/s,
     "A released event must immediately leave the grabbing state while preserving its dropped position"
   );
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /\.event-move-time/,
+    "The stylesheet must not reintroduce a separate floating drag-time popup"
+  );
   assert.match(
     eventComposerStyles.text,
-    /\.event-move-time\s*\{[^}]*bottom:\s*calc\(100% \+ 7px\)[^}]*border:[^}]*var\(--brand\)[^}]*white-space:\s*nowrap[^}]*transform:\s*translate3d\(-50%, 0, 0\) scale\(1\)[^}]*will-change:\s*transform, opacity/s,
-    "The drag-time badge must remain legible and hardware accelerated above every event size"
+    /\.event-card\.is-moving \[data-event-time-line="true"\],\s*\.busy-card\.is-moving \[data-event-time-line="true"\],\s*\.event-card\.is-resizing \[data-event-time-line="true"\]\s*\{[^}]*transform-origin:\s*left center[^}]*will-change:\s*transform, opacity/s,
+    "The in-card live time line must receive hardware-accelerated snap feedback"
   );
   assert.match(
     eventComposerStyles.text,
