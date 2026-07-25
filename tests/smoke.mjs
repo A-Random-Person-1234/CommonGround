@@ -250,7 +250,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-calendar-popout-r2"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-composer-clean-header"/);
   assert.match(home.text, /src="\/app\.js\?v=20260725-command-composer"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260725-command-composer"/);
@@ -303,6 +303,7 @@ try {
   assert.match(eventModalMarkup, /<form class="modal-card event-composer" id="eventForm">/);
   assert.doesNotMatch(eventModalMarkup, /<form[^>]*id="eventForm"[^>]*method="dialog"/);
   assert.match(eventModalMarkup, /<h2 class="sr-only" id="eventComposerTitle">Create a group event<\/h2>/);
+  assert.doesNotMatch(eventModalMarkup, /composer-handle/, "The event composer must not show the decorative menu lines");
   assert.match(eventModalMarkup, /<section class="composer-section composer-schedule-section" aria-label="Date and time">/);
   assert.match(eventModalMarkup, /<section class="composer-section composer-meta-section" aria-label="Event options">/);
   assert.match(eventModalMarkup, /id="eventStartInput" type="hidden"/);
