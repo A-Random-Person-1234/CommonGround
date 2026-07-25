@@ -197,6 +197,8 @@ let dragPreviewFrame = 0;
 let eventResizeFrame = 0;
 let eventMoveFrame = 0;
 let suppressCalendarClickUntil = 0;
+let suppressOutsideSurfaceClick = false;
+let suppressOutsideSurfaceTimer = null;
 let participantsDrawerGesture = null;
 const pendingEventMoveKeys = new Set();
 
@@ -3444,6 +3446,84 @@ function closeExpandedBusyStacks(exception = null) {
   }
 }
 
+function panelIsVisible(panel) {
+  return Boolean(panel && !panel.classList.contains("hidden"));
+}
+
+function suppressFollowupOutsideSurfaceClick() {
+  suppressOutsideSurfaceClick = true;
+  if (suppressOutsideSurfaceTimer) window.clearTimeout(suppressOutsideSurfaceTimer);
+  suppressOutsideSurfaceTimer = window.setTimeout(() => {
+    suppressOutsideSurfaceClick = false;
+    suppressOutsideSurfaceTimer = null;
+  }, 600);
+}
+
+function dismissOutsideFloatingSurfaces(target) {
+  let dismissed = false;
+
+  if (
+    emojiPickerState.open &&
+    !emojiPickerPopover?.contains(target) &&
+    !emojiPickerState.trigger?.contains(target)
+  ) {
+    closeEmojiPicker({ restoreFocus: false });
+    dismissed = true;
+  }
+
+  if (panelIsVisible(hostPopover) && !hostPopover.contains(target)) {
+    setPanelVisibility(hostPopover, false);
+    dismissed = true;
+  }
+
+  const expandedStacks = [...document.querySelectorAll(".busy-stack.expanded")];
+  if (expandedStacks.length && !expandedStacks.some((stack) => stack.contains(target))) {
+    closeExpandedBusyStacks();
+    dismissed = true;
+  }
+
+  for (const menu of document.querySelectorAll(".color-picker-menu[open]")) {
+    if (menu.contains(target)) continue;
+    menu.open = false;
+    dismissed = true;
+  }
+
+  if (calendarViewMenu?.open && !calendarViewMenu.contains(target)) {
+    calendarViewMenu.open = false;
+    dismissed = true;
+  }
+
+  for (const dropdown of document.querySelectorAll(".invite-dropdown[open]")) {
+    if (dropdown.contains(target)) continue;
+    dropdown.open = false;
+    dismissed = true;
+  }
+
+  if (panelIsVisible(detailPanel) && !detailPanel.contains(target)) {
+    clearDetailPanel();
+    dismissed = true;
+  }
+
+  return dismissed;
+}
+
+function handleOutsideFloatingSurfacePointer(event) {
+  if (event.button !== undefined && event.button !== 0) return;
+  if (!dismissOutsideFloatingSurfaces(event.target)) return;
+  suppressFollowupOutsideSurfaceClick();
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
+
+function handleOutsideFloatingSurfaceClick(event) {
+  if (!suppressOutsideSurfaceClick) return;
+  suppressOutsideSurfaceClick = false;
+  if (suppressOutsideSurfaceTimer) window.clearTimeout(suppressOutsideSurfaceTimer);
+  suppressOutsideSurfaceTimer = null;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}
+
 function createSingleBusyCard(segment, dayIndex) {
   const participant = segment.participants[0];
   const isOwnBlock = participant.participantId === currentParticipant?.id;
@@ -6576,6 +6656,8 @@ function enableDialogBackdropClose(dialog, closeHandler) {
   if (!dialog) return;
   dialog.addEventListener("click", (event) => {
     if (event.target !== dialog) return;
+    event.preventDefault();
+    event.stopPropagation();
     closeHandler();
   });
 }
@@ -7068,5 +7150,7 @@ eventModal.addEventListener("cancel", (event) => {
 });
 
 updateFullscreenControl();
+document.addEventListener("pointerdown", handleOutsideFloatingSurfacePointer, true);
+document.addEventListener("click", handleOutsideFloatingSurfaceClick, true);
 initializeEmojiPickers();
 boot();
