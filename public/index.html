@@ -24,7 +24,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20260724-appicon-new" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20260724-appicon-new" />
     <link rel="manifest" href="/site.webmanifest?v=20260724-appicon-new" />
-    <link rel="stylesheet" href="/styles.css?v=20260725-minimal-composer" />
+    <link rel="stylesheet" href="/styles.css?v=20260725-calendar-popout" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -267,452 +267,4 @@
         <section class="host-panel" id="hostPanel">
           <div class="host-panel-head">
             <div>
-              <p class="panel-label">Settings</p>
-            </div>
-          </div>
-
-          <section class="settings-card" id="syncSettingsCard">
-            <div>
-              <p class="panel-label">Sync calendar</p>
-              <p class="muted" id="connectWidgetText">Connect calendar to sync availability.</p>
-            </div>
-            <div class="settings-card-actions">
-              <button class="primary button-with-icon" id="connectGoogleButton" type="button">
-                <span class="ui-icon ui-icon-calendar-sync" aria-hidden="true"></span>
-                <span>Connect calendar</span>
-              </button>
-              <button class="secondary button-with-icon hidden" id="settingsReconnectButton" type="button">
-                <span class="ui-icon ui-icon-rotate" aria-hidden="true"></span>
-                <span>Reconnect</span>
-              </button>
-            </div>
-          </section>
-
-          <label class="theme-toggle" title="Toggle light and dark mode">
-            <input type="checkbox" id="themeToggle" />
-            <span>Light</span>
-            <strong>Dark</strong>
-          </label>
-
-          <label class="host-toggle-row calendar-event-sync-card" for="googleEventSyncToggle">
-            <div>
-                <strong>Sync CommonGround events to Google Calendar</strong>
-              <p class="muted" id="googleEventSyncStatus">Connect calendar to activate event sync.</p>
-            </div>
-            <span class="mini-toggle">
-              <input id="googleEventSyncToggle" type="checkbox" checked />
-              <span class="mini-toggle-ui"></span>
-            </span>
-          </label>
-
-          <div class="host-settings" id="hostSettings">
-            <div class="host-row">
-              <label class="field-label" for="renameRoomInput">
-                <span>Room name</span>
-                <input id="renameRoomInput" type="text" placeholder="Rename room" autocomplete="off" maxlength="80" />
-              </label>
-              <div class="field-label emoji-field">
-                <span id="renameRoomEmojiLabel">Emoji</span>
-                <input id="renameRoomEmojiInput" type="hidden" value="&#128197;" />
-                <button class="emoji-trigger" id="renameRoomEmojiTrigger" type="button" data-emoji-target="renameRoomEmojiInput" aria-haspopup="dialog" aria-controls="emojiPickerPopover" aria-expanded="false" aria-label="Choose room emoji, current calendar">
-                  <span class="emoji-trigger-value" id="renameRoomEmojiValue" aria-hidden="true">&#128197;</span>
-                  <span class="sr-only">Choose room emoji</span>
-                </button>
-              </div>
-            </div>
-            <div class="host-row">
-              <label class="field-label" for="customRoomCodeInput">
-                <span>Custom room code</span>
-                <input id="customRoomCodeInput" type="text" placeholder="ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" />
-              </label>
-            </div>
-            <label class="host-toggle-row" for="roomLockToggle">
-              <div>
-                <span class="setting-label-with-icon">
-                  <span class="ui-icon ui-icon-lock-open" id="roomLockIcon" aria-hidden="true"></span>
-                  <strong>Lock room</strong>
-                </span>
-                <p class="muted">New people must send a join request for host approval.</p>
-              </div>
-              <span class="mini-toggle">
-                <input id="roomLockToggle" type="checkbox" />
-                <span class="mini-toggle-ui"></span>
-              </span>
-            </label>
-            <div class="request-queue" id="joinRequestQueue">
-              <div class="request-queue-head">
-                <strong>Join requests</strong>
-                <span class="muted" id="joinRequestCount">0 pending</span>
-              </div>
-              <div class="request-list" id="joinRequestList">
-                <p class="muted">No pending requests.</p>
-              </div>
-            </div>
-            <div class="host-actions">
-              <button class="secondary button-with-icon" id="refreshCodeButton" type="button">
-                <span class="ui-icon ui-icon-rotate" aria-hidden="true"></span>
-                <span>Refresh room code</span>
-              </button>
-              <button class="danger button-with-icon" id="deleteRoomButton" type="button">
-                <span class="ui-icon ui-icon-trash" aria-hidden="true"></span>
-                <span>Delete room</span>
-              </button>
-            </div>
-          </div>
-        </section>
-      </section>
-
-      <section class="room-content">
-        <main class="calendar-stage">
-          <div class="calendar-wrap">
-            <div class="calendar-toolbar">
-              <div class="inline-status" id="calendarStatus">Loading roomâ€¦</div>
-            </div>
-            <div class="empty-room hidden" id="emptyRoomState">
-              <p>Invite people</p>
-              <div class="empty-room-actions">
-                <span class="room-code large" id="emptyRoomCode">------</span>
-                <button class="secondary button-with-icon" id="copyInviteButtonEmpty" type="button">
-                  <span class="ui-icon ui-icon-link" aria-hidden="true"></span>
-                  <span>Copy invite message</span>
-                </button>
-                <button class="icon-button empty-room-dismiss" id="dismissInviteButton" type="button" aria-label="Dismiss invite prompt">
-                  <span class="ui-icon ui-icon-circle-x" aria-hidden="true"></span>
-                </button>
-              </div>
-            </div>
-            <!--
-              /* TODO: Commonground Free Block Rendering - Hidden for current demo */
-              <button class="free-block free-glow-block" data-day-index="0" data-start-hour="9" data-end-hour="10">
-                <strong>Free</strong>
-                <span>9 â€“ 10am</span>
-              </button>
-            -->
-            <div class="calendar-grid" id="calendarGrid"></div>
-          </div>
-        </main>
-
-        <aside class="detail-panel hidden" id="detailPanel" aria-labelledby="detailTitle">
-          <div class="panel-head">
-            <div>
-              <p class="panel-label" id="detailLabel">Event details</p>
-              <h3 id="detailTitle">Select an event</h3>
-            </div>
-            <button class="icon-button modal-close-button" id="closeDetailButton" type="button" aria-label="Close event details">
-              <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
-            </button>
-          </div>
-
-          <div class="detail-empty" id="detailEmpty">
-            Tap a group event or busy stack to inspect it in more detail.
-          </div>
-
-          <div class="detail-body hidden" id="eventDetail">
-            <form class="event-panel-form" id="eventPanelForm">
-              <label class="event-panel-title-field">
-                <span class="sr-only">Event title</span>
-                <input id="detailTitleInput" type="text" placeholder="No title" autocomplete="off" />
-              </label>
-
-              <div class="event-panel-time-grid">
-                <label>
-                  <span>Date</span>
-                  <input id="detailDateInput" type="date" required />
-                </label>
-                <label>
-                  <span>Start</span>
-                  <input id="detailStartInput" type="time" step="900" required />
-                </label>
-                <label>
-                  <span>End</span>
-                  <input id="detailEndInput" type="time" step="900" required />
-                </label>
-              </div>
-
-              <label class="event-panel-field">
-                <span>Location</span>
-                <input id="detailLocationInput" type="text" placeholder="Add location" autocomplete="off" />
-              </label>
-
-              <label class="event-panel-field">
-                <span>Description</span>
-                <textarea id="detailDescriptionInput" rows="3" placeholder="Add description"></textarea>
-              </label>
-
-              <section class="event-panel-section">
-                <div class="event-panel-section-head">
-                  <strong>Invitees</strong>
-                  <small id="detailInviteeFeedback"></small>
-                </div>
-                <div class="event-panel-invitees" id="detailInviteeList"></div>
-              </section>
-
-              <label class="event-panel-sync-row" for="detailGoogleSyncInput">
-                <div>
-                  <strong>Sync to Google Calendar</strong>
-                  <small id="detailGoogleSyncStatus">Adds this event to your Google Calendar if enabled.</small>
-                </div>
-                <span class="mini-toggle">
-                  <input id="detailGoogleSyncInput" type="checkbox" />
-                  <span class="mini-toggle-ui"></span>
-                </span>
-              </label>
-
-              <div class="event-panel-save-row">
-                <p class="detail-time" id="detailTime"></p>
-                <button class="primary" id="saveEventChangesButton" type="submit">Save changes</button>
-              </div>
-            </form>
-
-            <div class="vote-row">
-              <button class="vote-button" data-response="yes" type="button">Yes</button>
-              <button class="vote-button" data-response="maybe" type="button">Maybe</button>
-              <button class="vote-button" data-response="no" type="button">No</button>
-            </div>
-
-            <div class="response-summary" id="responseSummary"></div>
-            <div class="invitee-summary" id="inviteeSummary"></div>
-            <div class="response-groups" id="responseGroups"></div>
-
-            <div class="comment-section">
-              <div class="comment-list" id="commentList"></div>
-              <form class="comment-form" id="commentForm">
-                <textarea id="commentInput" rows="3" maxlength="500" placeholder="Add a comment"></textarea>
-                <button class="secondary strong" type="submit">Comment</button>
-              </form>
-            </div>
-
-            <div class="detail-actions">
-              <button class="secondary button-with-icon" id="downloadIcsButton" type="button">
-                <span class="ui-icon ui-icon-calendar-sync" aria-hidden="true"></span>
-                <span>Add to calendar</span>
-              </button>
-              <button class="secondary hidden" id="editEventButton" type="button">Edit</button>
-              <button class="danger button-with-icon" id="deleteEventButton" type="button">
-                <span class="ui-icon ui-icon-trash" aria-hidden="true"></span>
-                <span>Delete</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="detail-body hidden" id="busyDetail">
-            <div class="busy-detail-list" id="busyDetailList"></div>
-          </div>
-        </aside>
-      </section>
-
-    </section>
-
-    <dialog class="command-centre-dialog" id="commandCentreDialog" aria-labelledby="commandCentreTitle" aria-describedby="commandCentreDescription">
-      <form class="command-centre-panel" id="commandCentreForm" novalidate>
-        <h2 class="sr-only" id="commandCentreTitle">Ask CommonGround</h2>
-        <p class="sr-only" id="commandCentreDescription">Create events, find shared free time, move events, or navigate the calendar.</p>
-
-        <header class="command-centre-search-row">
-          <svg class="command-centre-search-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path>
-          </svg>
-          <label class="sr-only" for="commandCentreInput">Create an event or find a time</label>
-          <div class="command-centre-input-shell">
-            <span class="command-centre-completion" id="commandCentreCompletion" aria-hidden="true">
-              <span class="command-centre-completion-prefix" id="commandCentreCompletionPrefix"></span><span class="command-centre-completion-suffix" id="commandCentreCompletionSuffix"></span>
-            </span>
-            <input id="commandCentreInput" type="search" maxlength="500" placeholder="Create an event or find a timeâ€¦" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-autocomplete="inline" aria-controls="commandCentreBody" aria-describedby="commandCentreDescription commandCentreCompletionHelp" />
-          </div>
-          <button class="icon-button command-centre-close" id="commandCentreCloseButton" type="button" aria-label="Close Command Centre">
-            <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
-          </button>
-        </header>
-
-        <p class="sr-only" id="commandCentreCompletionHelp">When a grey completion appears, press Tab or Right Arrow to accept it. Press Enter to run the selected command, use the Up and Down Arrow keys to move through results, or press Escape to close.</p>
-        <p class="sr-only" id="commandCentreStatus" role="status" aria-live="polite" aria-atomic="true"></p>
-
-        <section class="command-centre-body" id="commandCentreBody" aria-live="off">
-          <div class="command-centre-intro">
-            <p>Tell CommonGround what you want to do.</p>
-            <div class="command-example-list" aria-label="Example commands">
-              <button type="button" data-command-example="Find an hour for everyone next week">Find a time for everyone</button>
-              <button type="button" data-command-example="Create an event tomorrow at 1">Create an event</button>
-              <button type="button" data-command-example="Open August">Navigate the calendar</button>
-            </div>
-          </div>
-        </section>
-
-      </form>
-    </dialog>
-
-    <dialog class="modal" id="eventModal" aria-labelledby="eventComposerTitle">
-      <form class="modal-card event-composer" id="eventForm">
-        <h2 class="sr-only" id="eventComposerTitle">Create a group event</h2>
-        <header class="composer-heading-section">
-          <div class="event-composer-top">
-            <span class="composer-handle" aria-hidden="true"></span>
-            <button class="icon-button composer-close" id="cancelEventButton" type="button" aria-label="Close">
-              <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
-            </button>
-          </div>
-
-          <input class="composer-title" id="eventTitleInput" type="text" placeholder="Add title" aria-label="Event title" autocomplete="off" autofocus />
-        </header>
-
-        <section class="composer-section composer-schedule-section" aria-label="Date and time">
-          <span class="composer-row-icon ui-icon ui-icon-clock" aria-hidden="true"></span>
-          <div class="composer-time-grid">
-            <label class="composer-date-field">
-              <span class="sr-only">Date</span>
-              <input id="eventDateInput" type="date" required />
-            </label>
-            <label class="composer-end-date-field">
-              <span class="sr-only">End date</span>
-              <input id="eventEndDateInput" type="date" />
-            </label>
-            <div class="time-picker-field" id="eventStartTimeField" data-time-picker="start">
-              <label class="sr-only" for="eventStartTimeInput">Start time</label>
-              <input id="eventStartInput" type="hidden" />
-              <input
-                class="time-picker-input"
-                id="eventStartTimeInput"
-                type="text"
-                inputmode="numeric"
-                autocomplete="off"
-                spellcheck="false"
-                required
-                role="combobox"
-                aria-autocomplete="list"
-                aria-haspopup="listbox"
-                aria-expanded="false"
-                aria-controls="eventStartTimeListbox"
-              />
-              <div class="time-picker-dropdown" id="eventStartTimeDropdown" hidden>
-                <div class="time-picker-list" id="eventStartTimeListbox" role="listbox" aria-label="Start time options"></div>
-              </div>
-            </div>
-            <span class="time-divider">-</span>
-            <div class="time-picker-field" id="eventEndTimeField" data-time-picker="end">
-              <label class="sr-only" for="eventEndTimeInput">End time</label>
-              <input id="eventEndInput" type="hidden" />
-              <input
-                class="time-picker-input"
-                id="eventEndTimeInput"
-                type="text"
-                inputmode="numeric"
-                autocomplete="off"
-                spellcheck="false"
-                required
-                role="combobox"
-                aria-autocomplete="list"
-                aria-haspopup="listbox"
-                aria-expanded="false"
-                aria-controls="eventEndTimeListbox"
-              />
-              <div class="time-picker-dropdown time-picker-dropdown-end" id="eventEndTimeDropdown" hidden>
-                <div class="time-picker-list" id="eventEndTimeListbox" role="listbox" aria-label="End time options"></div>
-              </div>
-            </div>
-            <label class="all-day-toggle">
-              <input id="eventAllDayInput" type="checkbox" />
-              <span>All day</span>
-            </label>
-          </div>
-        </section>
-
-        <section class="composer-section composer-meta-section" aria-label="Event options">
-          <div class="composer-field-row composer-invite-row">
-            <span class="composer-row-icon ui-icon ui-icon-user-plus" aria-hidden="true"></span>
-            <details class="invite-dropdown">
-              <summary>
-                <span>Invite others</span>
-                <small id="inviteeCountText">Only you</small>
-              </summary>
-              <div class="invite-dropdown-panel">
-                <div class="invitee-picker" id="inviteePicker"></div>
-              </div>
-            </details>
-          </div>
-
-          <div class="composer-field-row composer-sync-row">
-            <span class="composer-row-icon ui-icon ui-icon-calendar-sync" aria-hidden="true"></span>
-            <div class="composer-sync-toggle" id="eventGoogleSyncRow">
-              <div class="composer-sync-copy">
-                <strong>Sync to Google Calendar</strong>
-                <small id="eventGoogleSyncStatus">Connect Google Calendar first.</small>
-              </div>
-              <label class="mini-toggle" for="eventGoogleSyncInput" aria-label="Sync this event to Google Calendar">
-                <input id="eventGoogleSyncInput" type="checkbox" />
-                <span class="mini-toggle-ui"></span>
-                <span class="oauth-spinner" aria-hidden="true"></span>
-              </label>
-            </div>
-          </div>
-
-          <label class="composer-field-row composer-input-row" for="eventLocationInput">
-            <span class="composer-row-icon ui-icon ui-icon-map-pin" aria-hidden="true"></span>
-            <input id="eventLocationInput" type="text" placeholder="Add location" aria-label="Location" autocomplete="off" />
-          </label>
-
-          <label class="composer-field-row composer-input-row composer-description-row" for="eventDescriptionInput">
-            <span class="composer-row-icon icon-lines" aria-hidden="true"></span>
-            <textarea id="eventDescriptionInput" rows="1" placeholder="Add description" aria-label="Description"></textarea>
-          </label>
-        </section>
-
-        <p class="composer-feedback" id="eventFormFeedback" role="status" aria-live="polite"></p>
-
-        <div class="modal-actions">
-          <button class="secondary" id="cancelEventSecondary" type="button">Cancel</button>
-          <button class="primary" id="saveEventButton" type="submit">Create event</button>
-        </div>
-      </form>
-    </dialog>
-
-    <dialog class="modal" id="createRoomModal" aria-labelledby="createRoomModalTitle">
-      <form class="modal-card compact-room-modal" id="createRoomModalForm" method="dialog">
-        <div class="panel-head">
-          <div>
-            <p class="panel-label">New room</p>
-            <h3 id="createRoomModalTitle">Create another room</h3>
-          </div>
-          <button class="icon-button modal-close-button" id="cancelCreateRoomModalButton" type="button" aria-label="Close new room dialog">
-            <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
-          </button>
-        </div>
-
-        <div class="modal-grid">
-          <label class="field-label" for="quickRoomNameInput">
-            <span>Room name</span>
-            <input id="quickRoomNameInput" type="text" value="Untitled room" placeholder="Untitled room" autocomplete="off" maxlength="80" />
-          </label>
-          <div class="field-label emoji-field">
-            <span id="quickRoomEmojiLabel">Emoji</span>
-            <input id="quickRoomEmojiInput" type="hidden" value="&#128197;" />
-            <button class="emoji-trigger" id="quickRoomEmojiTrigger" type="button" data-emoji-target="quickRoomEmojiInput" aria-haspopup="dialog" aria-controls="emojiPickerPopover" aria-expanded="false" aria-label="Choose room emoji, current calendar">
-              <span class="emoji-trigger-value" id="quickRoomEmojiValue" aria-hidden="true">&#128197;</span>
-              <span class="sr-only">Choose room emoji</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="modal-actions">
-          <button class="secondary" id="cancelCreateRoomModalSecondary" type="button">Cancel</button>
-          <button class="primary button-with-icon" type="submit">
-            <span class="ui-icon ui-icon-plus" aria-hidden="true"></span>
-            <span>Create room</span>
-          </button>
-        </div>
-      </form>
-    </dialog>
-
-    <div class="emoji-picker-popover" id="emojiPickerPopover" popover="manual" role="dialog" aria-labelledby="emojiPickerTitle">
-      <h2 class="sr-only" id="emojiPickerTitle">Choose room emoji</h2>
-      <div class="emoji-picker-searchbar">
-        <input id="emojiPickerSearch" type="search" placeholder="Search emoji..." aria-label="Search emoji" aria-controls="emojiPickerGrid" aria-describedby="emojiPickerStatus" autocomplete="off" spellcheck="false" />
-      </div>
-      <div class="emoji-picker-grid" id="emojiPickerGrid" role="group" aria-label="Emoji results"></div>
-      <p class="sr-only" id="emojiPickerStatus" role="status" aria-live="polite"></p>
-    </div>
-
-    <script src="/app.js?v=20260725-command-composer"></script>
-    <script src="/command-centre-actions.js?v=20260725-flexible-availability"></script>
-    <script src="/command-centre.js?v=20260725-command-composer"></script>
-  </body>
-</html>
+              <p cÛ­´¶‰žËkºwµçyÁÕÐˆÑåÁ”ô‰Ñ•áÐˆÁ±…•¡½±‘•Èô‰‘±½…Ñ¥½¸ˆ…ÕÑ½½µÁ±•Ñ”ô‰½™˜ˆ€¼ø(€€€€€€€€€€€€€€ð½±…‰•°ø((€€€€€€€€€€€€€€ñ±…‰•°±…ÍÌô‰•Ù•¹ÐµÁ…¹•°µ™¥•±ˆø(€€€€€€€€€€€€€€€€ñÍÁ…¸ù•ÍÉ¥ÁÑ¥½¸ð½ÍÁ…¸ø(€€€€€€€€€€€€€€€€ñÑ•áÑ…É•„¥ô‰‘•Ñ…¥±•ÍÉ¥ÁÑ¥½¹%¹ÁÕÐˆÉ½ÝÌôˆÌˆÁ±…•¡½±‘•Èô‰‘‘•ÍÉ¥ÁÑ¥½¸ˆøð½Ñ•áÑ…É•„ø(€€€€€€€€€€€€€€ð½±…‰•°ø((€€€€€€€€€€€€€€ñÍ•Ñ¥½¸±…ÍÌô‰•Ù•¹ÐµÁ…¹•°µÍ•Ñ¥½¸ˆø(€€€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰•Ù•¹ÐµÁ…¹•°µÍ•Ñ¥½¸µ¡•…ˆø(€€€€€€€€€€€€€€€€€€ñÍÑÉ½¹œù%¹Ù¥Ñ••Ìð½ÍÑÉ½¹œø(€€€€€€€€€€€€€€€€€€ñÍµ…±°¥ô‰‘•Ñ…¥±%¹Ù¥Ñ••••‘‰…¬ˆøð½Íµ…±°ø(€€€€€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰•Ù•¹ÐµÁ…¹•°µ¥¹Ù¥Ñ••Ìˆ¥ô‰‘•Ñ…¥±%¹Ù¥Ñ••1¥ÍÐˆøð½‘¥Øø(€€€€€€€€€€€€€€ð½Í•Ñ¥½¸ø((€€€€€€€€€€€€€€ñ±…‰•°±…ÍÌô‰•Ù•¹ÐµÁ…¹•°µÍå¹ŒµÉ½Üˆ™½Èô‰‘•Ñ…¥±½½±•Må¹%¹ÁÕÐˆø(€€€€€€€€€€€€€€€€ñ‘¥Øø(€€€€€€€€€€€€€€€€€€ñÍÑÉ½¹œùMå¹ŒÑ¼½½±”…±•¹‘…Èð½ÍÑÉ½¹œø(€€€€€€€€€€€€€€€€€€ñÍµ…±°¥ô‰‘•Ñ…¥±½½±•Må¹MÑ…ÑÕÌˆù‘‘ÌÑ¡¥Ì•Ù•¹ÐÑ¼å½ÕÈ½½±”…±•¹‘…È¥˜•¹…‰±•¸ð½Íµ…±°ø(€€€€€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰µ¥¹¤µÑ½±”ˆø(€€€€€€€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰‘•Ñ…¥±½½±•Må¹%¹ÁÕÐˆÑåÁ”ô‰¡•­‰½àˆ€¼ø(€€€€€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰µ¥¹¤µÑ½±”µÕ¤ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€€€€€ð½ÍÁ…¸ø(€€€€€€€€€€€€€€ð½±…‰•°ø((€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰•Ù•¹ÐµÁ…¹•°µÍ…Ù”µÉ½Üˆø(€€€€€€€€€€€€€€€€ñÀ±…ÍÌô‰‘•Ñ…¥°µÑ¥µ”ˆ¥ô‰‘•Ñ…¥±Q¥µ”ˆøð½Àø(€€€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰ÁÉ¥µ…Éäˆ¥ô‰Í…Ù•Ù•¹Ñ¡…¹•Í	ÕÑÑ½¸ˆÑåÁ”ô‰ÍÕ‰µ¥ÐˆùM…Ù”¡…¹•Ìð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€€€ð½™½É´ø((€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰Ù½Ñ”µÉ½Üˆø(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰Ù½Ñ”µ‰ÕÑÑ½¸ˆ‘…Ñ„µÉ•ÍÁ½¹Í”ô‰å•ÌˆÑåÁ”ô‰‰ÕÑÑ½¸ˆùe•Ìð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰Ù½Ñ”µ‰ÕÑÑ½¸ˆ‘…Ñ„µÉ•ÍÁ½¹Í”ô‰µ…å‰”ˆÑåÁ”ô‰‰ÕÑÑ½¸ˆù5…å‰”ð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰Ù½Ñ”µ‰ÕÑÑ½¸ˆ‘…Ñ„µÉ•ÍÁ½¹Í”ô‰¹¼ˆÑåÁ”ô‰‰ÕÑÑ½¸ˆù9¼ð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€ð½‘¥Øø((€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰É•ÍÁ½¹Í”µÍÕµµ…Éäˆ¥ô‰É•ÍÁ½¹Í•MÕµµ…Éäˆøð½‘¥Øø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰¥¹Ù¥Ñ•”µÍÕµµ…Éäˆ¥ô‰¥¹Ù¥Ñ••MÕµµ…Éäˆøð½‘¥Øø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰É•ÍÁ½¹Í”µÉ½ÕÁÌˆ¥ô‰É•ÍÁ½¹Í•É½ÕÁÌˆøð½‘¥Øø((€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰½µµ•¹ÐµÍ•Ñ¥½¸ˆø(€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰½µµ•¹Ðµ±¥ÍÐˆ¥ô‰½µµ•¹Ñ1¥ÍÐˆøð½‘¥Øø(€€€€€€€€€€€€€€ñ™½É´±…ÍÌô‰½µµ•¹Ðµ™½É´ˆ¥ô‰½µµ•¹Ñ½É´ˆø(€€€€€€€€€€€€€€€€ñÑ•áÑ…É•„¥ô‰½µµ•¹Ñ%¹ÁÕÐˆÉ½ÝÌôˆÌˆµ…á±•¹Ñ ôˆÔÀÀˆÁ±…•¡½±‘•Èô‰‘„½µµ•¹Ðˆøð½Ñ•áÑ…É•„ø(€€€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰Í•½¹‘…ÉäÍÑÉ½¹œˆÑåÁ”ô‰ÍÕ‰µ¥Ðˆù½µµ•¹Ðð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€€€ð½™½É´ø(€€€€€€€€€€€€ð½‘¥Øø((€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰‘•Ñ…¥°µ…Ñ¥½¹Ìˆø(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰Í•½¹‘…Éä‰ÕÑÑ½¸µÝ¥Ñ µ¥½¸ˆ¥ô‰‘½Ý¹±½…‘%Í	ÕÑÑ½¸ˆÑåÁ”ô‰‰ÕÑÑ½¸ˆø(€€€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰Õ¤µ¥½¸Õ¤µ¥½¸µ…±•¹‘…ÈµÍå¹Œˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€€€€€ñÍÁ…¸ù‘Ñ¼…±•¹‘…Èð½ÍÁ…¸ø(€€€€€€€€€€€€€€ð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰Í•½¹‘…Éä¡¥‘‘•¸ˆ¥ô‰•‘¥ÑÙ•¹Ñ	ÕÑÑ½¸ˆÑåÁ”ô‰‰ÕÑÑ½¸ˆù‘¥Ðð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰‘…¹•È‰ÕÑÑ½¸µÝ¥Ñ µ¥½¸ˆ¥ô‰‘•±•Ñ•Ù•¹Ñ	ÕÑÑ½¸ˆÑåÁ”ô‰‰ÕÑÑ½¸ˆø(€€€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰Õ¤µ¥½¸Õ¤µ¥½¸µÑÉ…Í ˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€€€€€ñÍÁ…¸ù•±•Ñ”ð½ÍÁ…¸ø(€€€€€€€€€€€€€€ð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ð½‘¥Øø((€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰‘•Ñ…¥°µ‰½‘ä¡¥‘‘•¸ˆ¥ô‰‰ÕÍå•Ñ…¥°ˆø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰‰ÕÍäµ‘•Ñ…¥°µ±¥ÍÐˆ¥ô‰‰ÕÍå•Ñ…¥±1¥ÍÐˆøð½‘¥Øø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€ð½…Í¥‘”ø(€€€€€€ð½Í•Ñ¥½¸ø((€€€€ð½Í•Ñ¥½¸ø((€€€€ñ‘¥…±½œ±…ÍÌô‰½µµ…¹µ•¹ÑÉ”µ‘¥…±½œˆ¥ô‰½µµ…¹‘•¹ÑÉ•¥…±½œˆ…É¥„µ±…‰•±±•‘‰äô‰½µµ…¹‘•¹ÑÉ•Q¥Ñ±”ˆ…É¥„µ‘•ÍÉ¥‰•‘‰äô‰½µµ…¹‘•¹ÑÉ••ÍÉ¥ÁÑ¥½¸ˆø(€€€€€€ñ™½É´±…ÍÌô‰½µµ…¹µ•¹ÑÉ”µÁ…¹•°ˆ¥ô‰½µµ…¹‘•¹ÑÉ•½É´ˆ¹½Ù…±¥‘…Ñ”ø(€€€€€€€€ñ È±…ÍÌô‰ÍÈµ½¹±äˆ¥ô‰½µµ…¹‘•¹ÑÉ•Q¥Ñ±”ˆùÍ¬½µµ½¹É½Õ¹ð½ Èø(€€€€€€€€ñÀ±…ÍÌô‰ÍÈµ½¹±äˆ¥ô‰½µµ…¹‘•¹ÑÉ••ÍÉ¥ÁÑ¥½¸ˆùÉ•…Ñ”•Ù•¹ÑÌ°™¥¹Í¡…É•™É•”Ñ¥µ”°µ½Ù”•Ù•¹ÑÌ°½È¹…Ù¥…Ñ”Ñ¡”…±•¹‘…È¸ð½Àø((€€€€€€€€ñ¡•…‘•È±…ÍÌô‰½µµ…¹µ•¹ÑÉ”µÍ•…É µÉ½Üˆø(€€€€€€€€€€ñÍÙœ±…ÍÌô‰½µµ…¹µ•¹ÑÉ”µÍ•…É µ¥½¸ˆÙ¥•Ý	½àôˆÀ€À€ÈÐ€ÈÐˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆø(€€€€€€€€€€€€ñÁ…Ñ ô‰´ÄÈ€Ì´Ä¸ä€Ô¸á„È€È€À€À€Ä´Ä¸Ì€Ä¸Í0Ì€ÄÉ°Ô¸à€Ä¸å„È€È€À€À€Ä€Ä¸Ì€Ä¸Í0ÄÈ€ÈÅ°Ä¸ä´Ô¸á„È€È€À€À€Ä€Ä¸Ì´Ä¸Í0ÈÄ€ÄÉ°´Ô¸à´Ä¸å„È€È€À€À€Ä´Ä¸Ì´Ä¸Í0ÄÈ€Íhˆøð½Á…Ñ ø(€€€€€€€€€€ð½ÍÙœø(€€€€€€€€€€ñ±…‰•°±…ÍÌô‰ÍÈµ½¹±äˆ™½Èô‰½µµ…¹‘•¹ÑÉ•%¹ÁÕÐˆùÉ•…Ñ”…¸•Ù•¹Ð½È™¥¹„Ñ¥µ”ð½±…‰•°ø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰½µµ…¹µ•¹ÑÉ”µ¥¹ÁÕÐµÍ¡•±°ˆø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰½µµ…¹µ•¹ÑÉ”µ½µÁ±•Ñ¥½¸ˆ¥ô‰½µµ…¹‘•¹ÑÉ•½µÁ±•Ñ¥½¸ˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆø(€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰½µµ…¹µ•¹ÑÉ”µ½µÁ±•Ñ¥½¸µÁÉ•™¥àˆ¥ô‰½µµ…¹‘•¹ÑÉ•½µÁ±•Ñ¥½¹AÉ•™¥àˆøð½ÍÁ…¸øñÍÁ…¸±…ÍÌô‰½µµ…¹µ•¹ÑÉ”µ½µÁ±•Ñ¥½¸µÍÕ™™¥àˆ¥ô‰½µµ…¹‘•¹ÑÉ•½µÁ±•Ñ¥½¹MÕ™™¥àˆøð½ÍÁ…¸ø(€€€€€€€€€€€€ð½ÍÁ…¸ø(€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰½µµ…¹‘•¹ÑÉ•%¹ÁÕÐˆÑåÁ”ô‰Í•…É ˆµ…á±•¹Ñ ôˆÔÀÀˆÁ±…•¡½±‘•Èô‰É•…Ñ”…¸•Ù•¹Ð½È™¥¹„Ñ¥µ—Š˜ˆ…ÕÑ½½µÁ±•Ñ”ô‰½™˜ˆÍÁ•±±¡•¬ô‰™…±Í”ˆ•¹Ñ•É­•å¡¥¹Ðô‰Í•…É ˆ…É¥„µ…ÕÑ½½µÁ±•Ñ”ô‰¥¹±¥¹”ˆ…É¥„µ½¹ÑÉ½±Ìô‰½µµ…¹‘•¹ÑÉ•	½‘äˆ…É¥„µ‘•ÍÉ¥‰•‘‰äô‰½µµ…¹‘•¹ÑÉ••ÍÉ¥ÁÑ¥½¸½µµ…¹‘•¹ÑÉ•½µÁ±•Ñ¥½¹!•±Àˆ€¼ø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰¥½¸µ‰ÕÑÑ½¸½µµ…¹µ•¹ÑÉ”µ±½Í”ˆ¥ô‰½µµ…¹‘•¹ÑÉ•±½Í•	ÕÑÑ½¸ˆÑåÁ”ô‰‰ÕÑÑ½¸ˆ…É¥„µ±…‰•°ô‰±½Í”½µµ…¹•¹ÑÉ”ˆø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰Õ¤µ¥½¸Õ¤µ¥½¸µàˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€ð½‰ÕÑÑ½¸ø(€€€€€€€€ð½¡•…‘•Èø((€€€€€€€€ñÀ±…ÍÌô‰ÍÈµ½¹±äˆ¥ô‰½µµ…¹‘•¹ÑÉ•½µÁ±•Ñ¥½¹!•±Àˆù]¡•¸„É•ä½µÁ±•Ñ¥½¸…ÁÁ•…ÉÌ°ÁÉ•ÍÌQ…ˆ½ÈI¥¡ÐÉÉ½ÜÑ¼…•ÁÐ¥Ð¸AÉ•ÍÌ¹Ñ•ÈÑ¼ÉÕ¸Ñ¡”Í•±•Ñ•½µµ…¹°ÕÍ”Ñ¡”UÀ…¹½Ý¸ÉÉ½Ü­•åÌÑ¼µ½Ù”Ñ¡É½Õ É•ÍÕ±ÑÌ°½ÈÁÉ•ÍÌÍ…Á”Ñ¼±½Í”¸ð½Àø(€€€€€€€€ñÀ±…ÍÌô‰ÍÈµ½¹±äˆ¥ô‰½µµ…¹‘•¹ÑÉ•MÑ…ÑÕÌˆÉ½±”ô‰ÍÑ…ÑÕÌˆ…É¥„µ±¥Ù”ô‰Á½±¥Ñ”ˆ…É¥„µ…Ñ½µ¥Œô‰ÑÉÕ”ˆøð½Àø((€€€€€€€€ñÍ•Ñ¥½¸±…ÍÌô‰½µµ…¹µ•¹ÑÉ”µ‰½‘äˆ¥ô‰½µµ…¹‘•¹ÑÉ•	½‘äˆ…É¥„µ±¥Ù”ô‰½™˜ˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰½µµ…¹µ•¹ÑÉ”µ¥¹ÑÉ¼ˆø(€€€€€€€€€€€€ñÀùQ•±°½µµ½¹É½Õ¹Ý¡…Ðå½ÔÝ…¹ÐÑ¼‘¼¸ð½Àø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰½µµ…¹µ•á…µÁ±”µ±¥ÍÐˆ…É¥„µ±…‰•°ô‰á…µÁ±”½µµ…¹‘Ìˆø(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸ÑåÁ”ô‰‰ÕÑÑ½¸ˆ‘…Ñ„µ½µµ…¹µ•á…µÁ±”ô‰¥¹…¸¡½ÕÈ™½È•Ù•Éå½¹”¹•áÐÝ••¬ˆù¥¹„Ñ¥µ”™½È•Ù•Éå½¹”ð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸ÑåÁ”ô‰‰ÕÑÑ½¸ˆ‘…Ñ„µ½µµ…¹µ•á…µÁ±”ô‰É•…Ñ”…¸•Ù•¹ÐÑ½µ½ÉÉ½Ü…Ð€ÄˆùÉ•…Ñ”…¸•Ù•¹Ðð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€€€ñ‰ÕÑÑ½¸ÑåÁ”ô‰‰ÕÑÑ½¸ˆ‘…Ñ„µ½µµ…¹µ•á…µÁ±”ô‰=Á•¸ÕÕÍÐˆù9…Ù¥…Ñ”Ñ¡”…±•¹‘…Èð½‰ÕÑÑ½¸ø(€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€ð½Í•Ñ¥½¸ø((€€€€€€ð½™½É´ø(€€€€ð½‘¥…±½œø((€€€€ñ‘¥…±½œ±…ÍÌô‰µ½‘…°ˆ¥ô‰•Ù•¹Ñ5½‘…°ˆ…É¥„µ±…‰•±±•‘‰äô‰•Ù•¹Ñ½µÁ½Í•ÉQ¥Ñ±”ˆø(€€€€€€ñ™½É´±…ÍÌô‰µ½‘…°µ…É•Ù•¹Ðµ½µÁ½Í•Èˆ¥ô‰•Ù•¹Ñ½É´ˆø(€€€€€€€€ñ È±…ÍÌô‰ÍÈµ½¹±äˆ¥ô‰•Ù•¹Ñ½µÁ½Í•ÉQ¥Ñ±”ˆùÉ•…Ñ”„É½ÕÀ•Ù•¹Ðð½ Èø(€€€€€€€€ñ¡•…‘•È±…ÍÌô‰½µÁ½Í•Èµ¡•…‘¥¹œµÍ•Ñ¥½¸ˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰•Ù•¹Ðµ½µÁ½Í•ÈµÑ½Àˆø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰½µÁ½Í•Èµ¡…¹‘±”ˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰¥½¸µ‰ÕÑÑ½¸½µÁ½Í•Èµ±½Í”ˆ¥ô‰…¹•±Ù•¹Ñ	ÕÑÑ½¸ˆÑåÁ”ô‰‰ÕÑÑ½¸ˆ…É¥„µ±…‰•°ô‰±½Í”ˆø(€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰Õ¤µ¥½¸Õ¤µ¥½¸µàˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€ð½‰ÕÑÑ½¸ø(€€€€€€€€€€ð½‘¥Øø((€€€€€€€€€€ñ¥¹ÁÕÐ±…ÍÌô‰½µÁ½Í•ÈµÑ¥Ñ±”ˆ¥ô‰•Ù•¹ÑQ¥Ñ±•%¹ÁÕÐˆÑåÁ”ô‰Ñ•áÐˆÁ±…•¡½±‘•Èô‰‘Ñ¥Ñ±”ˆ…É¥„µ±…‰•°ô‰Ù•¹ÐÑ¥Ñ±”ˆ…ÕÑ½½µÁ±•Ñ”ô‰½™˜ˆ…ÕÑ½™½ÕÌ€¼ø(€€€€€€€€ð½¡•…‘•Èø((€€€€€€€€ñÍ•Ñ¥½¸±…ÍÌô‰½µÁ½Í•ÈµÍ•Ñ¥½¸½µÁ½Í•ÈµÍ¡•‘Õ±”µÍ•Ñ¥½¸ˆ…É¥„µ±…‰•°ô‰…Ñ”…¹Ñ¥µ”ˆø(€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰½µÁ½Í•ÈµÉ½Üµ¥½¸Õ¤µ¥½¸Õ¤µ¥½¸µ±½¬ˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰½µÁ½Í•ÈµÑ¥µ”µÉ¥ˆø(€€€€€€€€€€€€ñ±…‰•°±…ÍÌô‰½µÁ½Í•Èµ‘…Ñ”µ™¥•±ˆø(€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰ÍÈµ½¹±äˆù…Ñ”ð½ÍÁ…¸ø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰•Ù•¹Ñ…Ñ•%¹ÁÕÐˆÑåÁ”ô‰‘…Ñ”ˆÉ•ÅÕ¥É•€¼ø(€€€€€€€€€€€€ð½±…‰•°ø(€€€€€€€€€€€€ñ±…‰•°±…ÍÌô‰½µÁ½Í•Èµ•¹µ‘…Ñ”µ™¥•±ˆø(€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰ÍÈµ½¹±äˆù¹‘…Ñ”ð½ÍÁ…¸ø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰•Ù•¹Ñ¹‘…Ñ•%¹ÁÕÐˆÑåÁ”ô‰‘…Ñ”ˆ€¼ø(€€€€€€€€€€€€ð½±…‰•°ø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰Ñ¥µ”µÁ¥­•Èµ™¥•±ˆ¥ô‰•Ù•¹ÑMÑ…ÉÑQ¥µ•¥•±ˆ‘…Ñ„µÑ¥µ”µÁ¥­•Èô‰ÍÑ…ÉÐˆø(€€€€€€€€€€€€€€ñ±…‰•°±…ÍÌô‰ÍÈµ½¹±äˆ™½Èô‰•Ù•¹ÑMÑ…ÉÑQ¥µ•%¹ÁÕÐˆùMÑ…ÉÐÑ¥µ”ð½±…‰•°ø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰•Ù•¹ÑMÑ…ÉÑ%¹ÁÕÐˆÑåÁ”ô‰¡¥‘‘•¸ˆ€¼ø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐ(€€€€€€€€€€€€€€€±…ÍÌô‰Ñ¥µ”µÁ¥­•Èµ¥¹ÁÕÐˆ(€€€€€€€€€€€€€€€¥ô‰•Ù•¹ÑMÑ…ÉÑQ¥µ•%¹ÁÕÐˆ(€€€€€€€€€€€€€€€ÑåÁ”ô‰Ñ•áÐˆ(€€€€€€€€€€€€€€€¥¹ÁÕÑµ½‘”ô‰¹Õµ•É¥Œˆ(€€€€€€€€€€€€€€€…ÕÑ½½µÁ±•Ñ”ô‰½™˜ˆ(€€€€€€€€€€€€€€€ÍÁ•±±¡•¬ô‰™…±Í”ˆ(€€€€€€€€€€€€€€€É•ÅÕ¥É•(€€€€€€€€€€€€€€€É½±”ô‰½µ‰½‰½àˆ(€€€€€€€€€€€€€€€…É¥„µ…ÕÑ½½µÁ±•Ñ”ô‰±¥ÍÐˆ(€€€€€€€€€€€€€€€…É¥„µ¡…ÍÁ½ÁÕÀô‰±¥ÍÑ‰½àˆ(€€€€€€€€€€€€€€€…É¥„µ•áÁ…¹‘•ô‰™…±Í”ˆ(€€€€€€€€€€€€€€€…É¥„µ½¹ÑÉ½±Ìô‰•Ù•¹ÑMÑ…ÉÑQ¥µ•1¥ÍÑ‰½àˆ(€€€€€€€€€€€€€€¼ø(€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰Ñ¥µ”µÁ¥­•Èµ‘É½Á‘½Ý¸ˆ¥ô‰•Ù•¹ÑMÑ…ÉÑQ¥µ•É½Á‘½Ý¸ˆ¡¥‘‘•¸ø(€€€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰Ñ¥µ”µÁ¥­•Èµ±¥ÍÐˆ¥ô‰•Ù•¹ÑMÑ…ÉÑQ¥µ•1¥ÍÑ‰½àˆÉ½±”ô‰±¥ÍÑ‰½àˆ…É¥„µ±…‰•°ô‰MÑ…ÉÐÑ¥µ”½ÁÑ¥½¹Ìˆøð½‘¥Øø(€€€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰Ñ¥µ”µ‘¥Ù¥‘•Èˆø´ð½ÍÁ…¸ø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰Ñ¥µ”µÁ¥­•Èµ™¥•±ˆ¥ô‰•Ù•¹Ñ¹‘Q¥µ•¥•±ˆ‘…Ñ„µÑ¥µ”µÁ¥­•Èô‰•¹ˆø(€€€€€€€€€€€€€€ñ±…‰•°±…ÍÌô‰ÍÈµ½¹±äˆ™½Èô‰•Ù•¹Ñ¹‘Q¥µ•%¹ÁÕÐˆù¹Ñ¥µ”ð½±…‰•°ø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰•Ù•¹Ñ¹‘%¹ÁÕÐˆÑåÁ”ô‰¡¥‘‘•¸ˆ€¼ø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐ(€€€€€€€€€€€€€€€±…ÍÌô‰Ñ¥µ”µÁ¥­•Èµ¥¹ÁÕÐˆ(€€€€€€€€€€€€€€€¥ô‰•Ù•¹Ñ¹‘Q¥µ•%¹ÁÕÐˆ(€€€€€€€€€€€€€€€ÑåÁ”ô‰Ñ•áÐˆ(€€€€€€€€€€€€€€€¥¹ÁÕÑµ½‘”ô‰¹Õµ•É¥Œˆ(€€€€€€€€€€€€€€€…ÕÑ½½µÁ±•Ñ”ô‰½™˜ˆ(€€€€€€€€€€€€€€€ÍÁ•±±¡•¬ô‰™…±Í”ˆ(€€€€€€€€€€€€€€€É•ÅÕ¥É•(€€€€€€€€€€€€€€€É½±”ô‰½µ‰½‰½àˆ(€€€€€€€€€€€€€€€…É¥„µ…ÕÑ½½µÁ±•Ñ”ô‰±¥ÍÐˆ(€€€€€€€€€€€€€€€…É¥„µ¡…ÍÁ½ÁÕÀô‰±¥ÍÑ‰½àˆ(€€€€€€€€€€€€€€€…É¥„µ•áÁ…¹‘•ô‰™…±Í”ˆ(€€€€€€€€€€€€€€€…É¥„µ½¹ÑÉ½±Ìô‰•Ù•¹Ñ¹‘Q¥µ•1¥ÍÑ‰½àˆ(€€€€€€€€€€€€€€¼ø(€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰Ñ¥µ”µÁ¥­•Èµ‘É½Á‘½Ý¸Ñ¥µ”µÁ¥­•Èµ‘É½Á‘½Ý¸µ•¹ˆ¥ô‰•Ù•¹Ñ¹‘Q¥µ•É½Á‘½Ý¸ˆ¡¥‘‘•¸ø(€€€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰Ñ¥µ”µÁ¥­•Èµ±¥ÍÐˆ¥ô‰•Ù•¹Ñ¹‘Q¥µ•1¥ÍÑ‰½àˆÉ½±”ô‰±¥ÍÑ‰½àˆ…É¥„µ±…‰•°ô‰¹Ñ¥µ”½ÁÑ¥½¹Ìˆøð½‘¥Øø(€€€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€€€ñ±…‰•°±…ÍÌô‰…±°µ‘…äµÑ½±”ˆø(€€€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰•Ù•¹Ñ±±…å%¹ÁÕÐˆÑåÁ”ô‰¡•­‰½àˆ€¼ø(€€€€€€€€€€€€€€ñÍÁ…¸ù±°‘…äð½ÍÁ…¸ø(€€€€€€€€€€€€ð½±…‰•°ø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€ð½Í•Ñ¥½¸ø((€€€€€€€€ñÍ•Ñ¥½¸±…ÍÌô‰½µÁ½Í•ÈµÍ•Ñ¥½¸½µÁ½Í•Èµµ•Ñ„µÍ•Ñ¥½¸ˆ…É¥„µ±…‰•°ô‰Ù•¹Ð½ÁÑ¥½¹Ìˆø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰½µÁ½Í•Èµ™¥•±µÉ½Ü½µÁ½Í•Èµ¥¹Ù¥Ñ”µÉ½Üˆø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰½µÁ½Í•ÈµÉ½Üµ¥½¸Õ¤µ¥½¸Õ¤µ¥½¸µÕÍ•ÈµÁ±ÕÌˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€ñ‘•Ñ…¥±Ì±…ÍÌô‰¥¹Ù¥Ñ”µ‘É½Á‘½Ý¸ˆø(€€€€€€€€€€€€€€ñÍÕµµ…Éäø(€€€€€€€€€€€€€€€€ñÍÁ…¸ù%¹Ù¥Ñ”½Ñ¡•ÉÌð½ÍÁ…¸ø(€€€€€€€€€€€€€€€€ñÍµ…±°¥ô‰¥¹Ù¥Ñ••½Õ¹ÑQ•áÐˆù=¹±äå½Ôð½Íµ…±°ø(€€€€€€€€€€€€€€ð½ÍÕµµ…Éäø(€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰¥¹Ù¥Ñ”µ‘É½Á‘½Ý¸µÁ…¹•°ˆø(€€€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰¥¹Ù¥Ñ•”µÁ¥­•Èˆ¥ô‰¥¹Ù¥Ñ••A¥­•Èˆøð½‘¥Øø(€€€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€€€ð½‘•Ñ…¥±Ìø(€€€€€€€€€€ð½‘¥Øø((€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰½µÁ½Í•Èµ™¥•±µÉ½Ü½µÁ½Í•ÈµÍå¹ŒµÉ½Üˆø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰½µÁ½Í•ÈµÉ½Üµ¥½¸Õ¤µ¥½¸Õ¤µ¥½¸µ…±•¹‘…ÈµÍå¹Œˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰½µÁ½Í•ÈµÍå¹ŒµÑ½±”ˆ¥ô‰•Ù•¹Ñ½½±•Må¹I½Üˆø(€€€€€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰½µÁ½Í•ÈµÍå¹Œµ½Áäˆø(€€€€€€€€€€€€€€€€ñÍÑÉ½¹œùMå¹ŒÑ¼½½±”…±•¹‘…Èð½ÍÑÉ½¹œø(€€€€€€€€€€€€€€€€ñÍµ…±°¥ô‰•Ù•¹Ñ½½±•Må¹MÑ…ÑÕÌˆù½¹¹•Ð½½±”…±•¹‘…È™¥ÉÍÐ¸ð½Íµ…±°ø(€€€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€€€€€ñ±…‰•°±…ÍÌô‰µ¥¹¤µÑ½±”ˆ™½Èô‰•Ù•¹Ñ½½±•Må¹%¹ÁÕÐˆ…É¥„µ±…‰•°ô‰Må¹ŒÑ¡¥Ì•Ù•¹ÐÑ¼½½±”…±•¹‘…Èˆø(€€€€€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰•Ù•¹Ñ½½±•Må¹%¹ÁÕÐˆÑåÁ”ô‰¡•­‰½àˆ€¼ø(€€€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰µ¥¹¤µÑ½±”µÕ¤ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰½…ÕÑ µÍÁ¥¹¹•Èˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€€€ð½±…‰•°ø(€€€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ð½‘¥Øø((€€€€€€€€€€ñ±…‰•°±…ÍÌô‰½µÁ½Í•Èµ™¥•±µÉ½Ü½µÁ½Í•Èµ¥¹ÁÕÐµÉ½Üˆ™½Èô‰•Ù•¹Ñ1½…Ñ¥½¹%¹ÁÕÐˆø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰½µÁ½Í•ÈµÉ½Üµ¥½¸Õ¤µ¥½¸Õ¤µ¥½¸µµ…ÀµÁ¥¸ˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰•Ù•¹Ñ1½…Ñ¥½¹%¹ÁÕÐˆÑåÁ”ô‰Ñ•áÐˆÁ±…•¡½±‘•Èô‰‘±½…Ñ¥½¸ˆ…É¥„µ±…‰•°ô‰1½…Ñ¥½¸ˆ…ÕÑ½½µÁ±•Ñ”ô‰½™˜ˆ€¼ø(€€€€€€€€€€ð½±…‰•°ø((€€€€€€€€€€ñ±…‰•°±…ÍÌô‰½µÁ½Í•Èµ™¥•±µÉ½Ü½µÁ½Í•Èµ¥¹ÁÕÐµÉ½Ü½µÁ½Í•Èµ‘•ÍÉ¥ÁÑ¥½¸µÉ½Üˆ™½Èô‰•Ù•¹Ñ•ÍÉ¥ÁÑ¥½¹%¹ÁÕÐˆø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰½µÁ½Í•ÈµÉ½Üµ¥½¸¥½¸µ±¥¹•Ìˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€ñÑ•áÑ…É•„¥ô‰•Ù•¹Ñ•ÍÉ¥ÁÑ¥½¹%¹ÁÕÐˆÉ½ÝÌôˆÄˆÁ±…•¡½±‘•Èô‰‘‘•ÍÉ¥ÁÑ¥½¸ˆ…É¥„µ±…‰•°ô‰•ÍÉ¥ÁÑ¥½¸ˆøð½Ñ•áÑ…É•„ø(€€€€€€€€€€ð½±…‰•°ø(€€€€€€€€ð½Í•Ñ¥½¸ø((€€€€€€€€ñÀ±…ÍÌô‰½µÁ½Í•Èµ™••‘‰…¬ˆ¥ô‰•Ù•¹Ñ½Éµ••‘‰…¬ˆÉ½±”ô‰ÍÑ…ÑÕÌˆ…É¥„µ±¥Ù”ô‰Á½±¥Ñ”ˆøð½Àø((€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ½‘…°µ…Ñ¥½¹Ìˆø(€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰Í•½¹‘…Éäˆ¥ô‰…¹•±Ù•¹ÑM•½¹‘…ÉäˆÑåÁ”ô‰‰ÕÑÑ½¸ˆù…¹•°ð½‰ÕÑÑ½¸ø(€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰ÁÉ¥µ…Éäˆ¥ô‰Í…Ù•Ù•¹Ñ	ÕÑÑ½¸ˆÑåÁ”ô‰ÍÕ‰µ¥ÐˆùÉ•…Ñ”•Ù•¹Ðð½‰ÕÑÑ½¸ø(€€€€€€€€ð½‘¥Øø(€€€€€€ð½™½É´ø(€€€€ð½‘¥…±½œø((€€€€ñ‘¥…±½œ±…ÍÌô‰µ½‘…°ˆ¥ô‰É•…Ñ•I½½µ5½‘…°ˆ…É¥„µ±…‰•±±•‘‰äô‰É•…Ñ•I½½µ5½‘…±Q¥Ñ±”ˆø(€€€€€€ñ™½É´±…ÍÌô‰µ½‘…°µ…É½µÁ…ÐµÉ½½´µµ½‘…°ˆ¥ô‰É•…Ñ•I½½µ5½‘…±½É´ˆµ•Ñ¡½ô‰‘¥…±½œˆø(€€€€€€€€ñ‘¥Ø±…ÍÌô‰Á…¹•°µ¡•…ˆø(€€€€€€€€€€ñ‘¥Øø(€€€€€€€€€€€€ñÀ±…ÍÌô‰Á…¹•°µ±…‰•°ˆù9•ÜÉ½½´ð½Àø(€€€€€€€€€€€€ñ Ì¥ô‰É•…Ñ•I½½µ5½‘…±Q¥Ñ±”ˆùÉ•…Ñ”…¹½Ñ¡•ÈÉ½½´ð½ Ìø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰¥½¸µ‰ÕÑÑ½¸µ½‘…°µ±½Í”µ‰ÕÑÑ½¸ˆ¥ô‰…¹•±É•…Ñ•I½½µ5½‘…±	ÕÑÑ½¸ˆÑåÁ”ô‰‰ÕÑÑ½¸ˆ…É¥„µ±…‰•°ô‰±½Í”¹•ÜÉ½½´‘¥…±½œˆø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰Õ¤µ¥½¸Õ¤µ¥½¸µàˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€ð½‰ÕÑÑ½¸ø(€€€€€€€€ð½‘¥Øø((€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ½‘…°µÉ¥ˆø(€€€€€€€€€€ñ±…‰•°±…ÍÌô‰™¥•±µ±…‰•°ˆ™½Èô‰ÅÕ¥­I½½µ9…µ•%¹ÁÕÐˆø(€€€€€€€€€€€€ñÍÁ…¸ùI½½´¹…µ”ð½ÍÁ…¸ø(€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰ÅÕ¥­I½½µ9…µ•%¹ÁÕÐˆÑåÁ”ô‰Ñ•áÐˆÙ…±Õ”ô‰U¹Ñ¥Ñ±•É½½´ˆÁ±…•¡½±‘•Èô‰U¹Ñ¥Ñ±•É½½´ˆ…ÕÑ½½µÁ±•Ñ”ô‰½™˜ˆµ…á±•¹Ñ ôˆàÀˆ€¼ø(€€€€€€€€€€ð½±…‰•°ø(€€€€€€€€€€ñ‘¥Ø±…ÍÌô‰™¥•±µ±…‰•°•µ½©¤µ™¥•±ˆø(€€€€€€€€€€€€ñÍÁ…¸¥ô‰ÅÕ¥­I½½µµ½©¥1…‰•°ˆùµ½©¤ð½ÍÁ…¸ø(€€€€€€€€€€€€ñ¥¹ÁÕÐ¥ô‰ÅÕ¥­I½½µµ½©¥%¹ÁÕÐˆÑåÁ”ô‰¡¥‘‘•¸ˆÙ…±Õ”ôˆ˜ŒÄÈàÄäÜìˆ€¼ø(€€€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰•µ½©¤µÑÉ¥•Èˆ¥ô‰ÅÕ¥­I½½µµ½©¥QÉ¥•ÈˆÑåÁ”ô‰‰ÕÑÑ½¸ˆ‘…Ñ„µ•µ½©¤µÑ…É•Ðô‰ÅÕ¥­I½½µµ½©¥%¹ÁÕÐˆ…É¥„µ¡…ÍÁ½ÁÕÀô‰‘¥…±½œˆ…É¥„µ½¹ÑÉ½±Ìô‰•µ½©¥A¥­•ÉA½Á½Ù•Èˆ…É¥„µ•áÁ…¹‘•ô‰™…±Í”ˆ…É¥„µ±…‰•°ô‰¡½½Í”É½½´•µ½©¤°ÕÉÉ•¹Ð…±•¹‘…Èˆø(€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰•µ½©¤µÑÉ¥•ÈµÙ…±Õ”ˆ¥ô‰ÅÕ¥­I½½µµ½©¥Y…±Õ”ˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆø˜ŒÄÈàÄäÜìð½ÍÁ…¸ø(€€€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰ÍÈµ½¹±äˆù¡½½Í”É½½´•µ½©¤ð½ÍÁ…¸ø(€€€€€€€€€€€€ð½‰ÕÑÑ½¸ø(€€€€€€€€€€ð½‘¥Øø(€€€€€€€€ð½‘¥Øø((€€€€€€€€ñ‘¥Ø±…ÍÌô‰µ½‘…°µ…Ñ¥½¹Ìˆø(€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰Í•½¹‘…Éäˆ¥ô‰…¹•±É•…Ñ•I½½µ5½‘…±M•½¹‘…ÉäˆÑåÁ”ô‰‰ÕÑÑ½¸ˆù…¹•°ð½‰ÕÑÑ½¸ø(€€€€€€€€€€ñ‰ÕÑÑ½¸±…ÍÌô‰ÁÉ¥µ…Éä‰ÕÑÑ½¸µÝ¥Ñ µ¥½¸ˆÑåÁ”ô‰ÍÕ‰µ¥Ðˆø(€€€€€€€€€€€€ñÍÁ…¸±…ÍÌô‰Õ¤µ¥½¸Õ¤µ¥½¸µÁ±ÕÌˆ…É¥„µ¡¥‘‘•¸ô‰ÑÉÕ”ˆøð½ÍÁ…¸ø(€€€€€€€€€€€€ñÍÁ…¸ùÉ•…Ñ”É½½´ð½ÍÁ…¸ø(€€€€€€€€€€ð½‰ÕÑÑ½¸ø(€€€€€€€€ð½‘¥Øø(€€€€€€ð½™½É´ø(€€€€ð½‘¥…±½œø((€€€€ñ‘¥Ø±…ÍÌô‰•µ½©¤µÁ¥­•ÈµÁ½Á½Ù•Èˆ¥ô‰•µ½©¥A¥­•ÉA½Á½Ù•ÈˆÁ½Á½Ù•Èô‰µ…¹Õ…°ˆÉ½±”ô‰‘¥…±½œˆ…É¥„µ±…‰•±±•‘‰äô‰•µ½©¥A¥­•ÉQ¥Ñ±”ˆø(€€€€€€ñ È±…ÍÌô‰ÍÈµ½¹±äˆ¥ô‰•µ½©¥A¥­•ÉQ¥Ñ±”ˆù¡½½Í”É½½´•µ½©¤ð½ Èø(€€€€€€ñ‘¥Ø±…ÍÌô‰•µ½©¤µÁ¥­•ÈµÍ•…É¡‰…Èˆø(€€€€€€€€ñ¥¹ÁÕÐ¥ô‰•µ½©¥A¥­•ÉM•…É ˆÑåÁ”ô‰Í•…É ˆÁ±…•¡½±‘•Èô‰M•…É •µ½©¤¸¸¸ˆ…É¥„µ±…‰•°ô‰M•…É •µ½©¤ˆ…É¥„µ½¹ÑÉ½±Ìô‰•µ½©¥A¥­•ÉÉ¥ˆ…É¥„µ‘•ÍÉ¥‰•‘‰äô‰•µ½©¥A¥­•ÉMÑ…ÑÕÌˆ…ÕÑ½½µÁ±•Ñ”ô‰½™˜ˆÍÁ•±±¡•¬ô‰™…±Í”ˆ€¼ø(€€€€€€ð½‘¥Øø(€€€€€€ñ‘¥Ø±…ÍÌô‰•µ½©¤µÁ¥­•ÈµÉ¥ˆ¥ô‰•µ½©¥A¥­•ÉÉ¥ˆÉ½±”ô‰É½ÕÀˆ…É¥„µ±…‰•°ô‰µ½©¤É•ÍÕ±ÑÌˆøð½‘¥Øø(€€€€€€ñÀ±…ÍÌô‰ÍÈµ½¹±äˆ¥ô‰•µ½©¥A¥­•ÉMÑ…ÑÕÌˆÉ½±”ô‰ÍÑ…ÑÕÌˆ…É¥„µ±¥Ù”ô‰Á½±¥Ñ”ˆøð½Àø(€€€€ð½‘¥Øø((€€€€ñÍÉ¥ÁÐÍÉŒôˆ½…ÁÀ¹©ÌýØôÈÀÈØÀÜÈÔµ½µµ…¹µ½µÁ½Í•Èˆøð½ÍÉ¥ÁÐø(€€€€ñÍÉ¥ÁÐÍÉŒôˆ½½µµ…¹µ•¹ÑÉ”µ…Ñ¥½¹Ì¹©ÌýØôÈÀÈØÀÜÈÔµ™±•á¥‰±”µ…Ù…¥±…‰¥±¥Ñäˆøð½ÍÉ¥ÁÐø(€€€€ñÍÉ¥ÁÐÍÉŒôˆ½½µµ…¹µ•¹ÑÉ”¹©ÌýØôÈÀÈØÀÜÈÔµ½µµ…¹µ½µÁ½Í•Èˆøð½ÍÉ¥ÁÐø(€€ð½‰½‘äø(ð½¡Ñµ°ø
