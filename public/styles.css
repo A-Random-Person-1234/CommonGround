@@ -8874,16 +8874,6 @@ button.identity-name-button:not(:disabled):active,
   border-radius: 7px;
 }
 
-#roomPage .sidebar-room-status {
-  margin: 0;
-  overflow: hidden;
-  color: var(--shell-muted);
-  font-size: 10px;
-  line-height: 1.3;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 #roomPage .sidebar-room-switcher {
   display: grid;
   gap: 5px;

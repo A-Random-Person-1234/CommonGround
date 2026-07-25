@@ -248,8 +248,9 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260724-compact-header"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260723-date-header"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260724-room-card"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260724-room-card"/);
+  assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(home.text, /<meta name="theme-color" content="#101c31" \/>/);
   assert.match(home.text, /<link rel="icon" href="\/icons\/favicon\.ico\?v=20260724-appicon-new" sizes="any" \/>/);
@@ -402,6 +403,7 @@ try {
   assert.equal(emojiDictionaryHead.text, "");
   assert.equal(Number(emojiDictionaryHead.response.headers.get("content-length")), Buffer.byteLength(emojiDictionaryResponse.text));
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
+  assert.doesNotMatch(eventComposerScript.text, /\broomStatus\b/);
   assert.match(eventComposerScript.text, /const emojiKeywordDictionaryUrl = "https:\/\/unpkg\.com\/emojilib@3\.0\.11\/dist\/emoji-en-US\.json";/);
   assert.match(eventComposerScript.text, /const emojiKeywordDictionaryFallbackUrl = "\/assets\/emojilib\/3\.0\.11\/emoji-en-US\.json";/);
   assert.match(eventComposerScript.text, /const frequentRoomEmojis = Object\.freeze\(\[[\s\S]*?"🙏"[\s\S]*?\]\);/);

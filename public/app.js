@@ -40,7 +40,6 @@ const entryChoiceLead = document.querySelector("#entryChoiceLead");
 const roomName = document.querySelector("#roomName");
 const roomCode = document.querySelector("#roomCode");
 const hostPill = document.querySelector("#hostPill");
-const roomStatus = document.querySelector("#roomStatus");
 const calendarStatus = document.querySelector("#calendarStatus");
 const calendarPeriodLabel = document.querySelector("#calendarPeriodLabel");
 const prevPeriodButton = document.querySelector("#prevPeriodButton");
@@ -2576,9 +2575,6 @@ function renderRoomMeta() {
   updateRoomLockIcon(Boolean(currentRoom?.accessLocked));
   hostPanel.classList.remove("hidden");
   hostSettings.classList.toggle("hidden", !currentIsHost);
-
-  const connectedCount = (currentRoom?.participants || []).filter((participant) => participant.connected).length;
-  roomStatus.textContent = `${currentRoom?.participants?.length || 0} people · ${connectedCount} connected`;
 
   const onlyOneParticipant = (currentRoom?.participants?.length || 0) <= 1;
   const inviteDismissed = Boolean(currentRoom?.code && dismissedInviteRoomCodes.has(currentRoom.code));
