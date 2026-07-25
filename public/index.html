@@ -24,7 +24,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20260724-appicon-new" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20260724-appicon-new" />
     <link rel="manifest" href="/site.webmanifest?v=20260724-appicon-new" />
-    <link rel="stylesheet" href="/styles.css?v=20260725-intent-router" />
+    <link rel="stylesheet" href="/styles.css?v=20260725-invite-members" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -280,116 +280,7 @@
             <div class="settings-card-actions">
               <button class="primary button-with-icon" id="connectGoogleButton" type="button">
                 <span class="ui-icon ui-icon-calendar-sync" aria-hidden="true"></span>
-                <span>Connect calendar</span>
-              </button>
-              <button class="secondary button-with-icon hidden" id="settingsReconnectButton" type="button">
-                <span class="ui-icon ui-icon-rotate" aria-hidden="true"></span>
-                <span>Reconnect</span>
-              </button>
-            </div>
-          </section>
-
-          <label class="theme-toggle" title="Toggle light and dark mode">
-            <input type="checkbox" id="themeToggle" />
-            <span>Light</span>
-            <strong>Dark</strong>
-          </label>
-
-          <label class="host-toggle-row calendar-event-sync-card" for="googleEventSyncToggle">
-            <div>
-                <strong>Sync CommonGround events to Google Calendar</strong>
-              <p class="muted" id="googleEventSyncStatus">Connect calendar to activate event sync.</p>
-            </div>
-            <span class="mini-toggle">
-              <input id="googleEventSyncToggle" type="checkbox" checked />
-              <span class="mini-toggle-ui"></span>
-            </span>
-          </label>
-
-          <div class="host-settings" id="hostSettings">
-            <div class="host-row">
-              <label class="field-label" for="renameRoomInput">
-                <span>Room name</span>
-                <input id="renameRoomInput" type="text" placeholder="Rename room" autocomplete="off" maxlength="80" />
-              </label>
-              <div class="field-label emoji-field">
-                <span id="renameRoomEmojiLabel">Emoji</span>
-                <input id="renameRoomEmojiInput" type="hidden" value="&#128197;" />
-                <button class="emoji-trigger" id="renameRoomEmojiTrigger" type="button" data-emoji-target="renameRoomEmojiInput" aria-haspopup="dialog" aria-controls="emojiPickerPopover" aria-expanded="false" aria-label="Choose room emoji, current calendar">
-                  <span class="emoji-trigger-value" id="renameRoomEmojiValue" aria-hidden="true">&#128197;</span>
-                  <span class="sr-only">Choose room emoji</span>
-                </button>
-              </div>
-            </div>
-            <div class="host-row">
-              <label class="field-label" for="customRoomCodeInput">
-                <span>Custom room code</span>
-                <input id="customRoomCodeInput" type="text" placeholder="ABC123" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="6" />
-              </label>
-            </div>
-            <label class="host-toggle-row" for="roomLockToggle">
-              <div>
-                <span class="setting-label-with-icon">
-                  <span class="ui-icon ui-icon-lock-open" id="roomLockIcon" aria-hidden="true"></span>
-                  <strong>Lock room</strong>
-                </span>
-                <p class="muted">New people must send a join request for host approval.</p>
-              </div>
-              <span class="mini-toggle">
-                <input id="roomLockToggle" type="checkbox" />
-                <span class="mini-toggle-ui"></span>
-              </span>
-            </label>
-            <div class="request-queue" id="joinRequestQueue">
-              <div class="request-queue-head">
-                <strong>Join requests</strong>
-                <span class="muted" id="joinRequestCount">0 pending</span>
-              </div>
-              <div class="request-list" id="joinRequestList">
-                <p class="muted">No pending requests.</p>
-              </div>
-            </div>
-            <div class="host-actions">
-              <button class="secondary button-with-icon" id="refreshCodeButton" type="button">
-                <span class="ui-icon ui-icon-rotate" aria-hidden="true"></span>
-                <span>Refresh room code</span>
-              </button>
-              <button class="danger button-with-icon" id="deleteRoomButton" type="button">
-                <span class="ui-icon ui-icon-trash" aria-hidden="true"></span>
-                <span>Delete room</span>
-              </button>
-            </div>
-          </div>
-        </section>
-      </section>
-
-      <section class="room-content">
-        <main class="calendar-stage">
-          <div class="calendar-wrap">
-            <div class="calendar-toolbar">
-              <div class="inline-status" id="calendarStatus">Loading room…</div>
-            </div>
-            <div class="empty-room hidden" id="emptyRoomState">
-              <p>Invite people</p>
-              <div class="empty-room-actions">
-                <span class="room-code large" id="emptyRoomCode">------</span>
-                <button class="secondary button-with-icon" id="copyInviteButtonEmpty" type="button">
-                  <span class="ui-icon ui-icon-link" aria-hidden="true"></span>
-                  <span>Copy invite message</span>
-                </button>
-                <button class="icon-button empty-room-dismiss" id="dismissInviteButton" type="button" aria-label="Dismiss invite prompt">
-                  <span class="ui-icon ui-icon-circle-x" aria-hidden="true"></span>
-                </button>
-              </div>
-            </div>
-            <!--
-              /* TODO: Commonground Free Block Rendering - Hidden for current demo */
-              <button class="free-block free-glow-block" data-day-index="0" data-start-hour="9" data-end-hour="10">
-                <strong>Free</strong>
-                <span>9 – 10am</span>
-              </button>
-            -->
-            <div class="calendar-grid" id="calendarGrid"></div>
+                <span>Connect cale…1781 tokens truncated…n            <div class="calendar-grid" id="calendarGrid"></div>
           </div>
         </main>
 
@@ -683,7 +574,7 @@
       <p class="sr-only" id="emojiPickerStatus" role="status" aria-live="polite"></p>
     </div>
 
-    <script src="/app.js?v=20260725-intent-router"></script>
+    <script src="/app.js?v=20260725-invite-members"></script>
     <script src="/command-centre-actions.js?v=20260725-flexible-availability"></script>
     <script src="/command-centre.js?v=20260725-flexible-availability"></script>
   </body>
