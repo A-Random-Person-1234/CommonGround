@@ -251,7 +251,7 @@ try {
   assert.match(home.text, /href="\/styles\.css\?v=20260725-intent-router"/);
   assert.match(home.text, /src="\/app\.js\?v=20260725-intent-router"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-intent-router"/);
-  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-intent-router"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-external-title"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(home.text, /<meta name="theme-color" content="#101c31" \/>/);
