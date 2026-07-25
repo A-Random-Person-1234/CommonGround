@@ -348,6 +348,11 @@ try {
   assert.match(home.text, /class="ui-icon ui-icon-maximize" id="fullscreenIcon"/);
   assert.match(home.text, /composer-row-icon ui-icon ui-icon-clock/);
   assert.match(home.text, /button-with-icon[^>]*id="addEventButton"/);
+  assert.doesNotMatch(
+    home.text,
+    /sidebar-create-chevron/,
+    "The Create button must not include a dropdown chevron"
+  );
   assert.match(
     home.text,
     /<button class="calendar-google-button needs-connection button-with-icon" id="calendarGoogleButton" type="button" title="Connect Google Calendar" aria-label="Connect Google Calendar">/,
