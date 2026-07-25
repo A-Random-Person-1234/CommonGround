@@ -4,6 +4,15 @@ import fs from "node:fs";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
+import {
+  completeMoveTarget,
+  parseCommand,
+  resolveEventCandidates
+} from "./command-centre-parser.js";
+import {
+  calculateAvailableSlots,
+  findConflicts
+} from "./command-centre-scheduling.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -39,6 +48,7 @@ const textLimits = Object.freeze({
   comment: 500
 });
 const rateLimits = new Map();
+const commandMutationQueues = new Map();
 const participantPalette = [
   "#743F45",
   "#6C4652",
@@ -2099,6 +2109,27 @@ function requireRoomParticipant(req, res, roomCode) {
   return { session, user, room, participant };
 }
 
+function requireExistingRoomParticipant(req, res, roomCode) {
+  const session = getSession(req, res);
+  const user = currentUserFromSession(session);
+  const room = findRoom(roomCode);
+  if (!room) {
+    sendJson(res, 404, { error: "Room not found." });
+    return null;
+  }
+  const participant = findParticipant(room, session, user);
+  if (!participant) {
+    sendJson(res, 403, { error: "Join this room before using the Command Centre." });
+    return null;
+  }
+  if (isRoomLocked(room) && !canJoinLockedRoom(room, session, user)) {
+    sendJson(res, 403, { error: "You no longer have access to this room." });
+    return null;
+  }
+  participant.lastSeenAt = nowIso();
+  return { session, user, room, participant };
+}
+
 function updateParticipantFromUser(room, participant, user) {
   if (!participant || !user) return;
   participant.userId = user.id;
@@ -3491,6 +3522,314 @@ function publicEvent(event, room, viewerParticipantId = null) {
   };
 }
 
+function strictCommandParticipantIds(room, requestedIds, {
+  currentParticipantId = null,
+  includeCurrent = false
+} = {}) {
+  if (!Array.isArray(requestedIds)) {
+    throw httpError(400, "Choose at least one room member.");
+  }
+  if (requestedIds.length > 50) {
+    throw httpError(400, "A command can include at most 50 room members.");
+  }
+  const values = uniqueStrings(requestedIds);
+  const validIds = new Set((room.participants || []).map((participant) => participant.id));
+  const unknownIds = values.filter((participantId) => !validIds.has(participantId));
+  if (unknownIds.length) {
+    const error = httpError(403, "One or more selected people are no longer in this room.");
+    error.code = "participant_access_denied";
+    throw error;
+  }
+  if (includeCurrent && currentParticipantId && !values.includes(currentParticipantId)) {
+    values.unshift(currentParticipantId);
+  }
+  if (!values.length) throw httpError(400, "Choose at least one room member.");
+  return values;
+}
+
+function commandRoomEventBusyIntervals(room, participantIds, rangeStart, rangeEnd, {
+  excludeEventId = null
+} = {}) {
+  const selected = new Set(participantIds);
+  const lower = new Date(rangeStart).getTime();
+  const upper = new Date(rangeEnd).getTime();
+  const intervals = [];
+  for (const event of room.events || []) {
+    if (event.id === excludeEventId) continue;
+    const start = new Date(event.start);
+    const end = new Date(event.end);
+    if (
+      Number.isNaN(start.getTime()) ||
+      Number.isNaN(end.getTime()) ||
+      start.getTime() >= upper ||
+      end.getTime() <= lower
+    ) {
+      continue;
+    }
+    const eventParticipantIds = uniqueStrings([
+      event.createdByParticipantId,
+      ...(event.inviteeParticipantIds || [])
+    ]);
+    for (const participantId of eventParticipantIds) {
+      if (!selected.has(participantId)) continue;
+      intervals.push({
+        start: start.toISOString(),
+        end: end.toISOString(),
+        participantId,
+        source: "commonground"
+      });
+    }
+  }
+  return intervals;
+}
+
+async function collectCommandBusyIntervals(room, participantIds, rangeStart, rangeEnd, viewerParticipantId, {
+  excludeEventId = null
+} = {}) {
+  const busyIntervals = commandRoomEventBusyIntervals(
+    room,
+    participantIds,
+    rangeStart,
+    rangeEnd,
+    { excludeEventId }
+  );
+  const unavailableParticipantIds = [];
+  const providerErrors = [];
+
+  for (const participantId of participantIds) {
+    const participant = findParticipantById(room, participantId);
+    if (!participant?.userId) continue;
+    const user = store.users[participant.userId];
+    if (!user) continue;
+    const result = await fetchUserFreeBusy(
+      room,
+      user,
+      participant,
+      rangeStart,
+      rangeEnd,
+      viewerParticipantId
+    );
+    if (result.calendarListError) {
+      unavailableParticipantIds.push(participantId);
+      providerErrors.push({
+        participantId,
+        message: "Calendar availability is temporarily unavailable."
+      });
+      continue;
+    }
+    for (const entry of result.busy || []) {
+      busyIntervals.push({
+        start: entry.start,
+        end: entry.end,
+        participantId: entry.participantId,
+        source: "connected_calendar"
+      });
+    }
+  }
+
+  room.updatedAt = nowIso();
+  saveStore();
+  return {
+    busyIntervals,
+    unavailableParticipantIds: uniqueStrings(unavailableParticipantIds),
+    providerErrors,
+    complete: unavailableParticipantIds.length === 0
+  };
+}
+
+function validateCommandAvailabilityInput(room, participant, body = {}) {
+  const timezone = normalizeTimezone(body.timezone || "UTC");
+  const { start, end } = validateFreeBusyRange(body.rangeStart, body.rangeEnd);
+  if (end.getTime() - start.getTime() > 31 * 24 * 60 * 60 * 1000) {
+    throw httpError(400, "Command Centre availability ranges cannot exceed 31 days.");
+  }
+  const durationMinutes = Number(body.durationMinutes || 60);
+  if (
+    !Number.isInteger(durationMinutes) ||
+    durationMinutes < 15 ||
+    durationMinutes > 8 * 60 ||
+    durationMinutes % 15 !== 0
+  ) {
+    throw httpError(400, "Duration must be between 15 minutes and 8 hours in 15-minute increments.");
+  }
+  const earliestMinute = Number(body.earliestMinute ?? 8 * 60);
+  const latestMinute = Number(body.latestMinute ?? 21 * 60);
+  if (
+    !Number.isInteger(earliestMinute) ||
+    !Number.isInteger(latestMinute) ||
+    earliestMinute < 0 ||
+    latestMinute > 24 * 60 ||
+    latestMinute <= earliestMinute
+  ) {
+    throw httpError(400, "Choose a valid daily time window.");
+  }
+  const timeOfDay = ["morning", "afternoon", "evening"].includes(body.timeOfDay)
+    ? body.timeOfDay
+    : null;
+  const participantIds = strictCommandParticipantIds(room, body.participantIds, {
+    currentParticipantId: participant.id,
+    includeCurrent: false
+  });
+  return {
+    participantIds,
+    rangeStart: start.toISOString(),
+    rangeEnd: end.toISOString(),
+    durationMinutes,
+    earliestMinute,
+    latestMinute,
+    timeOfDay,
+    timezone
+  };
+}
+
+async function commandAvailability(auth, input, {
+  excludeEventId = null,
+  includeEveryCandidate = false,
+  limit = 5
+} = {}) {
+  const collection = await collectCommandBusyIntervals(
+    auth.room,
+    input.participantIds,
+    input.rangeStart,
+    input.rangeEnd,
+    auth.participant.id,
+    { excludeEventId }
+  );
+  if (!collection.complete) {
+    return {
+      complete: false,
+      slots: [],
+      freeIntervals: [],
+      unavailableParticipantIds: collection.unavailableParticipantIds,
+      errors: collection.providerErrors
+    };
+  }
+  const calculated = calculateAvailableSlots({
+    ...input,
+    busyIntervals: collection.busyIntervals,
+    includeEveryCandidate,
+    limit
+  });
+  return {
+    complete: true,
+    ...calculated,
+    participantIds: input.participantIds,
+    unavailableParticipantIds: []
+  };
+}
+
+async function revalidateCommandEventTime(auth, eventFields, participantIds, {
+  excludeEventId = null
+} = {}) {
+  const collection = await collectCommandBusyIntervals(
+    auth.room,
+    participantIds,
+    eventFields.start,
+    eventFields.end,
+    auth.participant.id,
+    { excludeEventId }
+  );
+  if (!collection.complete) {
+    const error = httpError(503, "Calendar availability could not be confirmed. Try again shortly.");
+    error.code = "availability_unavailable";
+    error.details = { unavailableParticipantIds: collection.unavailableParticipantIds };
+    throw error;
+  }
+  const conflicts = findConflicts({
+    start: eventFields.start,
+    end: eventFields.end,
+    busyIntervals: collection.busyIntervals
+  });
+  if (conflicts.length) {
+    const error = httpError(409, "That time is no longer available.");
+    error.code = "availability_conflict";
+    error.details = {
+      conflictingParticipantIds: uniqueStrings(conflicts.map((entry) => entry.participantId))
+    };
+    throw error;
+  }
+}
+
+async function createRoomEvent(auth, body) {
+  const eventFields = validateEventInput(body);
+  const inviteeParticipantIds = normalizeInviteeParticipantIds(
+    auth.room,
+    body.inviteeParticipantIds,
+    auth.participant.id
+  );
+  const event = {
+    id: generateId("event"),
+    ...eventFields,
+    inviteeParticipantIds,
+    createdByParticipantId: auth.participant.id,
+    syncToGoogle: body.syncToGoogle === true,
+    syncToOutlook: body.syncToOutlook === true,
+    googleCalendarSync: {},
+    outlookCalendarSync: {},
+    createdAt: nowIso(),
+    updatedAt: nowIso(),
+    responses: {},
+    comments: []
+  };
+  auth.room.events.push(event);
+  notifyEventParticipants(auth.room, event, auth.participant, "event_invite", inviteeParticipantIds);
+  auth.room.updatedAt = nowIso();
+  await syncRoomCalendarsForEvent(auth.room, event);
+  saveStore();
+  return event;
+}
+
+async function updateRoomEvent(auth, event, body) {
+  const previousInviteeIds = new Set(event.inviteeParticipantIds || []);
+  const previousDetails = {
+    title: event.title,
+    start: event.start,
+    end: event.end,
+    location: event.location,
+    description: event.description
+  };
+  const mergedBody = {
+    ...event,
+    ...body,
+    inviteeParticipantIds: body.inviteeParticipantIds ?? event.inviteeParticipantIds
+  };
+  Object.assign(event, validateEventInput(mergedBody, event));
+  event.inviteeParticipantIds = normalizeInviteeParticipantIds(
+    auth.room,
+    mergedBody.inviteeParticipantIds,
+    event.createdByParticipantId
+  );
+  removeResponsesForUninvitedParticipants(event);
+  event.updatedAt = nowIso();
+  if (typeof body.syncToGoogle === "boolean") event.syncToGoogle = body.syncToGoogle;
+  if (typeof body.syncToOutlook === "boolean") event.syncToOutlook = body.syncToOutlook;
+  const newInviteeIds = (event.inviteeParticipantIds || []).filter((participantId) => !previousInviteeIds.has(participantId));
+  const existingInviteeIds = (event.inviteeParticipantIds || []).filter((participantId) => previousInviteeIds.has(participantId));
+  const detailsChanged = Object.entries(previousDetails).some(([key, value]) => event[key] !== value);
+  notifyEventParticipants(auth.room, event, auth.participant, "event_invite", newInviteeIds);
+  if (detailsChanged) {
+    notifyEventParticipants(auth.room, event, auth.participant, "event_updated", existingInviteeIds, {
+      dedupeSuffix: event.updatedAt
+    });
+  }
+  auth.room.updatedAt = nowIso();
+  await syncRoomCalendarsForEvent(auth.room, event);
+  saveStore();
+  return event;
+}
+
+async function withCommandMutation(roomCode, task) {
+  const key = normalizeRoomCode(roomCode);
+  const previous = commandMutationQueues.get(key) || Promise.resolve();
+  const queued = previous.catch(() => {}).then(task);
+  commandMutationQueues.set(key, queued);
+  try {
+    return await queued;
+  } finally {
+    if (commandMutationQueues.get(key) === queued) commandMutationQueues.delete(key);
+  }
+}
+
 const server = http.createServer(async (req, res) => {
   applySecurityHeaders(res);
   const url = new URL(req.url, `http://${req.headers.host}`);
@@ -3502,6 +3841,10 @@ const server = http.createServer(async (req, res) => {
   const roomParticipantPatchMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/participants\/([^/]+)$/);
   const roomParticipantDeleteMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/participants\/([^/]+)$/);
   const roomFreeBusyMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/freebusy$/);
+  const roomCommandParseMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/parse$/);
+  const roomCommandAvailabilityMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/availability$/);
+  const roomCommandCreateMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/create-event$/);
+  const roomCommandMoveMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/move-event$/);
   const roomGoogleCalendarEventsMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/google-calendar-events$/);
   const roomEventsMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/events$/);
   const roomEventMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/events\/([^/]+)$/);
@@ -4116,6 +4459,144 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (roomCommandParseMatch && req.method === "POST") {
+      if (!enforceRateLimit(req, res, "command-parse", 180, 10 * 60 * 1000)) return;
+      const auth = requireExistingRoomParticipant(req, res, roomCommandParseMatch[1]);
+      if (!auth) return;
+      const body = await readJsonBody(req);
+      const command = boundedText(body.command, {
+        field: "Command",
+        max: 500,
+        required: true
+      });
+      const timezone = normalizeTimezone(body.timezone || "UTC");
+      let result = parseCommand(command, {
+        now: new Date(),
+        timezone,
+        members: auth.room.participants.map((participant) => ({
+          id: participant.id,
+          displayName: participant.displayName
+        })),
+        currentParticipantId: auth.participant.id
+      });
+
+      if (result.intent === "move_event") {
+        const eventCandidates = resolveEventCandidates(result.eventQuery, auth.room.events, {
+          participantId: auth.participant.id,
+          isHost: isHost(auth.room, auth.session, auth.user)
+        });
+        result = {
+          ...result,
+          eventCandidates
+        };
+        if (!eventCandidates.length && !result.missingFields.includes("event")) {
+          result.missingFields.push("event");
+        } else if (eventCandidates.length === 1) {
+          result = completeMoveTarget(result, eventCandidates[0], timezone);
+        }
+      }
+
+      if (result.intent === "navigate" && result.query) {
+        result = {
+          ...result,
+          eventCandidates: resolveEventCandidates(result.query, auth.room.events, {
+            participantId: auth.participant.id,
+            isHost: true
+          }),
+          participantCandidates: auth.room.participants
+            .filter((participant) => result.participantIds.includes(participant.id))
+            .map((participant) => ({
+              id: participant.id,
+              displayName: participant.displayName,
+              color: participant.color
+            }))
+        };
+      }
+
+      sendJson(res, 200, { result });
+      return;
+    }
+
+    if (roomCommandAvailabilityMatch && req.method === "POST") {
+      if (!enforceRateLimit(req, res, "command-availability", 45, 10 * 60 * 1000)) return;
+      const auth = requireExistingRoomParticipant(req, res, roomCommandAvailabilityMatch[1]);
+      if (!auth) return;
+      const body = await readJsonBody(req);
+      const input = validateCommandAvailabilityInput(auth.room, auth.participant, body);
+      const availability = await commandAvailability(auth, input, {
+        includeEveryCandidate: body.intent === "show_availability",
+        limit: body.intent === "show_availability" ? 20 : 5
+      });
+      sendJson(res, 200, { availability });
+      return;
+    }
+
+    if (roomCommandCreateMatch && req.method === "POST") {
+      if (!enforceRateLimit(req, res, "command-create", 30, 60 * 60 * 1000)) return;
+      const auth = requireExistingRoomParticipant(req, res, roomCommandCreateMatch[1]);
+      if (!auth) return;
+      const body = await readJsonBody(req);
+      const event = await withCommandMutation(auth.room.code, async () => {
+        const participantIds = strictCommandParticipantIds(auth.room, body.inviteeParticipantIds || [], {
+          currentParticipantId: auth.participant.id,
+          includeCurrent: true
+        });
+        const eventFields = validateEventInput(body);
+        await revalidateCommandEventTime(auth, eventFields, participantIds);
+        return createRoomEvent(auth, {
+          ...body,
+          inviteeParticipantIds: participantIds
+        });
+      });
+      sendJson(res, 201, { event: publicEvent(event, auth.room, auth.participant.id) });
+      return;
+    }
+
+    if (roomCommandMoveMatch && req.method === "POST") {
+      if (!enforceRateLimit(req, res, "command-move", 60, 60 * 60 * 1000)) return;
+      const auth = requireExistingRoomParticipant(req, res, roomCommandMoveMatch[1]);
+      if (!auth) return;
+      const body = await readJsonBody(req);
+      const event = await withCommandMutation(auth.room.code, async () => {
+        const currentEvent = auth.room.events.find((item) => item.id === String(body.eventId || ""));
+        if (!currentEvent) throw httpError(404, "Event not found.");
+        const canEdit = currentEvent.createdByParticipantId === auth.participant.id || isHost(auth.room, auth.session, auth.user);
+        if (!canEdit) throw httpError(403, "You cannot move this event.");
+        if (!body.expectedUpdatedAt || body.expectedUpdatedAt !== (currentEvent.updatedAt || currentEvent.createdAt)) {
+          const error = httpError(409, "This event changed after the preview. Review it again before moving it.");
+          error.code = "event_changed";
+          throw error;
+        }
+        const participantIds = strictCommandParticipantIds(
+          auth.room,
+          currentEvent.inviteeParticipantIds || [],
+          {
+            currentParticipantId: currentEvent.createdByParticipantId,
+            includeCurrent: true
+          }
+        );
+        const eventFields = validateEventInput({
+          ...currentEvent,
+          start: body.start,
+          end: body.end,
+          timezone: body.timezone || currentEvent.timezone,
+          allDay: false
+        }, currentEvent);
+        await revalidateCommandEventTime(auth, eventFields, participantIds, {
+          excludeEventId: currentEvent.id
+        });
+        return updateRoomEvent(auth, currentEvent, {
+          start: eventFields.start,
+          end: eventFields.end,
+          timezone: eventFields.timezone,
+          allDay: false,
+          inviteeParticipantIds: participantIds
+        });
+      });
+      sendJson(res, 200, { event: publicEvent(event, auth.room, auth.participant.id) });
+      return;
+    }
+
     if (roomGoogleCalendarEventsMatch && req.method === "PATCH") {
       if (!enforceRateLimit(req, res, "google-event-update", 120, 60 * 60 * 1000)) return;
       const auth = requireRoomParticipant(req, res, roomGoogleCalendarEventsMatch[1]);
@@ -4216,38 +4697,7 @@ const server = http.createServer(async (req, res) => {
       if (!auth) return;
 
       const body = await readJsonBody(req);
-      const eventFields = validateEventInput(body);
-      const inviteeParticipantIds = normalizeInviteeParticipantIds(
-        auth.room,
-        body.inviteeParticipantIds,
-        auth.participant.id
-      );
-      const event = {
-        id: generateId("event"),
-        ...eventFields,
-        inviteeParticipantIds,
-        createdByParticipantId: auth.participant.id,
-        syncToGoogle: body.syncToGoogle === true,
-        syncToOutlook: body.syncToOutlook === true,
-        googleCalendarSync: {},
-        outlookCalendarSync: {},
-        createdAt: nowIso(),
-        updatedAt: nowIso(),
-        responses: {},
-        comments: []
-      };
-
-      auth.room.events.push(event);
-      notifyEventParticipants(
-        auth.room,
-        event,
-        auth.participant,
-        "event_invite",
-        inviteeParticipantIds
-      );
-      auth.room.updatedAt = nowIso();
-      await syncRoomCalendarsForEvent(auth.room, event);
-      saveStore();
+      const event = await createRoomEvent(auth, body);
       sendJson(res, 201, { event: publicEvent(event, auth.room, auth.participant.id) });
       return;
     }
@@ -4267,40 +4717,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       const body = await readJsonBody(req);
-      const previousInviteeIds = new Set(event.inviteeParticipantIds || []);
-      const previousDetails = {
-        title: event.title,
-        start: event.start,
-        end: event.end,
-        location: event.location,
-        description: event.description
-      };
-      Object.assign(event, validateEventInput(body, event));
-      event.inviteeParticipantIds = normalizeInviteeParticipantIds(
-        auth.room,
-        body.inviteeParticipantIds,
-        event.createdByParticipantId
-      );
-      removeResponsesForUninvitedParticipants(event);
-      event.updatedAt = nowIso();
-      if (typeof body.syncToGoogle === "boolean") {
-        event.syncToGoogle = body.syncToGoogle;
-      }
-      if (typeof body.syncToOutlook === "boolean") {
-        event.syncToOutlook = body.syncToOutlook;
-      }
-      const newInviteeIds = (event.inviteeParticipantIds || []).filter((participantId) => !previousInviteeIds.has(participantId));
-      const existingInviteeIds = (event.inviteeParticipantIds || []).filter((participantId) => previousInviteeIds.has(participantId));
-      const detailsChanged = Object.entries(previousDetails).some(([key, value]) => event[key] !== value);
-      notifyEventParticipants(auth.room, event, auth.participant, "event_invite", newInviteeIds);
-      if (detailsChanged) {
-        notifyEventParticipants(auth.room, event, auth.participant, "event_updated", existingInviteeIds, {
-          dedupeSuffix: event.updatedAt
-        });
-      }
-      auth.room.updatedAt = nowIso();
-      await syncRoomCalendarsForEvent(auth.room, event);
-      saveStore();
+      await updateRoomEvent(auth, event, body);
       sendJson(res, 200, { event: publicEvent(event, auth.room, auth.participant.id) });
       return;
     }
@@ -4667,9 +5084,19 @@ if (url.pathname === "/auth/google") {
     serveStatic(req, res);
   } catch (error) {
     const status = Number(error.status || 500);
-    sendJson(res, status >= 400 && status < 600 ? status : 500, {
-      error: status >= 400 && status < 500 ? error.message : "The server could not complete this request."
-    });
+    const safeStatus = status >= 400 && status < 600 ? status : 500;
+    const payload = {
+      error: safeStatus < 500 || safeStatus === 503
+        ? error.message
+        : "The server could not complete this request."
+    };
+    if (typeof error.code === "string" && /^[a-z0-9_]{1,80}$/.test(error.code)) {
+      payload.code = error.code;
+    }
+    if (error.details && typeof error.details === "object") {
+      payload.details = error.details;
+    }
+    sendJson(res, safeStatus, payload);
   }
 });
 
