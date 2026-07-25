@@ -366,10 +366,10 @@ try {
     /<\/header>\s*<aside class="participants-sidebar" id="participantsSidebar"[^>]*data-open="true">[\s\S]*?<div class="mini-calendar-grid" id="miniCalendarGrid"><\/div>[\s\S]*?<input id="memberSearchInput" type="search" placeholder="Search for people"[\s\S]*?<span>Members<\/span>[\s\S]*?<div class="participant-strip" id="participantStrip"><\/div>/,
     "The persistent left sidebar must contain the mini calendar, member search, and Members selection list"
   );
-  assert.match(
+  assert.doesNotMatch(
     home.text,
-    /<div class="calendar-grid" id="calendarGrid"><\/div>\s*<footer class="legal-links calendar-legal-links" aria-label="Legal links">/,
-    "Legal links must remain below the calendar grid in the scroll flow"
+    /calendar-legal-links|Privacy Policy|Terms &amp; Conditions/,
+    "The calendar view must not duplicate the sidebar legal links"
   );
   for (const removedShellControl of [
     /id="calendarSearchButton"/,
@@ -1411,7 +1411,7 @@ try {
   assert.match(eventComposerStyles.text, /@media \(max-width: 760px\)[\s\S]*?#roomPage\.calendar-app-shell,[\s\S]*?--shell-nav-height:\s*54px/s);
   assert.doesNotMatch(eventComposerStyles.text, /--shell-rail-width|grid-area:\s*rail|calendar-icon-rail/);
   assert.match(eventComposerStyles.text, /#roomPage \.calendar-app-nav\s*\{[^}]*grid-area:\s*nav[^}]*height:\s*var\(--shell-nav-height\)[^}]*background:\s*var\(--shell-panel\)/s);
-  assert.match(eventComposerStyles.text, /#roomPage \.calendar-legal-links\s*\{[^}]*position:\s*static[^}]*margin:\s*14px 14px 16px auto/s);
+  assert.doesNotMatch(eventComposerStyles.text, /calendar-legal-links/);
   assert.match(eventComposerStyles.text, /#roomPage \.calendar-grid\s*\{[^}]*min-height:\s*calc\(100% \+ 1px\)/s);
   assert.match(eventComposerStyles.text, /#roomPage \.calendar-stage\s*\{[^}]*min-height:\s*0[^}]*overflow:\s*hidden/s);
   assert.match(eventComposerStyles.text, /#roomPage \.calendar-wrap\s*\{[^}]*grid-row:\s*1[^}]*height:\s*100%[^}]*overflow:\s*auto/s);

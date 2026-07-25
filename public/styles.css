@@ -472,19 +472,6 @@ a:focus-visible {
   text-underline-offset: 3px;
 }
 
-.legal-links.calendar-legal-links {
-  position: static;
-  right: auto;
-  bottom: auto;
-  z-index: auto;
-  display: flex;
-  justify-content: flex-end;
-  width: fit-content;
-  max-width: calc(100% - 24px);
-  margin: 12px 12px 14px auto;
-  transform: none;
-}
-
 .legal-page {
   min-height: 100vh;
   padding: 38px 18px;
@@ -2383,10 +2370,6 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   min-width: 0;
   width: 100%;
   grid-template-columns: var(--time-width) repeat(var(--day-count), minmax(0, 1fr));
-}
-
-.fullscreen-mode .calendar-legal-links {
-  display: none;
 }
 
 .fullscreen-mode .busy-card strong,
@@ -5406,6 +5389,8 @@ button.free-block:not(:disabled):active {
   padding: 6px 7px;
 }
 
+}
+
 /* CommonGround Command Centre */
 #roomPage .command-centre-trigger {
   display: inline-flex;
@@ -5779,6 +5764,45 @@ button.free-block:not(:disabled):active {
 
 .command-field input[aria-invalid="true"] {
   border-color: rgba(220, 104, 104, 0.64);
+}
+
+.command-field input:disabled {
+  opacity: 0.42;
+}
+
+.command-all-day {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+}
+
+.command-all-day input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #b39458;
+}
+
+.command-all-day span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.command-all-day strong {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+}
+
+.command-all-day small {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
 }
 
 .command-participant-editor {
@@ -6172,6 +6196,8 @@ button.free-block:not(:disabled):active {
     animation-iteration-count: 1 !important;
   }
 }
+
+@media (max-width: 760px) {
 
 .busy-card strong,
 .busy-stack-item strong,
@@ -10170,13 +10196,6 @@ button.identity-name-button:not(:disabled):active,
   font-size: 10px;
   font-weight: 550;
   text-align: right;
-}
-
-#roomPage .calendar-legal-links {
-  position: static;
-  margin: 14px 14px 16px auto;
-  color: var(--shell-muted);
-  font-size: 10px;
 }
 
 #roomPage .host-popover {
