@@ -25,7 +25,15 @@ npm run check
 npm test
 ```
 
-`npm test` starts CommonGround against a temporary SQLite database and checks the core room, guest, event, voting, notification, privacy, persistence, room-code refresh, and deletion flows.
+`npm test` runs deterministic parser/scheduling checks, room-scoped Command Centre permission and conflict checks, then the full CommonGround smoke suite against temporary SQLite databases.
+
+## Command Centre
+
+CommonGround includes a deterministic command palette for creating and moving events, finding or highlighting shared availability, and navigating the current room. Open **Ask CommonGround** from the calendar toolbar or press `Cmd/Ctrl+K`; `/` also opens it when focus is not inside an editable control.
+
+The Command Centre uses local parsing plus CommonGround's existing server-side room, availability, permission, event, and Google Calendar sync systems. It does not call an LLM, require an AI API key, or create events without an editable preview and explicit confirmation.
+
+See [Command Centre architecture and usage](docs/command-centre.md) for supported commands, security details, extension guidance, tests, Render considerations, and current limitations.
 
 ## Environment variables
 
@@ -98,6 +106,9 @@ For a prototype, attach a persistent disk and point `DATA_DIR` or `DATABASE_PATH
 
 ```text
 server.js
+command-centre-date-time.js
+command-centre-parser.js
+command-centre-scheduling.js
 package.json
 Procfile
 render.yaml
@@ -106,8 +117,12 @@ render.yaml
 public/index.html
 public/styles.css
 public/app.js
+public/command-centre.js
 public/privacy.html
 public/terms.html
+docs/command-centre.md
+tests/command-centre.mjs
+tests/command-centre-integration.mjs
 tests/smoke.mjs
 ```
 
