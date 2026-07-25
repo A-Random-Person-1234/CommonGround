@@ -8,6 +8,7 @@ This directory is the complete deployable application. Run and deploy from this 
 
 - Node.js 22 or newer (the server uses the built-in `node:sqlite` module)
 - Google OAuth credentials for Google Calendar connection
+- A server-only Google Maps Platform key with Places API (New) enabled for address suggestions
 - Microsoft OAuth credentials only if Outlook connection is enabled
 
 ## Run locally
@@ -42,6 +43,7 @@ Required for the public Google Calendar flow:
 ```text
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...
+GOOGLE_MAPS_API_KEY=...
 PUBLIC_BASE_URL=https://YOUR-DOMAIN
 ```
 
@@ -62,6 +64,12 @@ OUTBOUND_REQUEST_TIMEOUT_MS=15000
 ```
 
 Do not commit OAuth secrets. Configure them in the hosting provider's secret/environment settings.
+
+## Address autocomplete
+
+The location fields in the event composer, event detail editor, and Command Centre use Google Places API (New) address suggestions. CommonGround sends searches through the room-scoped server endpoint `/api/rooms/:code/places/autocomplete`; the browser never receives the Maps API key. Manual location entry remains available if Places is not configured or temporarily unavailable.
+
+Create a separate Maps Platform key for CommonGround, enable only **Places API (New)** for that key, set quota and billing alerts, and store the key as the `GOOGLE_MAPS_API_KEY` secret in Render. Never put the key in `public/`, a URL, a client-side script, or GitHub. Rotate a key immediately if it has been pasted into chat, logs, or another non-secret channel.
 
 ## OAuth redirect setup
 

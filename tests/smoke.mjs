@@ -249,11 +249,15 @@ try {
 
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
+  const publicConfig = await publicSession.request("/api/config");
+  assert.equal(publicConfig.payload.placesReady, false);
+  assert.ok(!("googleMapsApiKey" in publicConfig.payload));
+  assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-composer-title-top"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260725-command-composer"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-places-autocomplete"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260725-no-passive-autofocus"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
-  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-command-composer"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-places-autocomplete"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(home.text, /<meta name="theme-color" content="#101c31" \/>/);
@@ -303,6 +307,7 @@ try {
   assert.match(eventModalMarkup, /<form class="modal-card event-composer" id="eventForm">/);
   assert.doesNotMatch(eventModalMarkup, /<form[^>]*id="eventForm"[^>]*method="dialog"/);
   assert.match(eventModalMarkup, /<h2 class="sr-only" id="eventComposerTitle">Create a group event<\/h2>/);
+  assert.doesNotMatch(home.text, /\sautofocus(?:\s|\/?>)/i, "Text fields must not receive a caret before deliberate user focus");
   assert.doesNotMatch(eventModalMarkup, /composer-handle/, "The event composer must not show the decorative menu lines");
   assert.doesNotMatch(eventModalMarkup, /event-composer-top/, "The title must not be pushed down by an empty top row");
   assert.match(
@@ -329,7 +334,15 @@ try {
   assert.match(eventModalMarkup, /<label class="mini-toggle" for="eventGoogleSyncInput" aria-label="Sync this event to Google Calendar">/);
   assert.match(eventModalMarkup, /<span class="oauth-spinner" aria-hidden="true"><\/span>/);
   assert.match(eventModalMarkup, /id="eventFormFeedback" role="status" aria-live="polite"/);
-  assert.match(eventModalMarkup, /<label class="composer-field-row composer-input-row" for="eventLocationInput">/);
+  assert.match(eventModalMarkup, /<div class="composer-field-row composer-input-row location-autocomplete-host">/);
+  assert.match(
+    eventModalMarkup,
+    /id="eventLocationInput"[\s\S]*?maxlength="200"[\s\S]*?role="combobox"[\s\S]*?aria-autocomplete="list"[\s\S]*?aria-expanded="false"[\s\S]*?aria-controls="eventLocationListbox"[\s\S]*?aria-describedby="eventLocationStatus"/,
+    "The event location must expose an editable address-suggestion combobox"
+  );
+  assert.match(eventModalMarkup, /id="eventLocationListbox" role="listbox" aria-label="Address suggestions"/);
+  assert.match(eventModalMarkup, /id="eventLocationStatus" role="status" aria-live="polite"/);
+  assert.match(eventModalMarkup, /class="location-autocomplete-attribution" translate="no">Google Maps<\/div>/);
   assert.match(eventModalMarkup, /<label class="composer-field-row composer-input-row composer-description-row" for="eventDescriptionInput">/);
   assert.match(eventModalMarkup, /id="eventDescriptionInput"[^>]*rows="1"/);
   assert.doesNotMatch(eventModalMarkup, /class="composer-body"/);
@@ -352,6 +365,12 @@ try {
     'id="eventFormFeedback"',
     'id="saveEventButton"'
   ], "Event composer sections must retain their accessible visual order");
+  assert.match(
+    home.text,
+    /id="detailLocationInput"[\s\S]*?maxlength="200"[\s\S]*?role="combobox"[\s\S]*?aria-controls="detailLocationListbox"[\s\S]*?aria-describedby="detailLocationStatus"/,
+    "The event detail editor must use the same accessible address combobox"
+  );
+  assert.match(home.text, /id="detailLocationListbox" role="listbox" aria-label="Address suggestions"/);
   assert.match(home.text, /class="ui-icon ui-icon-maximize" id="fullscreenIcon"/);
   assert.match(home.text, /composer-row-icon ui-icon ui-icon-clock/);
   assert.match(home.text, /button-with-icon[^>]*id="addEventButton"/);
@@ -468,6 +487,51 @@ try {
   const commandPredictorScript = await publicSession.request("/command-centre-predictor.js", {
     accept: "text/javascript"
   });
+  assert.match(
+    serverSource,
+    /const googleMapsApiKey = String\(process\.env\.GOOGLE_MAPS_API_KEY \|\| ""\)\.trim\(\);[\s\S]*?https:\/\/places\.googleapis\.com\/v1\/places:autocomplete/,
+    "Places must use a server-only environment key and a fixed Google endpoint"
+  );
+  assert.match(
+    serverSource,
+    /roomPlacesAutocompleteMatch[\s\S]*?req\.method !== "POST"[\s\S]*?enforceRateLimit[\s\S]*?requireExistingRoomParticipant[\s\S]*?readJsonBody\(req, \{ maxBytes: 8_192 \}\)[\s\S]*?fetchGooglePlaceSuggestions/,
+    "Address suggestions must be room-scoped, rate-limited, authenticated, and body-bounded"
+  );
+  assert.match(
+    serverSource,
+    /X-Goog-Api-Key": googleMapsApiKey[\s\S]*?"X-Goog-FieldMask"[\s\S]*?sanitizeGooglePlaceSuggestions/,
+    "The proxy must authenticate by header, request only required fields, and sanitize results"
+  );
+  assert.doesNotMatch(
+    [home.text, eventComposerScript.text, commandCentreScript.text].join("\n"),
+    /AIza[0-9A-Za-z_-]{20,}/,
+    "Client assets must never contain a Google Maps API key"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function initializeLocationAutocomplete\(input\)[\s\S]*?dataset\.locationAutocompleteReady[\s\S]*?addEventListener\("focus"[\s\S]*?addEventListener\("input"[\s\S]*?queueLocationAutocomplete[\s\S]*?addEventListener\("keydown"[\s\S]*?handleLocationAutocompleteKeydown[\s\S]*?addEventListener\("blur"/,
+    "Static and dynamic address fields must share one autocomplete controller"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function queueLocationAutocomplete\(state,[\s\S]*?query\.length < 3[\s\S]*?\}, immediate \? 0 : 260\);/,
+    "Address lookups must require three characters and debounce user input"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function requestLocationAutocomplete\(state, query\)[\s\S]*?new AbortController\(\)[\s\S]*?generation !== state\.requestGeneration[\s\S]*?state\.input\.value\.trim\(\) !== query/,
+    "Address lookups must abort and reject stale results"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function handleLocationAutocompleteKeydown\(event, state\)[\s\S]*?ArrowDown[\s\S]*?ArrowUp[\s\S]*?Enter[\s\S]*?Escape[\s\S]*?Tab/,
+    "Address suggestions must support complete keyboard navigation"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /id="commandEventLocation"[\s\S]*?role="combobox"[\s\S]*?aria-controls="commandEventLocationListbox"[\s\S]*?Google Maps[\s\S]*?window\.initializeLocationAutocomplete\?\.\(commandCentreBody\.querySelector\("#commandEventLocation"\)\)/,
+    "The dynamic Command Centre location editor must register the shared address combobox"
+  );
   assert.match(
     commandPredictorScript.text,
     /export function predictCommand\([\s\S]*?acceptedCommand[\s\S]*?inlineSuffix[\s\S]*?parseTyped/,
@@ -1190,6 +1254,21 @@ try {
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
   assert.match(
     eventComposerStyles.text,
+    /\.location-autocomplete-menu\s*\{[^}]*position:\s*absolute;[^}]*opacity:\s*0;[^}]*transform:\s*translate3d\(0, -5px, 0\) scale\(0\.98\);[^}]*transition:[^}]*opacity var\(--motion-standard\) var\(--ease-standard\),[^}]*transform var\(--motion-standard\) var\(--ease-standard\);[^}]*will-change:\s*transform, opacity;/s,
+    "Address suggestions must use a contained, compositor-safe popover"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.location-autocomplete-attribution\s*\{[^}]*font-family:\s*Roboto, Arial, sans-serif;[^}]*font-size:\s*12px;[^}]*font-weight:\s*400;[^}]*white-space:\s*nowrap;/s,
+    "Displayed Places content must keep legible Google Maps attribution"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.location-autocomplete-menu\s*\{[^}]*left:\s*40px;[^}]*right:\s*0;/s,
+    "Composer suggestions must align with the location text rather than its icon"
+  );
+  assert.match(
+    eventComposerStyles.text,
     /\.free-glow-block\s*\{\s*padding:\s*6px 7px;\s*\}\s*\}\s*\/\* CommonGround Command Centre \*\//,
     "The Command Centre styles must sit outside the legacy mobile calendar media block"
   );
@@ -1808,6 +1887,16 @@ try {
     /const eventInviteDropdown = eventModal\?\.querySelector\("\.invite-dropdown"\);[\s\S]*?eventInviteDropdown\?\.addEventListener\("toggle", \(\) => \{\s*requestAnimationFrame\(positionEventModal\);/,
     "Opening the in-flow invitee selector must remeasure the anchored composer"
   );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /eventTitleInput\.(?:focus|select)\(/,
+    "Opening the event composer must not place a text caret in the title"
+  );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /function openCreateRoomModal\(\)[\s\S]*?quickRoomNameInput\?\.focus\(\)/,
+    "Opening the room composer must not place a text caret in the room name"
+  );
   assert.match(eventComposerStyles.text, /@media \(max-width: 820px\)[\s\S]*?#eventModal \.event-composer[\s\S]*?width: min\(100vw - 16px, 360px\)/);
   assert.match(eventComposerStyles.text, /@media \(max-height: 720px\)[\s\S]*?#eventModal \.event-composer\s*\{[^}]*gap: 10px[^}]*padding: 14px 16px/s);
   assert.match(eventComposerStyles.text, /@media \(max-height: 560px\)[\s\S]*?#eventModal \.composer-sync-toggle small\s*\{[^}]*display: block[^}]*font-size: 11px/s);
@@ -2049,6 +2138,32 @@ try {
   const hostId = hostRoom.payload.participant.id;
   assert.equal(hostRoom.payload.room.participants.length, 3);
   assertNoKeys(hostRoom.payload, new Set(["userId", "ownerEmail", "tokens", "googleTokens", "microsoftTokens"]));
+
+  const placesPath = `/api/rooms/${firstCode}/places/autocomplete`;
+  await host.request(placesPath, { expected: 405 });
+  await host.request(placesPath, { method: "POST", expected: 415 });
+  await publicSession.request(placesPath, {
+    method: "POST",
+    expected: 403,
+    body: { input: "10 Downing Street", sessionToken: "public-session" }
+  });
+  const shortPlacesQuery = await host.request(placesPath, {
+    method: "POST",
+    body: { input: "St", sessionToken: "short-query" }
+  });
+  assert.deepEqual(shortPlacesQuery.payload, { suggestions: [] });
+  await host.request(placesPath, {
+    method: "POST",
+    expected: 400,
+    body: { input: "Downing Street", sessionToken: "spaces are invalid" }
+  });
+  const missingPlacesConfiguration = await host.request(placesPath, {
+    method: "POST",
+    expected: 503,
+    body: { input: "10 Downing Street", sessionToken: "smoke-session" }
+  });
+  assert.equal(missingPlacesConfiguration.payload.error, "Address suggestions are not configured.");
+  assert.ok(!("key" in missingPlacesConfiguration.payload));
 
   for (const { value: color } of expectedParticipantPalette) {
     const recolored = await host.request(`/api/rooms/${firstCode}/participants/${hostId}`, {
