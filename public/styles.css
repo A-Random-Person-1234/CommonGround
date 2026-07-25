@@ -8192,14 +8192,24 @@ button.identity-name-button:not(:disabled):active,
   --composer-muted: color-mix(in srgb, var(--text) 48%, transparent);
   --composer-faint: color-mix(in srgb, var(--text) 8%, transparent);
   --composer-field: color-mix(in srgb, var(--text) 3%, transparent);
-  --composer-accent: var(--brand);
+  --composer-accent: #bd865d;
+  --composer-surface: var(--surface);
+  --composer-popover: var(--surface-2);
 }
 
 :root[data-theme="dark"] #eventModal {
   --composer-ink: #fff;
-  --composer-muted: rgba(255, 255, 255, 0.45);
+  --composer-muted: #9aa0a6;
   --composer-faint: rgba(255, 255, 255, 0.08);
   --composer-field: rgba(255, 255, 255, 0.03);
+  --composer-accent: #d09e72;
+  --composer-surface: #1e1e1e;
+  --composer-popover: #292827;
+}
+
+#eventModal ::selection {
+  background: color-mix(in srgb, var(--composer-accent) 42%, transparent);
+  color: var(--composer-ink);
 }
 
 #eventModal[open] .event-composer {
@@ -8235,9 +8245,7 @@ button.identity-name-button:not(:disabled):active,
   padding: 16px;
   border: 1px solid var(--composer-faint);
   border-radius: 14px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.025), transparent),
-    var(--surface);
+  background: var(--composer-surface);
   box-shadow:
     0 28px 80px rgba(0, 0, 0, 0.32),
     0 4px 16px rgba(0, 0, 0, 0.16);
@@ -8295,7 +8303,7 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-title {
   width: 100%;
-  min-height: 28px;
+  min-height: 36px;
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -8303,10 +8311,10 @@ button.identity-name-button:not(:disabled):active,
   background: transparent;
   box-shadow: none;
   color: var(--composer-ink);
-  font-size: 20px;
+  font-size: 26px;
   font-weight: 600;
-  line-height: 1.4;
-  letter-spacing: -0.012em;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
   will-change: transform;
 }
 
@@ -8330,24 +8338,26 @@ button.identity-name-button:not(:disabled):active,
 #eventModal .composer-schedule-section,
 #eventModal .composer-field-row {
   display: grid;
-  grid-template-columns: 16px minmax(0, 1fr);
-  gap: 16px;
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 0;
   align-items: center;
 }
 
 #eventModal .composer-schedule-section {
   align-items: start;
+  margin-bottom: 8px;
 }
 
 #eventModal .composer-row-icon,
 #eventModal .composer-row-icon.ui-icon {
   position: relative;
-  width: 16px;
-  height: 16px;
-  margin: 12px 0 0;
+  width: 18px;
+  height: 18px;
+  margin: 7px 0 0;
   color: var(--composer-muted);
   opacity: 1;
-  flex: 0 0 16px;
+  justify-self: center;
+  flex: 0 0 18px;
 }
 
 #eventModal .composer-field-row > .composer-row-icon,
@@ -8376,13 +8386,14 @@ button.identity-name-button:not(:disabled):active,
   grid-column: auto;
   display: grid;
   grid-template-columns: minmax(116px, 1.25fr) minmax(72px, 0.8fr) auto minmax(72px, 0.8fr);
-  gap: 0 6px;
+  gap: 4px 6px;
   align-items: center;
   min-width: 0;
-  padding: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   will-change: transform, opacity;
 }
 
@@ -8434,14 +8445,13 @@ button.identity-name-button:not(:disabled):active,
   width: 100%;
   min-width: 0;
   min-height: 32px;
-  padding: 0 10px;
+  padding: 0 8px;
   border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 4px;
+  border-radius: 6px;
   outline: 0;
-  background: #3c4043;
-  color: #fff;
-  caret-color: #8ab4f8;
+  background: transparent;
+  color: var(--composer-ink);
+  caret-color: var(--composer-accent);
   font-family: "Avenir Next", "Segoe UI Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   font-weight: 600;
@@ -8452,25 +8462,24 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .composer-time-grid .time-picker-input:hover {
-  background: #45494d;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 #eventModal .composer-time-grid .time-picker-input:focus,
 #eventModal .composer-time-grid .time-picker-input[aria-expanded="true"] {
-  border-bottom-color: #8ab4f8;
   outline: 0;
-  background: #3c4043;
+  background: rgba(255, 255, 255, 0.07);
   box-shadow: none;
   transform: none;
 }
 
 #eventModal .composer-time-grid .time-picker-input::selection {
-  background: #355c91;
-  color: #fff;
+  background: color-mix(in srgb, var(--composer-accent) 46%, transparent);
+  color: var(--composer-ink);
 }
 
 #eventModal .composer-time-grid .time-picker-input[aria-invalid="true"] {
-  border-bottom-color: #f28b82;
+  box-shadow: inset 0 -2px 0 var(--danger);
 }
 
 #eventModal .composer-time-grid .time-picker-input:disabled {
@@ -8489,13 +8498,11 @@ button.identity-name-button:not(:disabled):active,
   width: max(184px, 100%);
   max-width: min(260px, calc(100vw - 32px));
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  background: #202124;
-  box-shadow:
-    0 14px 34px rgba(0, 0, 0, 0.42),
-    0 2px 8px rgba(0, 0, 0, 0.28);
-  color: #e8eaed;
+  border: 1px solid var(--composer-faint);
+  border-radius: 10px;
+  background: var(--composer-popover);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  color: var(--composer-ink);
   transform-origin: top center;
   animation: event-time-picker-in var(--motion-slow) var(--ease-modal) both;
   will-change: transform, opacity;
@@ -8530,23 +8537,28 @@ button.identity-name-button:not(:disabled):active,
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 4px 0;
-  scrollbar-color: #5f6368 #202124;
+  padding: 6px;
+  scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
   scrollbar-width: thin;
 }
 
 #eventModal .time-picker-list::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 #eventModal .time-picker-list::-webkit-scrollbar-track {
-  background: #202124;
+  background: transparent;
 }
 
 #eventModal .time-picker-list::-webkit-scrollbar-thumb {
-  border: 2px solid #202124;
   border-radius: 999px;
-  background: #5f6368;
+  background: rgba(255, 255, 255, 0.24);
+}
+
+#eventModal .time-picker-list::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 #eventModal .time-picker-option {
@@ -8557,9 +8569,9 @@ button.identity-name-button:not(:disabled):active,
   min-height: 36px;
   padding: 8px 14px;
   border: 0;
-  border-radius: 0;
+  border-radius: 6px;
   background: transparent;
-  color: #e8eaed;
+  color: var(--composer-ink);
   font-family: "Avenir Next", "Segoe UI Variable", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   font-size: 14px;
   font-weight: 500;
@@ -8573,7 +8585,7 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .time-picker-option:hover,
 #eventModal .time-picker-option.is-active {
-  background: #3c4043;
+  background: rgba(255, 255, 255, 0.06);
   transform: translate3d(0, 0, 0) scale(1.01);
 }
 
@@ -8582,11 +8594,11 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .time-picker-option.is-selected .time-picker-clock {
-  color: #aecbfa;
+  color: var(--composer-accent);
 }
 
 #eventModal .time-picker-duration {
-  color: rgba(232, 234, 237, 0.82);
+  color: var(--composer-muted);
   font-weight: 500;
 }
 
@@ -8611,21 +8623,63 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .all-day-toggle {
   grid-column: 1 / -1;
-  min-height: 28px;
-  margin-top: 4px;
-  padding: 4px 8px 0;
-  border-top: 1px solid var(--composer-faint);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  min-height: 32px;
+  margin-top: 2px;
+  padding: 0 8px;
+  border: 0;
   color: var(--composer-ink);
   font-size: 14px;
   font-weight: 500;
+  cursor: pointer;
 }
 
 #eventModal .all-day-toggle input {
-  width: 16px;
-  height: 16px;
+  appearance: none;
+  -webkit-appearance: none;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
   min-height: 0;
+  margin: 0;
   padding: 0;
+  border: 0;
   border-radius: 4px;
+  background: rgba(255, 255, 255, 0.12);
+  cursor: pointer;
+}
+
+#eventModal .all-day-toggle input::after {
+  content: "";
+  width: 5px;
+  height: 9px;
+  margin-top: -2px;
+  border-right: 2px solid #241b15;
+  border-bottom: 2px solid #241b15;
+  opacity: 0;
+  transform: rotate(45deg) scale(0.72);
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
+}
+
+#eventModal .all-day-toggle input:checked {
+  background: var(--composer-accent);
+}
+
+#eventModal .all-day-toggle input:checked::after {
+  opacity: 1;
+  transform: rotate(45deg) scale(1);
+}
+
+#eventModal .all-day-toggle input:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--composer-accent) 74%, white);
+  outline-offset: 2px;
 }
 
 #eventModal .composer-time-grid.is-all-day {
@@ -8639,22 +8693,24 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-meta-section {
   display: grid;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
 #eventModal .composer-field-row {
   position: relative;
   min-height: 36px;
-  padding: 0 8px;
-  border-radius: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
   isolation: isolate;
 }
 
 #eventModal .composer-input-row::before {
   content: "";
   position: absolute;
-  inset: 0;
+  inset: 0 0 0 40px;
   z-index: -1;
   border-radius: inherit;
   background: rgba(255, 255, 255, 0.02);
@@ -8715,7 +8771,7 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal .composer-invite-row > .composer-row-icon,
 #eventModal .composer-invite-row > .composer-row-icon.ui-icon {
-  margin-top: 10px;
+  margin-top: 9px;
 }
 
 #eventModal .invite-dropdown {
@@ -8730,8 +8786,8 @@ button.identity-name-button:not(:disabled):active,
   display: block;
   width: 100%;
   max-height: clamp(88px, 22dvh, 160px);
-  margin: 4px 0 8px;
-  padding: 4px;
+  margin: 4px 0 0;
+  padding: 4px 0 0;
   overflow-x: hidden;
   overflow-y: auto;
   visibility: visible;
@@ -8739,9 +8795,9 @@ button.identity-name-button:not(:disabled):active,
   transform: translate3d(0, 0, 0) scale(1);
   transform-origin: top center;
   pointer-events: auto;
-  border-color: var(--composer-faint);
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--composer-field) 84%, var(--surface));
+  border: 0;
+  border-radius: 0;
+  background: transparent;
   box-shadow: none;
   scrollbar-color: var(--composer-faint) transparent;
   scrollbar-width: thin;
@@ -8790,9 +8846,12 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .invitee-option:hover,
-#eventModal .invitee-option:focus-within,
-#eventModal .invitee-option:has(input:checked) {
+#eventModal .invitee-option:focus-within {
   background: rgba(255, 255, 255, 0.04);
+}
+
+#eventModal .invitee-option:has(input:checked) {
+  background: color-mix(in srgb, var(--composer-accent) 12%, transparent);
 }
 
 #eventModal .invitee-option:active {
@@ -8871,8 +8930,9 @@ button.identity-name-button:not(:disabled):active,
   justify-content: space-between;
   gap: 16px;
   min-height: 44px;
-  border-radius: 8px;
-  padding-right: 4px;
+  border: 0;
+  border-radius: 6px;
+  padding: 0 4px 0 0;
   transition:
     transform var(--motion-fast) var(--ease-standard),
     opacity var(--motion-fast) var(--ease-standard);
@@ -8884,7 +8944,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .composer-sync-toggle[role="button"]:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(255, 255, 255, 0.04);
 }
 
 #eventModal .composer-sync-copy {
@@ -8903,9 +8963,9 @@ button.identity-name-button:not(:disabled):active,
 #eventModal .mini-toggle-ui {
   width: 40px;
   height: 24px;
-  border: 1px solid var(--composer-faint);
+  border: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.14);
   transition:
     transform var(--motion-fast) var(--ease-standard),
     opacity var(--motion-fast) var(--ease-standard);
@@ -8913,11 +8973,11 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .mini-toggle-ui::after {
-  top: 3px;
-  left: 3px;
+  top: 4px;
+  left: 4px;
   width: 16px;
   height: 16px;
-  background: color-mix(in srgb, var(--composer-ink) 78%, var(--surface));
+  background: #f3eee9;
   transition:
     transform var(--motion-fast) var(--ease-standard),
     opacity var(--motion-fast) var(--ease-standard);
@@ -8925,12 +8985,12 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .mini-toggle:has(input:checked) .mini-toggle-ui {
-  border-color: color-mix(in srgb, var(--composer-accent) 58%, transparent);
-  background: color-mix(in srgb, var(--composer-accent) 84%, var(--surface));
+  background: var(--composer-accent);
 }
 
 #eventModal .mini-toggle:has(input:checked) .mini-toggle-ui::after {
   transform: translate3d(16px, 0, 0);
+  background: #241b15;
 }
 
 #eventModal .mini-toggle:has(input:disabled) .mini-toggle-ui {
@@ -9068,9 +9128,10 @@ button.identity-name-button:not(:disabled):active,
 
 #eventModal #saveEventButton {
   border: 0;
+  border-radius: 8px;
   background: var(--composer-accent);
-  color: #fff;
-  box-shadow: 0 8px 22px color-mix(in srgb, var(--composer-accent) 24%, transparent);
+  color: #241b15;
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--composer-accent) 20%, transparent);
 }
 
 #eventModal .modal-actions > button:not(:disabled):hover {
@@ -9125,7 +9186,7 @@ button.identity-name-button:not(:disabled):active,
   }
 
   #eventModal .composer-time-grid {
-    padding: 4px 8px;
+    padding: 0;
   }
 
   #eventModal .composer-time-grid input {
@@ -9163,10 +9224,29 @@ button.identity-name-button:not(:disabled):active,
 }
 
 @media (max-height: 560px) {
+  #eventModal {
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  #eventModal[open] {
+    place-items: start center;
+    padding-block: 6px;
+  }
+
+  #eventModal.anchored-composer .modal-card {
+    position: relative;
+    inset: auto;
+    margin: 0 auto;
+  }
+
   #eventModal .event-composer {
+    max-height: none;
     gap: 8px;
     padding: 10px 12px;
     border-radius: 12px;
+    overflow: visible;
   }
 
   #eventModal .composer-handle {
