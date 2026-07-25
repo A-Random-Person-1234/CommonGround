@@ -30,6 +30,11 @@ const members = [
 ];
 const options = { now, timezone, members, currentParticipantId: "me" };
 
+const genericCreate = parseCommand("Create an event", options);
+assert.equal(genericCreate.intent, "create_event");
+assert.equal(genericCreate.title, "");
+assert.ok(genericCreate.missingFields.includes("title"));
+
 const lunch = parseCommand("Lunch with Sam tomorrow at 1", options);
 assert.equal(lunch.intent, "create_event");
 assert.equal(lunch.title, "Lunch");

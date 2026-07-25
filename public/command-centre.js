@@ -39,8 +39,17 @@ const commandCentreState = {
   conflictDraft: null,
   prediction: null,
   composing: false,
-  announcedPrediction: null
+  announcedPrediction: null,
+  createSuggestionCursor: 0,
+  createTitleSuggestion: ""
 };
+
+const commandEventIdeaLabels = Object.freeze([
+  "Lunch",
+  "Coffee",
+  "Catch-up",
+  "Planning"
+]);
 
 let commandCentrePredictor = null;
 import("/command-centre-predictor.js?v=20260725-predictive-commands")
@@ -82,7 +91,7 @@ function commandCentreIntroMarkup() {
       <p>Tell CommonGround what you want to do.</p>
       <div class="command-example-list" aria-label="Example commands">
         <button type="button" data-command-example="Find an hour for everyone next week">Find a time for everyone</button>
-        <button type="button" data-command-example="Lunch with Sam tomorrow at 1">Create an event</button>
+        <button type="button" data-command-example="Create an event tomorrow at 1">Create an event</button>
         <button type="button" data-command-example="Open August">Navigate the calendar</button>
       </div>
     </div>
@@ -234,6 +243,7 @@ function openCommandCentre(opener = commandCentreButton) {
   commandCentreState.availability = null;
   commandCentreState.moveCandidate = null;
   commandCentreState.conflictDraft = null;
+  commandCentreState.createTitleSuggestion = "";
   commandCentreState.selectedIndex = 0;
   commandCentreState.composing = false;
   commandCentreState.announcedPrediction = null;
@@ -297,6 +307,48 @@ function commandParticipantNames(participantIds = [], { includeCurrent = true } 
     .map(commandParticipantName);
 }
 
+function commandEventSuggestionName(participant, members) {
+  const displayName = String(participant?.displayName || "").trim();
+  const firstName = displayName.split(/\s+/)[0] || "Member";
+  const duplicateFirstName = members.some((member) => (
+    member.id !== participant?.id &&
+    String(member.displayName || "").trim().split(/\s+/)[0]?.toLocaleLowerCase("en-GB") ===
+      firstName.toLocaleLowerCase("en-GB")
+  ));
+  return duplicateFirstName ? displayName : firstName;
+}
+
+function commandEventTitleSuggestion(participantIds = []) {
+  const members = (currentRoom?.participants || []).filter((participant) => (
+    participant?.id && String(participant.displayName || "").trim()
+  ));
+  if (members.length <= 1) return "";
+
+  const current = members.find((participant) => participant.id === currentParticipant?.id) || members[0];
+  const otherMembers = members.filter((participant) => participant.id !== current.id);
+  if (!otherMembers.length) return "";
+
+  const requestedIds = new Set(participantIds || []);
+  const requestedOthers = otherMembers.filter((participant) => requestedIds.has(participant.id));
+  const candidates = requestedOthers.length ? requestedOthers : otherMembers;
+  const cursor = commandCentreState.createSuggestionCursor;
+  const other = candidates[cursor % candidates.length];
+  const ideaIndex = Math.floor(cursor / candidates.length) % commandEventIdeaLabels.length;
+  commandCentreState.createSuggestionCursor += 1;
+
+  return `${commandEventSuggestionName(current, members)}/${commandEventSuggestionName(other, members)} ${commandEventIdeaLabels[ideaIndex]}`;
+}
+
+function commandPrepareEventTitleSuggestion(result) {
+  const titleMissing = (
+    result?.missingFields?.includes("title") ||
+    !String(result?.title || "").trim()
+  );
+  commandCentreState.createTitleSuggestion = titleMissing
+    ? commandEventTitleSuggestion(result?.participantIds || [])
+    : "";
+}
+
 function commandParticipantEditorMarkup(selectedIds = []) {
   const selected = new Set([currentParticipant?.id, ...selectedIds].filter(Boolean));
   return `
@@ -329,6 +381,16 @@ function commandLocalTimeValue(value) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function commandInclusiveAllDayEndDateValue(start, end) {
+  const startDateValue = commandLocalDateValue(start);
+  if (!end) return startDateValue;
+  const inclusiveEnd = new Date(end);
+  if (Number.isNaN(inclusiveEnd.getTime())) return startDateValue;
+  inclusiveEnd.setDate(inclusiveEnd.getDate() - 1);
+  const endDateValue = commandLocalDateValue(inclusiveEnd);
+  return endDateValue && endDateValue >= startDateValue ? endDateValue : startDateValue;
 }
 
 function commandHumanDate(value) {
@@ -430,7 +492,7 @@ function commandRenderAmbiguity(result) {
 }
 
 function commandRenderCreatePreview(result, {
-  title = result.title,
+  title = result.missingFields?.includes("title") ? "" : result.title,
   start = result.start,
   end = result.end,
   participantIds = result.participantIds,
@@ -442,42 +504,47 @@ function commandRenderCreatePreview(result, {
   const dateValue = commandLocalDateValue(start) || result.dateKey || "";
   const startValue = commandLocalTimeValue(start);
   const endValue = commandLocalTimeValue(end);
-  const unmatchedParticipantNote = result.unmatchedParticipants?.length
-    ? `<div class="command-clarification">No matching room member was added. The name remains in the event title, and you can still create the event for yourself.</div>`
-    : "";
+  const titleValue = String(title || "").trim();
+  if (!titleValue && !commandCentreState.createTitleSuggestion) {
+    commandCentreState.createTitleSuggestion = commandEventTitleSuggestion(participantIds || []);
+  }
+  const titlePlaceholder = commandCentreState.createTitleSuggestion || "Add title";
+  const inclusiveEndDateValue = allDay
+    ? commandInclusiveAllDayEndDateValue(start, end)
+    : dateValue;
   commandCentreSetPhase(question ? "needs_clarification" : "preview", question || "Event preview ready.");
   commandCentreSetBody(`
-    ${question ? `<div class="command-clarification">${commandEscape(question)}</div>` : ""}
-    <div class="command-preview-card">
+    <div class="command-preview-card command-create-preview" aria-label="Event details">
       <h3>Event preview</h3>
-      <p>Review every detail before anything is created.</p>
-      ${unmatchedParticipantNote}
       <div class="command-preview-grid">
         <label class="command-field command-field-wide">
           <span>Title</span>
-          <input id="commandEventTitle" type="text" maxlength="120" value="${commandAttribute(title || "")}" ${!title ? 'aria-invalid="true"' : ""} />
+          <input id="commandEventTitle" type="text" maxlength="120" value="${commandAttribute(titleValue)}" placeholder="${commandAttribute(titlePlaceholder)}" ${!titleValue ? 'aria-invalid="true"' : ""} />
         </label>
-        <label class="command-field">
-          <span>Date</span>
-          <input id="commandEventDate" type="date" value="${commandAttribute(dateValue)}" ${!dateValue ? 'aria-invalid="true"' : ""} />
-        </label>
-        <label class="command-field">
-          <span>Room</span>
-          <input type="text" value="${commandAttribute(currentRoom?.name || currentRoom?.code || "")}" readonly />
-        </label>
-        <label class="command-field">
-          <span>Start</span>
-          <input id="commandEventStart" type="time" step="900" value="${commandAttribute(startValue)}" ${!startValue && !allDay ? 'aria-invalid="true"' : ""} ${allDay ? "disabled" : ""} />
-        </label>
-        <label class="command-field">
-          <span>End</span>
-          <input id="commandEventEnd" type="time" step="900" value="${commandAttribute(endValue)}" ${!endValue && !allDay ? 'aria-invalid="true"' : ""} ${allDay ? "disabled" : ""} />
-        </label>
+        <div class="command-schedule-row command-field-wide ${allDay ? "is-all-day" : ""}">
+          <label class="command-field command-date-field">
+            <span>Date</span>
+            <input id="commandEventDate" type="date" value="${commandAttribute(dateValue)}" ${!dateValue ? 'aria-invalid="true"' : ""} />
+          </label>
+          <span class="command-schedule-separator" data-command-all-day-separator aria-hidden="true" ${allDay ? "" : "hidden"}>–</span>
+          <label class="command-field" data-command-all-day-end-field ${allDay ? "" : "hidden"}>
+            <span>End date</span>
+            <input id="commandEventEndDate" type="date" min="${commandAttribute(dateValue)}" value="${commandAttribute(inclusiveEndDateValue)}" />
+          </label>
+          <label class="command-field" data-command-time-field ${allDay ? "hidden" : ""}>
+            <span>Start</span>
+            <input id="commandEventStart" type="time" step="900" value="${commandAttribute(startValue)}" ${!startValue && !allDay ? 'aria-invalid="true"' : ""} ${allDay ? "disabled" : ""} />
+          </label>
+          <span class="command-schedule-separator" data-command-time-separator aria-hidden="true" ${allDay ? "hidden" : ""}>–</span>
+          <label class="command-field" data-command-time-field ${allDay ? "hidden" : ""}>
+            <span>End</span>
+            <input id="commandEventEnd" type="time" step="900" value="${commandAttribute(endValue)}" ${!endValue && !allDay ? 'aria-invalid="true"' : ""} ${allDay ? "disabled" : ""} />
+          </label>
+        </div>
         <label class="command-all-day command-field-wide">
           <input id="commandEventAllDay" type="checkbox" ${allDay ? "checked" : ""} />
           <span>
             <strong>All day</strong>
-            <small>Use the full calendar day without a start or end time.</small>
           </span>
         </label>
         <label class="command-field command-field-wide">
@@ -492,7 +559,6 @@ function commandRenderCreatePreview(result, {
       ${commandParticipantEditorMarkup(participantIds)}
       <div class="command-actions">
         <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
-        <button class="command-secondary-action" type="button" data-command-edit-preview>Edit</button>
         <button class="command-primary-action" type="button" data-command-confirm-create>Create event</button>
       </div>
     </div>
@@ -543,6 +609,7 @@ function commandSelectedParticipantIds() {
 function commandReadCreateDraft() {
   const title = commandCentreBody.querySelector("#commandEventTitle")?.value.trim();
   const date = commandCentreBody.querySelector("#commandEventDate")?.value;
+  const inclusiveEndDate = commandCentreBody.querySelector("#commandEventEndDate")?.value || date;
   const startTime = commandCentreBody.querySelector("#commandEventStart")?.value;
   const endTime = commandCentreBody.querySelector("#commandEventEnd")?.value;
   const allDay = commandCentreBody.querySelector("#commandEventAllDay")?.checked === true;
@@ -552,9 +619,16 @@ function commandReadCreateDraft() {
   if (!allDay && (!startTime || !endTime)) {
     throw new Error("Add a title, date, start time and end time.");
   }
+  if (allDay && inclusiveEndDate < date) {
+    throw new Error("The all-day end date must be on or after its start date.");
+  }
   const start = new Date(`${date}T${allDay ? "00:00" : startTime}`);
-  const end = allDay ? new Date(start) : new Date(`${date}T${endTime}`);
-  if (allDay || (!Number.isNaN(end.getTime()) && end <= start && endTime === "00:00")) {
+  const end = allDay
+    ? new Date(`${inclusiveEndDate}T00:00`)
+    : new Date(`${date}T${endTime}`);
+  if (allDay) {
+    end.setDate(end.getDate() + 1);
+  } else if (!Number.isNaN(end.getTime()) && end <= start && endTime === "00:00") {
     end.setDate(end.getDate() + 1);
   }
   if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
@@ -877,6 +951,7 @@ function commandRenderAvailabilityResults(result, availability) {
 function commandCreateDraftFromSlot(result, slot) {
   const conflictDraft = commandCentreState.conflictDraft;
   if (conflictDraft) {
+    commandCentreState.createTitleSuggestion = "";
     commandRenderCreatePreview({
       ...result,
       intent: "create_event",
@@ -892,12 +967,11 @@ function commandCreateDraftFromSlot(result, slot) {
     });
     return;
   }
-  const otherNames = commandParticipantNames(result.participantIds, { includeCurrent: false });
-  const title = otherNames.length ? `Meeting with ${otherNames.join(" and ")}` : "New event";
+  commandCentreState.createTitleSuggestion = commandEventTitleSuggestion(result.participantIds);
   commandRenderCreatePreview({
     ...result,
     intent: "create_event",
-    title,
+    title: "",
     start: slot.start,
     end: slot.end,
     missingFields: [],
@@ -1276,6 +1350,7 @@ function commandContinueParsedResult(result, { submitted = false } = {}) {
   }
   if (result.intent === "create_event") {
     commandCentreState.conflictDraft = null;
+    commandPrepareEventTitleSuggestion(result);
     commandRenderCreatePreview(result);
     return;
   }
@@ -1469,6 +1544,7 @@ window.commandCentreReset = () => {
   commandCentreState.conflictDraft = null;
   commandCentreState.composing = false;
   commandCentreState.announcedPrediction = null;
+  commandCentreState.createTitleSuggestion = "";
   commandCentreClearDebounce();
   commandCentreAbortRequest();
   commandCentreClearPrediction();
@@ -1527,11 +1603,6 @@ commandCentreBody?.addEventListener("click", async (event) => {
   }
   if (event.target.closest("[data-command-cancel], [data-command-close]")) {
     closeCommandCentre();
-    return;
-  }
-  if (event.target.closest("[data-command-edit-preview]")) {
-    const field = commandCentreBody.querySelector('[aria-invalid="true"], #commandEventTitle');
-    field?.focus({ preventScroll: true });
     return;
   }
   if (event.target.closest("[data-command-edit-conflict]")) {
@@ -1651,18 +1722,39 @@ commandCentreBody?.addEventListener("click", async (event) => {
 
 for (const eventName of ["input", "change"]) {
   commandCentreBody?.addEventListener(eventName, (event) => {
-    if (event.target.matches("#commandEventAllDay")) {
-      const checked = event.target.checked;
+    if (event.target.matches("#commandEventAllDay, #commandEventDate")) {
+      const allDayInput = commandCentreBody.querySelector("#commandEventAllDay");
+      const checked = allDayInput?.checked === true;
+      const date = commandCentreBody.querySelector("#commandEventDate");
+      const endDate = commandCentreBody.querySelector("#commandEventEndDate");
       const start = commandCentreBody.querySelector("#commandEventStart");
       const end = commandCentreBody.querySelector("#commandEventEnd");
-      if (!checked && (!start.value || start.value === "00:00") && (!end.value || end.value === "00:00")) {
+      const schedule = commandCentreBody.querySelector(".command-schedule-row");
+      const allDayEndField = commandCentreBody.querySelector("[data-command-all-day-end-field]");
+      const allDaySeparator = commandCentreBody.querySelector("[data-command-all-day-separator]");
+      const timeSeparator = commandCentreBody.querySelector("[data-command-time-separator]");
+      const timeFields = commandCentreBody.querySelectorAll("[data-command-time-field]");
+
+      schedule?.classList.toggle("is-all-day", checked);
+      allDayEndField?.toggleAttribute("hidden", !checked);
+      allDaySeparator?.toggleAttribute("hidden", !checked);
+      timeSeparator?.toggleAttribute("hidden", checked);
+      timeFields.forEach((field) => field.toggleAttribute("hidden", checked));
+
+      if (endDate && date) {
+        endDate.min = date.value;
+        if (!endDate.value || endDate.value < date.value) endDate.value = date.value;
+      }
+      if (!checked && start && end && (!start.value || start.value === "00:00") && (!end.value || end.value === "00:00")) {
         start.value = "09:00";
         end.value = "10:00";
       }
-      start.disabled = checked;
-      end.disabled = checked;
-      start.toggleAttribute("aria-invalid", !checked && !start.value);
-      end.toggleAttribute("aria-invalid", !checked && !end.value);
+      if (start && end) {
+        start.disabled = checked;
+        end.disabled = checked;
+        start.toggleAttribute("aria-invalid", !checked && !start.value);
+        end.toggleAttribute("aria-invalid", !checked && !end.value);
+      }
       return;
     }
     if (!event.target.matches("#commandMoveDate, #commandMoveStart, #commandMoveEnd")) return;

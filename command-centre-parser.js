@@ -726,9 +726,12 @@ export function parseCommand(command, {
 
   if (intent === "create_event") {
     const allDay = /\ball day\b/.test(text);
-    const title = stripTitleNoise(original, {
-      stripParticipantPhrase: participants.unmatched.length === 0
-    });
+    const genericCreate = /^(?:create|add|schedule)(?:\s+(?:an?\s+)?event)?$/i.test(original);
+    const title = genericCreate
+      ? ""
+      : stripTitleNoise(original, {
+          stripParticipantPhrase: participants.unmatched.length === 0
+        });
     if (!title) base.missingFields.push("title");
     if (!date.dateKey) base.missingFields.push("date");
     if (!allDay && time.startMinute === null) base.missingFields.push("start_time");
@@ -744,11 +747,13 @@ export function parseCommand(command, {
     const namedParticipants = members.filter((member) => participants.participantIds.includes(member.id));
     return {
       ...base,
-      title: title || (
-        namedParticipants.length
+      title: genericCreate
+        ? ""
+        : (title || (
+          namedParticipants.length
           ? `Meeting with ${namedParticipants.map((member) => member.displayName.split(" ")[0]).join(" and ")}`
           : "New event"
-      ),
+        )),
       start: start?.toISOString() || null,
       end: end?.toISOString() || null,
       durationMinutes: resolvedDuration,
