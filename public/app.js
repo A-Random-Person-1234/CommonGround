@@ -1178,6 +1178,337 @@ function initializeEventTimePickers() {
   });
 }
 
+const locationAutocompleteStates = new Set();
+let locationAutocompleteOutsideListenerReady = false;
+
+function createLocationAutocompleteSessionToken() {
+  const uuid = window.crypto?.randomUUID?.();
+  if (uuid) return uuid;
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}-${Math.random().toString(36).slice(2)}`
+    .replace(/[^A-Za-z0-9_-]/g, "")
+    .slice(0, 36);
+}
+
+function locationAutocompleteStateFor(input) {
+  for (const state of locationAutocompleteStates) {
+    if (state.input === input) return state;
+  }
+  return null;
+}
+
+function setLocationAutocompleteOpen(state, open) {
+  if (!state) return;
+  if (state.hideTimer) {
+    window.clearTimeout(state.hideTimer);
+    state.hideTimer = null;
+  }
+  state.open = Boolean(open);
+  state.input.setAttribute("aria-expanded", String(state.open));
+  state.host.classList.toggle("is-autocomplete-open", state.open);
+  if (state.open) {
+    state.menu.hidden = false;
+    requestAnimationFrame(() => state.menu.classList.add("is-open"));
+    return;
+  }
+  state.menu.classList.remove("is-open");
+  state.input.removeAttribute("aria-activedescendant");
+  state.hideTimer = window.setTimeout(() => {
+    if (!state.open) state.menu.hidden = true;
+    state.hideTimer = null;
+  }, 260);
+}
+
+function closeLocationAutocomplete(state, {
+  immediate = false,
+  resetSession = false
+} = {}) {
+  if (!state) return;
+  if (state.debounceTimer) {
+    window.clearTimeout(state.debounceTimer);
+    state.debounceTimer = null;
+  }
+  state.controller?.abort();
+  state.controller = null;
+  state.requestGeneration += 1;
+  state.activeIndex = -1;
+  state.optionElements = [];
+  if (resetSession) state.sessionToken = "";
+  setLocationAutocompleteOpen(state, false);
+  if (immediate) {
+    if (state.hideTimer) window.clearTimeout(state.hideTimer);
+    state.hideTimer = null;
+    state.menu.hidden = true;
+  }
+}
+
+function closeAllLocationAutocompletes({
+  exceptHost = null,
+  immediate = false,
+  resetSession = false
+} = {}) {
+  for (const state of [...locationAutocompleteStates]) {
+    if (!state.input.isConnected) {
+      closeLocationAutocomplete(state, { immediate: true, resetSession: true });
+      locationAutocompleteStates.delete(state);
+      continue;
+    }
+    if (exceptHost && state.host === exceptHost) continue;
+    closeLocationAutocomplete(state, { immediate, resetSession });
+  }
+}
+
+function setLocationAutocompleteActiveIndex(state, index, { scroll = false } = {}) {
+  if (!state.options.length) {
+    state.activeIndex = -1;
+    state.input.removeAttribute("aria-activedescendant");
+    return;
+  }
+  state.activeIndex = Math.max(0, Math.min(state.options.length - 1, index));
+  state.optionElements.forEach((option, optionIndex) => {
+    const active = optionIndex === state.activeIndex;
+    option.classList.toggle("is-active", active);
+    option.setAttribute("aria-selected", String(active));
+  });
+  const activeOption = state.optionElements[state.activeIndex];
+  if (!activeOption) return;
+  state.input.setAttribute("aria-activedescendant", activeOption.id);
+  if (scroll) activeOption.scrollIntoView({ block: "nearest" });
+}
+
+function renderLocationAutocomplete(state, {
+  suggestions = [],
+  message = ""
+} = {}) {
+  state.options = Array.isArray(suggestions) ? suggestions.slice(0, 6) : [];
+  state.activeIndex = -1;
+  state.optionElements = [];
+  state.listbox.innerHTML = "";
+  state.input.removeAttribute("aria-activedescendant");
+
+  if (state.options.length) {
+    state.options.forEach((suggestion, index) => {
+      const option = document.createElement("div");
+      option.className = "location-autocomplete-option";
+      option.id = `${state.input.id}AddressOption${index}`;
+      option.dataset.locationOption = String(index);
+      option.setAttribute("role", "option");
+      option.setAttribute("aria-selected", "false");
+
+      const primary = document.createElement("span");
+      primary.className = "location-autocomplete-primary";
+      primary.textContent = suggestion.primary || suggestion.label;
+      option.appendChild(primary);
+
+      if (suggestion.secondary) {
+        const secondary = document.createElement("span");
+        secondary.className = "location-autocomplete-secondary";
+        secondary.textContent = suggestion.secondary;
+        option.appendChild(secondary);
+      }
+
+      option.addEventListener("pointerenter", () => {
+        setLocationAutocompleteActiveIndex(state, index);
+      });
+      state.optionElements.push(option);
+      state.listbox.appendChild(option);
+    });
+    state.attribution.hidden = false;
+    state.status.textContent = `${state.options.length} address suggestions available.`;
+  } else {
+    const empty = document.createElement("div");
+    empty.className = "location-autocomplete-message";
+    empty.textContent = message || "No addresses found. You can keep typing the location manually.";
+    state.listbox.appendChild(empty);
+    state.attribution.hidden = true;
+    state.status.textContent = empty.textContent;
+  }
+  setLocationAutocompleteOpen(state, true);
+}
+
+function selectLocationAutocompleteOption(state, index) {
+  const suggestion = state.options[index];
+  if (!suggestion?.label) return;
+  state.suppressInput = true;
+  state.input.value = suggestion.label;
+  state.input.dispatchEvent(new Event("input", { bubbles: true }));
+  state.input.dispatchEvent(new Event("change", { bubbles: true }));
+  closeLocationAutocomplete(state, { immediate: true, resetSession: true });
+  state.input.focus({ preventScroll: true });
+}
+
+async function requestLocationAutocomplete(state, query) {
+  if (!currentRoom?.code || appConfig?.placesReady === false) {
+    closeLocationAutocomplete(state, { immediate: true });
+    return;
+  }
+  state.controller?.abort();
+  const controller = new AbortController();
+  state.controller = controller;
+  const generation = ++state.requestGeneration;
+  const roomCode = currentRoom.code;
+  if (!state.sessionToken) state.sessionToken = createLocationAutocompleteSessionToken();
+
+  try {
+    const data = await fetchJson(`/api/rooms/${encodeURIComponent(roomCode)}/places/autocomplete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        input: query,
+        sessionToken: state.sessionToken
+      }),
+      signal: controller.signal
+    });
+    if (
+      controller.signal.aborted ||
+      generation !== state.requestGeneration ||
+      state.input.value.trim() !== query
+    ) {
+      return;
+    }
+    const suggestions = (Array.isArray(data.suggestions) ? data.suggestions : [])
+      .filter((suggestion) => typeof suggestion?.label === "string" && suggestion.label.trim())
+      .map((suggestion) => ({
+        placeId: String(suggestion.placeId || ""),
+        label: suggestion.label.trim(),
+        primary: String(suggestion.primary || suggestion.label).trim(),
+        secondary: String(suggestion.secondary || "").trim()
+      }));
+    renderLocationAutocomplete(state, {
+      suggestions,
+      message: "No addresses found. You can keep typing the location manually."
+    });
+  } catch (error) {
+    if (error?.name === "AbortError" || generation !== state.requestGeneration) return;
+    renderLocationAutocomplete(state, {
+      message: "Address suggestions are unavailable. You can keep typing the location manually."
+    });
+  } finally {
+    if (state.controller === controller) state.controller = null;
+  }
+}
+
+function queueLocationAutocomplete(state, { immediate = false } = {}) {
+  if (state.suppressInput) {
+    state.suppressInput = false;
+    return;
+  }
+  if (state.debounceTimer) window.clearTimeout(state.debounceTimer);
+  state.controller?.abort();
+  state.controller = null;
+  const query = state.input.value.trim();
+  if (query.length < 3 || !currentRoom?.code || appConfig?.placesReady === false) {
+    closeLocationAutocomplete(state, { immediate: true });
+    return;
+  }
+  renderLocationAutocomplete(state, { message: "Searching addresses..." });
+  state.debounceTimer = window.setTimeout(() => {
+    state.debounceTimer = null;
+    requestLocationAutocomplete(state, query);
+  }, immediate ? 0 : 260);
+}
+
+function handleLocationAutocompleteKeydown(event, state) {
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    if (!state.open) {
+      queueLocationAutocomplete(state, { immediate: true });
+      return;
+    }
+    if (!state.options.length) return;
+    event.preventDefault();
+    const direction = event.key === "ArrowDown" ? 1 : -1;
+    const fallback = direction > 0 ? 0 : state.options.length - 1;
+    setLocationAutocompleteActiveIndex(
+      state,
+      state.activeIndex < 0 ? fallback : state.activeIndex + direction,
+      { scroll: true }
+    );
+    return;
+  }
+  if (event.key === "Enter" && state.open && state.activeIndex >= 0) {
+    event.preventDefault();
+    event.stopPropagation();
+    selectLocationAutocompleteOption(state, state.activeIndex);
+    return;
+  }
+  if (event.key === "Escape" && state.open) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeLocationAutocomplete(state, { immediate: true, resetSession: true });
+    return;
+  }
+  if (event.key === "Tab" && state.open) {
+    closeLocationAutocomplete(state, { immediate: true, resetSession: true });
+  }
+}
+
+function initializeLocationAutocomplete(input) {
+  if (!input || input.dataset.locationAutocompleteReady === "true") {
+    return input ? locationAutocompleteStateFor(input) : null;
+  }
+  const host = input.closest(".location-autocomplete-host");
+  const listbox = document.getElementById(input.getAttribute("aria-controls"));
+  const menu = host?.querySelector(".location-autocomplete-menu");
+  const status = document.getElementById(input.getAttribute("aria-describedby"));
+  const attribution = menu?.querySelector(".location-autocomplete-attribution");
+  if (!host || !menu || !listbox || !status || !attribution) return null;
+
+  const state = {
+    input,
+    host,
+    menu,
+    listbox,
+    status,
+    attribution,
+    open: false,
+    options: [],
+    optionElements: [],
+    activeIndex: -1,
+    sessionToken: "",
+    debounceTimer: null,
+    hideTimer: null,
+    controller: null,
+    requestGeneration: 0,
+    suppressInput: false
+  };
+  input.dataset.locationAutocompleteReady = "true";
+  attribution.hidden = true;
+  locationAutocompleteStates.add(state);
+
+  input.addEventListener("focus", () => {
+    if (!state.sessionToken) state.sessionToken = createLocationAutocompleteSessionToken();
+    if (input.value.trim().length >= 3) queueLocationAutocomplete(state);
+  });
+  input.addEventListener("input", () => queueLocationAutocomplete(state));
+  input.addEventListener("keydown", (event) => handleLocationAutocompleteKeydown(event, state));
+  input.addEventListener("blur", () => {
+    window.setTimeout(() => {
+      if (state.host.contains(document.activeElement)) return;
+      closeLocationAutocomplete(state, { resetSession: true });
+    }, 0);
+  });
+  listbox.addEventListener("pointerdown", (event) => {
+    const option = event.target.closest("[data-location-option]");
+    if (!option) return;
+    event.preventDefault();
+    selectLocationAutocompleteOption(state, Number(option.dataset.locationOption));
+  });
+
+  if (!locationAutocompleteOutsideListenerReady) {
+    locationAutocompleteOutsideListenerReady = true;
+    document.addEventListener("pointerdown", (event) => {
+      const hostTarget = event.target.closest(".location-autocomplete-host");
+      closeAllLocationAutocompletes({
+        exceptHost: hostTarget,
+        resetSession: !hostTarget
+      });
+    }, true);
+  }
+  return state;
+}
+
+window.initializeLocationAutocomplete = initializeLocationAutocomplete;
+window.closeLocationAutocompletes = closeAllLocationAutocompletes;
+
 function commitEventTimePickersBeforeSubmit(event) {
   for (const picker of eventTimePickers) {
     if (picker.displayInput.disabled) continue;
@@ -3356,6 +3687,7 @@ function setVoteButtons(responseValue) {
 }
 
 function openEventDetail(eventId) {
+  closeAllLocationAutocompletes({ immediate: true, resetSession: true });
   selectedEventId = eventId;
   selectedBusyGroup = null;
   const event = activeEvent();
@@ -3392,6 +3724,7 @@ function openEventDetail(eventId) {
 }
 
 function clearDetailPanel() {
+  closeAllLocationAutocompletes({ immediate: true, resetSession: true });
   selectedEventId = null;
   selectedBusyGroup = null;
   syncSelectedEventCard();
@@ -6539,7 +6872,6 @@ function openCreateRoomModal() {
   syncEmojiTrigger(quickRoomEmojiInput);
   prepareDialogForOpen(createRoomModal);
   createRoomModal.showModal();
-  quickRoomNameInput?.focus();
 }
 
 function closeCreateRoomModal() {
@@ -6986,6 +7318,7 @@ function attemptCloseEventModal() {
 }
 
 function openEventModal(mode = "create", options = {}) {
+  closeAllLocationAutocompletes({ immediate: true, resetSession: true });
   editingEventId = mode === "edit" ? selectedEventId : null;
   if (eventModalLabel) eventModalLabel.textContent = mode === "edit" ? "Edit group event" : "Add group event";
   if (eventModalTitle) eventModalTitle.textContent = mode === "edit" ? "Update proposal" : pendingEventPrefill ? "Create group event" : "Create proposal";
@@ -7054,8 +7387,6 @@ function openEventModal(mode = "create", options = {}) {
   eventModalInitialState = eventFormStateSnapshot();
   requestAnimationFrame(() => {
     positionEventModal();
-    eventTitleInput.focus({ preventScroll: true });
-    if (mode === "create" && !eventTitleInput.value) eventTitleInput.select();
   });
   pendingEventPrefill = null;
 }
@@ -7063,6 +7394,7 @@ function openEventModal(mode = "create", options = {}) {
 function closeEventModal() {
   stopDragCreate();
   closeEventTimePicker();
+  closeAllLocationAutocompletes({ immediate: true, resetSession: true });
   closeDialogWithMotion(eventModal, () => {
     editingEventId = null;
     pendingEventPrefill = null;
@@ -7619,6 +7951,8 @@ roomName.addEventListener("blur", async () => {
 });
 closeDetailButton.addEventListener("click", clearDetailPanel);
 initializeEventTimePickers();
+initializeLocationAutocomplete(eventLocationInput);
+initializeLocationAutocomplete(detailLocationInput);
 eventForm.addEventListener("submit", commitEventTimePickersBeforeSubmit, true);
 eventForm.addEventListener("submit", saveEvent);
 eventPanelForm?.addEventListener("submit", saveEventPanelChanges);
