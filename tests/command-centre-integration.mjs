@@ -138,6 +138,42 @@ try {
   const guestId = joinedGuest.payload.participant.id;
   const expectedInviteeIds = [guestId, hostId].sort();
 
+  const parsedCommands = [
+    ["Go to August 15th 2030", "navigate", { targetDate: "2030-08-15", targetView: "week" }],
+    ["Switch to week view", "navigate_view", { targetView: "week" }],
+    ["Open settings", "navigate_view", { targetView: "settings" }],
+    ["Connect my Google Calendar", "connect_google", { provider: "google" }],
+    ["Change room code to ABC234", "update_room_code", { newRoomCode: "ABC234" }]
+  ];
+  for (const [command, intent, expectedFields] of parsedCommands) {
+    const parsed = await host.request(`/api/rooms/${roomCode}/command-centre/parse`, {
+      method: "POST",
+      body: { command, timezone: "Europe/London" }
+    });
+    assert.equal(parsed.payload.result.intent, intent);
+    for (const [field, expectedValue] of Object.entries(expectedFields)) {
+      assert.equal(parsed.payload.result[field], expectedValue);
+    }
+  }
+
+  const invalidDateParse = await host.request(`/api/rooms/${roomCode}/command-centre/parse`, {
+    method: "POST",
+    body: { command: "Go to 31 February 2030", timezone: "Europe/London" }
+  });
+  assert.equal(invalidDateParse.payload.result.intent, "navigate");
+  assert.equal(invalidDateParse.payload.result.targetDate, null);
+  assert.equal(invalidDateParse.payload.result.ambiguities[0].type, "invalid_date");
+
+  const outsiderParse = await outsider.request(
+    `/api/rooms/${roomCode}/command-centre/parse`,
+    {
+      method: "POST",
+      expected: 403,
+      body: { command: "Open settings", timezone: "UTC" }
+    }
+  );
+  assert.match(outsiderParse.payload.error, /join this room/i);
+
   const beforeOutsiderRequest = await host.request(`/api/rooms/${roomCode}`);
   assert.equal(beforeOutsiderRequest.payload.room.participants.length, 2);
 
@@ -196,6 +232,72 @@ try {
     }
   });
   assert.deepEqual(inviteeIds(blockingEvent.payload.event), expectedInviteeIds);
+
+  const overlapAvailability = await host.request(
+    `/api/rooms/${roomCode}/command-centre/availability`,
+    {
+      method: "POST",
+      body: {
+        intent: "find_time",
+        participantIds: [hostId, guestId],
+        rangeStart: "2030-01-15T08:00:00.000Z",
+        rangeEnd: "2030-01-15T20:00:00.000Z",
+        durationMinutes: 30,
+        earliestMinute: 8 * 60,
+        latestMinute: 20 * 60,
+        timezone: "UTC"
+      }
+    }
+  );
+  assert.equal(overlapAvailability.payload.availability.complete, true);
+  assert.ok(overlapAvailability.payload.availability.slots.length > 0);
+  assert.ok(overlapAvailability.payload.availability.slots.length <= 3);
+  for (const slot of overlapAvailability.payload.availability.slots) {
+    assert.equal((new Date(slot.start).getUTCMinutes()) % 15, 0);
+    assert.equal(new Date(slot.end).getTime() - new Date(slot.start).getTime(), 30 * 60 * 1000);
+    assert.ok(
+      new Date(slot.end) <= new Date(blockingEvent.payload.event.start) ||
+      new Date(slot.start) >= new Date(blockingEvent.payload.event.end)
+    );
+  }
+  const availabilityText = JSON.stringify(overlapAvailability.payload.availability);
+  assert.ok(!availabilityText.includes("Existing commitment"));
+  assert.ok(!availabilityText.includes("Private"));
+  assert.ok(!availabilityText.includes("Must not leak"));
+
+  const invalidAvailabilityParticipant = await host.request(
+    `/api/rooms/${roomCode}/command-centre/availability`,
+    {
+      method: "POST",
+      expected: 403,
+      body: {
+        intent: "find_time",
+        participantIds: ["participant-not-in-room"],
+        rangeStart: "2030-01-15T08:00:00.000Z",
+        rangeEnd: "2030-01-15T20:00:00.000Z",
+        durationMinutes: 30,
+        timezone: "UTC"
+      }
+    }
+  );
+  assert.equal(invalidAvailabilityParticipant.payload.code, "participant_access_denied");
+
+  const invalidAvailabilityDuration = await host.request(
+    `/api/rooms/${roomCode}/command-centre/availability`,
+    {
+      method: "POST",
+      expected: 400,
+      body: {
+        intent: "find_time",
+        participantIds: [hostId],
+        rangeStart: "2030-01-15T08:00:00.000Z",
+        rangeEnd: "2030-01-15T20:00:00.000Z",
+        durationMinutes: 17,
+        timezone: "UTC"
+      }
+    }
+  );
+  assert.match(invalidAvailabilityDuration.payload.error, /15-minute increments/i);
 
   const conflict = await host.request(
     `/api/rooms/${roomCode}/command-centre/create-event`,
@@ -321,6 +423,55 @@ try {
   assert.equal(finalEvent.description, "Bring the project outline");
   assert.deepEqual(inviteeIds(finalEvent), expectedInviteeIds);
   assert.equal(finalRoom.payload.room.events.length, 2);
+
+  const secondHost = new BrowserSession();
+  await secondHost.request("/api/me");
+  const secondRoom = await secondHost.request("/api/rooms", {
+    method: "POST",
+    expected: 201,
+    body: {
+      name: "Collision room",
+      displayName: "Second host"
+    }
+  });
+
+  const forbiddenCodeChange = await guest.request(`/api/rooms/${roomCode}`, {
+    method: "PATCH",
+    expected: 403,
+    body: { code: "ZXCVBN" }
+  });
+  assert.match(forbiddenCodeChange.payload.error, /only the host/i);
+
+  const invalidCodeChange = await host.request(`/api/rooms/${roomCode}`, {
+    method: "PATCH",
+    expected: 400,
+    body: { code: "COMMON" }
+  });
+  assert.match(invalidCodeChange.payload.error, /six unambiguous/i);
+
+  const collisionCodeChange = await host.request(`/api/rooms/${roomCode}`, {
+    method: "PATCH",
+    expected: 409,
+    body: { code: secondRoom.payload.room.code }
+  });
+  assert.match(collisionCodeChange.payload.error, /already taken/i);
+
+  const changedCode = "ZXCVBN";
+  const confirmedCodeChange = await host.request(`/api/rooms/${roomCode}`, {
+    method: "PATCH",
+    body: { code: changedCode }
+  });
+  assert.equal(confirmedCodeChange.payload.room.code, changedCode);
+  assert.equal(confirmedCodeChange.payload.isHost, true);
+  assert.equal(
+    confirmedCodeChange.payload.room.events.find((event) => event.id === createdEvent.id)?.title,
+    "Planning session"
+  );
+
+  await host.request(`/api/rooms/${roomCode}`, { expected: 404 });
+  const roomAtNewCode = await host.request(`/api/rooms/${changedCode}`);
+  assert.equal(roomAtNewCode.payload.room.code, changedCode);
+  assert.equal(roomAtNewCode.payload.participant.id, hostId);
 
   console.log("CommonGround Command Centre integration checks passed.");
 } catch (error) {

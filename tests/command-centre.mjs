@@ -91,6 +91,73 @@ assert.equal(openAugust.intent, "navigate");
 assert.equal(openAugust.targetDate, "2026-08-01");
 assert.equal(openAugust.targetView, "month");
 
+const augustFifteenth = parseCommand("Go to August 15th", options);
+assert.equal(augustFifteenth.intent, "navigate");
+assert.equal(augustFifteenth.targetDate, "2026-08-15");
+assert.equal(augustFifteenth.targetView, "week");
+
+const showTomorrow = parseCommand("Show me tomorrow", options);
+assert.equal(showTomorrow.intent, "navigate");
+assert.equal(showTomorrow.targetDate, "2026-07-21");
+assert.equal(showTomorrow.targetView, "week");
+
+const jumpMonday = parseCommand("Jump to next Monday", options);
+assert.equal(jumpMonday.intent, "navigate");
+assert.equal(jumpMonday.targetDate, "2026-07-27");
+
+for (const view of ["day", "week", "month", "year"]) {
+  const viewCommand = parseCommand(`Switch to ${view} view`, options);
+  assert.equal(viewCommand.intent, "navigate_view");
+  assert.equal(viewCommand.targetView, view);
+}
+
+const openSettings = parseCommand("Open settings", options);
+assert.equal(openSettings.intent, "navigate_view");
+assert.equal(openSettings.targetView, "settings");
+
+const connectGoogle = parseCommand("Connect my Google Calendar", options);
+assert.equal(connectGoogle.intent, "connect_google");
+assert.equal(connectGoogle.provider, "google");
+assert.equal(connectGoogle.requiresUserAction, true);
+assert.equal(parseCommand("Sync Google Cal", options).intent, "connect_google");
+assert.equal(parseCommand("Disconnect Google Calendar", options).intent, "unsupported");
+
+const updateRoomCode = parseCommand("Change room code to ABC234", options);
+assert.equal(updateRoomCode.intent, "update_room_code");
+assert.equal(updateRoomCode.newRoomCode, "ABC234");
+assert.equal(updateRoomCode.requiresConfirmation, true);
+
+const missingRoomCode = parseCommand("Set custom room code", options);
+assert.equal(missingRoomCode.intent, "update_room_code");
+assert.ok(missingRoomCode.missingFields.includes("room_code"));
+
+const invalidRoomCode = parseCommand("Change room code to commonground-dev", options);
+assert.equal(invalidRoomCode.intent, "update_room_code");
+assert.equal(invalidRoomCode.ambiguities[0].type, "invalid_room_code");
+
+const impossibleDate = parseCommand("Go to 31 February", options);
+assert.equal(impossibleDate.intent, "navigate");
+assert.equal(impossibleDate.targetDate, null);
+assert.equal(impossibleDate.ambiguities[0].type, "invalid_date");
+
+const leapDate = parseCommand("Go to February 29th 2028", options);
+assert.equal(leapDate.targetDate, "2028-02-29");
+const nonLeapDate = parseCommand("Go to February 29th 2027", options);
+assert.equal(nonLeapDate.targetDate, null);
+assert.equal(nonLeapDate.ambiguities[0].type, "invalid_date");
+
+const designReview = parseCommand("Create event 'Design Review' tomorrow at 10 AM", options);
+assert.equal(designReview.intent, "create_event");
+assert.equal(designReview.title, "Design Review");
+
+const settingsReview = parseCommand("Create settings review tomorrow at 2", options);
+assert.equal(settingsReview.intent, "create_event");
+assert.equal(settingsReview.title, "settings review");
+
+const googlePlanning = parseCommand("Create Google sync planning tomorrow at 2", options);
+assert.equal(googlePlanning.intent, "create_event");
+assert.equal(googlePlanning.title, "Google sync planning");
+
 const ambiguousCreate = parseCommand("Meet Sam next week", options);
 assert.equal(ambiguousCreate.intent, "create_event");
 assert.ok(ambiguousCreate.missingFields.includes("date"));
@@ -120,6 +187,21 @@ const duplicateParticipant = resolveParticipants(
 assert.deepEqual(duplicateParticipant.participantIds, []);
 assert.equal(duplicateParticipant.ambiguities[0].type, "participant");
 assert.equal(duplicateParticipant.ambiguities[0].options.length, 2);
+
+const duplicateJohnCommand = parseCommand(
+  "Schedule a meeting with John tomorrow at 3",
+  {
+    ...options,
+    members: [
+      ...members,
+      { id: "john-one", displayName: "John Smith" },
+      { id: "john-two", displayName: "John Jones" }
+    ]
+  }
+);
+assert.equal(duplicateJohnCommand.intent, "create_event");
+assert.equal(duplicateJohnCommand.ambiguities[0].type, "participant");
+assert.equal(duplicateJohnCommand.ambiguities[0].options.length, 2);
 
 const eventCandidates = resolveEventCandidates("economics revision", [
   {

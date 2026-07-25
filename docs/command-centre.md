@@ -6,7 +6,7 @@ Open it with the **Ask CommonGround** toolbar button, `Cmd+K` on macOS, `Ctrl+K`
 
 ## Supported commands
 
-Version one supports five intent families.
+The deterministic router supports eight intent families.
 
 ### Create an event
 
@@ -33,7 +33,7 @@ When can everyone meet next week?
 Find two hours after 4pm on Thursday
 ```
 
-The result contains up to five ranked 15-minute-aligned choices. Selecting a choice opens a final editable event preview; it does not create the event immediately.
+The result contains up to three ranked 15-minute-aligned choices. Selecting a choice opens a final editable event preview; it does not create the event immediately.
 
 ### Show availability
 
@@ -72,6 +72,34 @@ Find economics revision
 
 Navigation reuses the existing calendar view, date, member sidebar, and event-detail behavior.
 
+### Switch views or open settings
+
+```text
+Switch to week view
+Open month view
+Open settings
+```
+
+Supported view names are `day`, `week`, `month`, `year`, and `settings`.
+
+### Connect Google Calendar
+
+```text
+Connect my Google Calendar
+Sync Google Cal
+```
+
+The result exposes a user-clicked quick action that reuses CommonGround's existing centered, same-origin OAuth popup. The parser never handles credentials or OAuth tokens.
+
+### Update the room code
+
+```text
+Change room code to ABC234
+Set custom room code to HJK567
+```
+
+The host receives a confirmation preview before the existing room update endpoint is called. Room codes remain exactly six unambiguous uppercase letters or numbers; unsupported slugs are rejected rather than truncated.
+
 Requests outside these intent families return a bounded help message. The Command Centre does not answer general questions, recommend venues, search the web, plan routes, or fabricate unsupported results.
 
 ## Architecture
@@ -85,6 +113,10 @@ public/index.html
 public/command-centre.js
   Dialog state machine, previews, clarification UI, keyboard handling,
   availability results, confirmation actions, and calendar highlights
+
+public/command-centre-actions.js
+  Reusable action handlers returning { success, message, payload }, including
+  date/view navigation, availability, event creation, OAuth, and room settings
 
 command-centre-parser.js
   Pure command normalization, intent detection, participant resolution,
@@ -148,7 +180,7 @@ The authoritative server:
 8. Filters intervals shorter than the requested duration.
 9. Generates deterministic 15-minute-aligned candidates and returns the earliest suitable results, prioritizing the requested time-of-day window.
 
-Event creation and movement repeat the availability collection immediately before writing. A newly introduced conflict returns `409 availability_conflict`; unavailable provider data returns `503 availability_unavailable`.
+Event creation and movement repeat the availability collection immediately before writing. A newly introduced conflict returns `409 availability_conflict`; the browser then requests and displays up to three privacy-safe alternatives. Unavailable provider data returns `503 availability_unavailable`. A successful create exposes Undo through the existing authorized event-deletion workflow.
 
 ## API contract
 
@@ -182,7 +214,7 @@ The parse route accepts at most 500 characters. Availability is read-only. Creat
 2. Return a structured result with `missingFields` and `ambiguities`.
 3. Keep parsing pure; do not fetch or mutate from the parser.
 4. Add any authoritative lookup or mutation to the room-scoped server route and reuse existing auth/event helpers.
-5. Add the corresponding preview, clarification, result, and confirmation renderer in `public/command-centre.js`.
+5. Add or reuse a structured action in `public/command-centre-actions.js`, then add the corresponding preview, clarification, result, and confirmation renderer in `public/command-centre.js`.
 6. Add parser, permission, conflict, and UI-contract tests.
 7. Add examples and limitations to this document.
 

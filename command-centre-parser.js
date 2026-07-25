@@ -11,7 +11,7 @@ import {
   zonedParts
 } from "./command-centre-date-time.js";
 
-const intentHelp = "CommonGround can currently create events, find shared free time, show availability, move events and navigate the calendar.";
+const intentHelp = "CommonGround can currently create events, find shared free time, show availability, move events and navigate the calendar. It can also open settings, connect Google Calendar and update a valid room code.";
 
 export function normaliseCommand(value) {
   return String(value || "")
@@ -215,31 +215,208 @@ function explicitDayDate(text, referenceDateKey) {
   return null;
 }
 
-function explicitMonthDate(text, referenceDateKey) {
-  const match = text.match(new RegExp(`\\b(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(${monthNames.join("|")})(?:\\s+(\\d{4}))?\\b`));
-  if (!match) return null;
-  const referenceYear = Number(referenceDateKey.slice(0, 4));
-  const month = monthNames.indexOf(match[2]) + 1;
-  const day = Number(match[1]);
-  let year = Number(match[3] || referenceYear);
-  let key = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-  if (!match[3] && key < referenceDateKey) {
-    year += 1;
-    key = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+function validDateKey(year, month, day) {
+  if (
+    !Number.isInteger(year) ||
+    !Number.isInteger(month) ||
+    !Number.isInteger(day) ||
+    year < 1900 ||
+    year > 2200 ||
+    month < 1 ||
+    month > 12 ||
+    day < 1 ||
+    day > 31
+  ) {
+    return null;
   }
-  return key;
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 }
 
-export function parseDateRange(command, {
-  now = new Date(),
-  timezone = "UTC"
-} = {}) {
+function explicitMonthDate(text, referenceDateKey) {
+  const monthPattern = monthNames.join("|");
+  const dayFirst = text.match(new RegExp(`\\b(?:on\\s+)?(\\d{1,2})(?:st|nd|rd|th)?\\s+(${monthPattern})(?:\\s+(\\d{4}))?\\b`));
+  const monthFirst = text.match(new RegExp(`\\b(?:on\\s+)?(${monthPattern})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:,?\\s+(\\d{4}))?\\b`));
+  const match = dayFirst || monthFirst;
+  if (!match) return { matched: false, dateKey: null, invalidDate: null };
+  const referenceYear = Number(referenceDateKey.slice(0, 4));
+  const monthName = dayFirst ? match[2] : match[1];
+  const day = Number(dayFirst ? match[1] : match[2]);
+  const explicitYear = dayFirst ? match[3] : match[3];
+  const month = monthNames.indexOf(monthName) + 1;
+  const token = match[0].replace(/^on\s+/, "").trim();
+  let year = Number(explicitYear || referenceYear);
+  let key = validDateKey(year, month, day);
+  if (!key) return { matched: true, dateKey: null, invalidDate: token };
+  if (!explicitYear && key < referenceDateKey) {
+    year += 1;
+    key = validDateKey(year, month, day);
+  }
+  return { matched: true, dateKey: key, invalidDate: key ? null : token };
+}
+
+function requestedView(text) {
+  if (/\bsettings?\b/.test(text)) return "settings";
+  return text.match(/\b(day|week|month|year)(?:\s+view)?\b/)?.[1] || null;
+}
+
+function requestedRoomCode(command) {
+  const match = normaliseCommand(command).match(
+    /\b(?:custom\s+)?room\s+code(?:\s+(?:to|as))?\s+["']?([a-z0-9-]+)["']?\s*$/i
+  );
+  if (!match) return null;
+  return match[1].toUpperCase();
+}
+
+function validCustomRoomCode(code) {
+  return /^[A-HJ-NP-Z2-9]{6}$/.test(String(code || ""));
+}
+
+function invalidDateAmbiguity(token) {
+  return {
+    type: "invalid_date",
+    token,
+    message: `“${token}” is not a valid calendar date.`,
+    options: []
+  };
+}
+
+function invalidRoomCodeAmbiguity(code) {
+  return {
+    type: "invalid_room_code",
+    token: code,
+    message: "Room codes must contain exactly six unambiguous letters or numbers.",
+    options: []
+  };
+}
+
+function navigationAliasPattern() {
+  return /^(?:open|go to|jump to|show me)\b/;
+}
+
+function isGoogleConnectCommand(text) {
+  return /^(?:connect|link|sync|authorise|authorize|enable)\b/.test(text) &&
+    /\bgoogle(?:\s+(?:calendar|cal))?\b/.test(text);
+}
+
+function isRoomCodeCommand(text) {
+  return /^(?:change|set|update)\b/.test(text) && /\b(?:custom\s+)?room\s+code\b/.test(text);
+}
+
+function isViewCommand(text) {
+  if (/^(?:open|show)\s+settings?\b/.test(text)) return true;
+  return /^(?:switch|change|open|show|go)\b/.test(text) &&
+    /\b(?:day|week|month|year)\s+view\b/.test(text);
+}
+
+function explicitMonthNavigationDate(text, referenceDateKey) {
+  const month = monthNames.findIndex((name) => new RegExp(`\\b${name}\\b`).test(text));
+  if (month < 0) return null;
+  let year = Number(text.match(/\b(20\d{2})\b/)?.[1] || referenceDateKey.slice(0, 4));
+  const referenceMonth = Number(referenceDateKey.slice(5, 7)) - 1;
+  if (!text.match(/\b(20\d{2})\b/) && month < referenceMonth) year += 1;
+  return `${year}-${String(month + 1).padStart(2, "0")}-01`;
+}
+
+function monthNavigationTarget(command, referenceDateKey) {
   const text = normaliseMatch(command);
-  const referenceDateKey = dateKeyInZone(now, timezone);
+  const targetDate = explicitMonthNavigationDate(text, referenceDateKey);
+  return targetDate
+    ? { targetDate, targetView: "month" }
+    : { targetDate: null, targetView: null };
+}
+
+function navigationQuery(command, targetDate) {
+  if (targetDate) return null;
+  return normaliseCommand(command)
+    .replace(/^(?:open|go to|jump to|show me|show|find)\s+/i, "")
+    .trim();
+}
+
+function applyDateAmbiguity(base, date) {
+  if (!date.invalidDate) return;
+  base.ambiguities.push(invalidDateAmbiguity(date.invalidDate));
+}
+
+function applyRoomCodeValidation(base, code) {
+  if (!code) {
+    base.missingFields.push("room_code");
+    return;
+  }
+  if (!validCustomRoomCode(code)) base.ambiguities.push(invalidRoomCodeAmbiguity(code));
+}
+
+function parseNavigation(command, base, date) {
+  const nav = date.invalidDate
+    ? { targetDate: null, targetView: null }
+    : monthNavigationTarget(command, date.referenceDateKey);
+  const targetDate = date.invalidDate ? null : (date.dateKey || nav.targetDate);
+  const targetView = date.dateKey ? "week" : nav.targetView;
+  const query = date.invalidDate ? null : navigationQuery(command, targetDate);
+  if (!targetDate && !query && !date.invalidDate) base.missingFields.push("destination");
+  return {
+    ...base,
+    targetDate,
+    targetView: targetView || (targetDate ? "week" : null),
+    query
+  };
+}
+
+function parseViewIntent(base, text) {
+  const targetView = requestedView(text);
+  if (!targetView) base.missingFields.push("view");
+  return {
+    ...base,
+    targetView
+  };
+}
+
+function parseRoomCodeIntent(base, command) {
+  const newRoomCode = requestedRoomCode(command);
+  applyRoomCodeValidation(base, newRoomCode);
+  return {
+    ...base,
+    newRoomCode,
+    requiresConfirmation: true
+  };
+}
+
+function parseGoogleIntent(base) {
+  return {
+    ...base,
+    provider: "google",
+    requiresUserAction: true
+  };
+}
+
+function parseInvalidDateSafe(date, timezone) {
+  if (!date.rangeStartKey || !date.rangeEndKey) {
+    return { rangeStart: null, rangeEnd: null };
+  }
+  return {
+    rangeStart: dateAtMinute(date.rangeStartKey, 0, timezone).toISOString(),
+    rangeEnd: dateAtMinute(date.rangeEndKey, 0, timezone).toISOString()
+  };
+}
+
+function monthDateParts(text, referenceDateKey) {
+  return explicitMonthDate(text, referenceDateKey);
+}
+
+function dateRangeKeys(command, referenceDateKey) {
+  const text = normaliseMatch(command);
   let dateKey = null;
   let rangeStartKey = null;
   let rangeEndKey = null;
   let precision = null;
+  let invalidDate = null;
 
   if (/\btomorrow\b/.test(text)) {
     dateKey = addDateKeyDays(referenceDateKey, 1);
@@ -258,7 +435,13 @@ export function parseDateRange(command, {
     rangeEndKey = addDateKeyDays(rangeStartKey, 7);
     precision = "range";
   } else {
-    dateKey = explicitMonthDate(text, referenceDateKey) || explicitDayDate(text, referenceDateKey);
+    const monthDate = monthDateParts(text, referenceDateKey);
+    if (monthDate.matched) {
+      dateKey = monthDate.dateKey;
+      invalidDate = monthDate.invalidDate;
+    } else {
+      dateKey = explicitDayDate(text, referenceDateKey);
+    }
     precision = dateKey ? "day" : null;
   }
 
@@ -269,21 +452,39 @@ export function parseDateRange(command, {
 
   return {
     dateKey,
-    rangeStart: rangeStartKey ? dateAtMinute(rangeStartKey, 0, timezone).toISOString() : null,
-    rangeEnd: rangeEndKey ? dateAtMinute(rangeEndKey, 0, timezone).toISOString() : null,
+    rangeStartKey,
+    rangeEndKey,
     precision,
+    invalidDate
+  };
+}
+
+export function parseDateRange(command, {
+  now = new Date(),
+  timezone = "UTC"
+} = {}) {
+  const referenceDateKey = dateKeyInZone(now, timezone);
+  const keys = dateRangeKeys(command, referenceDateKey);
+  const safeRange = parseInvalidDateSafe(keys, timezone);
+  return {
+    dateKey: keys.dateKey,
+    rangeStart: safeRange.rangeStart,
+    rangeEnd: safeRange.rangeEnd,
+    precision: keys.precision,
+    invalidDate: keys.invalidDate,
     referenceDateKey
   };
 }
 
 function stripTitleNoise(command) {
   return normaliseCommand(command)
-    .replace(/^(?:create|add|schedule)\s+/i, "")
+    .replace(/^(?:create|add|schedule)(?:\s+(?:an?\s+)?event)?\s+/i, "")
     .replace(/^meet\s+/i, "")
     .replace(/\bwith\s+.+?(?=\s+(?:today|tomorrow|on|this|next|at|from|for|after|before|morning|afternoon|evening|weekend|week)\b|$)/i, "")
     .replace(/\b(?:today|tomorrow|this weekend|next week)\b/gi, "")
     .replace(new RegExp(`\\b(?:next\\s+)?(?:${weekdayNames.join("|")})\\b`, "gi"), "")
     .replace(new RegExp(`\\b(?:on\\s+)?\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${monthNames.join("|")})(?:\\s+\\d{4})?\\b`, "gi"), "")
+    .replace(new RegExp(`\\b(?:on\\s+)?(?:${monthNames.join("|")})\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?\\b`, "gi"), "")
     .replace(/\bfrom\s+\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)?\s+(?:to|-)\s+\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)?\b/gi, "")
     .replace(/\b(?:at|to)\s+\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)?\b/gi, "")
     .replace(/\bfor\s+(?:half an? hour|an hour|one hour|two hours|three hours|\d+(?:\.\d+)?\s*(?:hours?|hrs?|hr|minutes?|mins?|min))\b/gi, "")
@@ -291,12 +492,17 @@ function stripTitleNoise(command) {
     .replace(/\b(?:morning|afternoon|evening)\b/gi, "")
     .replace(/\s+/g, " ")
     .replace(/^[,;:\s-]+|[,;:\s-]+$/g, "")
+    .replace(/^["']|["']$/g, "")
     .trim();
 }
 
 function detectIntent(text) {
   if (/^(?:move|reschedule)\b/.test(text)) return "move_event";
-  if (/^(?:open|go to)\b/.test(text)) return "navigate";
+  if (/^(?:create|add|schedule|meet)\b/.test(text)) return "create_event";
+  if (isGoogleConnectCommand(text)) return "connect_google";
+  if (isRoomCodeCommand(text)) return "update_room_code";
+  if (isViewCommand(text)) return "navigate_view";
+  if (navigationAliasPattern().test(text)) return "navigate";
   if (/^(?:when is|when are|show when|highlight)\b/.test(text)) return "show_availability";
   if (/^when can\b.+\bmeet\b/.test(text)) return "find_time";
   if (/^find\b/.test(text)) {
@@ -304,7 +510,6 @@ function detectIntent(text) {
     return "navigate";
   }
   if (/^(?:show)\b/.test(text) && /\bfree\b/.test(text)) return "show_availability";
-  if (/^(?:create|add|schedule|meet)\b/.test(text)) return "create_event";
   if (/\b(?:today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/.test(text) && /\b(?:at|from)\b/.test(text)) {
     return "create_event";
   }
@@ -316,21 +521,6 @@ function moveEventQuery(command) {
     .replace(/^(?:move|reschedule)\s+/i, "")
     .split(/\s+\bto\b\s+/i)[0]
     .trim();
-}
-
-function navigationTarget(command, referenceDateKey) {
-  const text = normaliseMatch(command);
-  const month = monthNames.findIndex((name) => new RegExp(`\\b${name}\\b`).test(text));
-  if (month >= 0) {
-    let year = Number(text.match(/\b(20\d{2})\b/)?.[1] || referenceDateKey.slice(0, 4));
-    const referenceMonth = Number(referenceDateKey.slice(5, 7)) - 1;
-    if (!text.match(/\b(20\d{2})\b/) && month < referenceMonth) year += 1;
-    return {
-      targetDate: `${year}-${String(month + 1).padStart(2, "0")}-01`,
-      targetView: "month"
-    };
-  }
-  return { targetDate: null, targetView: null };
 }
 
 function afterTimeMinute(text) {
@@ -381,6 +571,12 @@ export function parseCommand(command, {
       options: []
     });
   }
+
+  applyDateAmbiguity(base, date);
+
+  if (intent === "navigate_view") return parseViewIntent(base, text);
+  if (intent === "connect_google") return parseGoogleIntent(base);
+  if (intent === "update_room_code") return parseRoomCodeIntent(base, original);
 
   if (intent === "create_event") {
     const allDay = /\ball day\b/.test(text);
@@ -447,16 +643,7 @@ export function parseCommand(command, {
     };
   }
 
-  const nav = navigationTarget(original, date.referenceDateKey);
-  const targetDate = nav.targetDate || date.dateKey;
-  const query = targetDate ? null : original.replace(/^(?:open|go to|show|find)\s+/i, "").trim();
-  if (!targetDate && !query) base.missingFields.push("destination");
-  return {
-    ...base,
-    targetDate,
-    targetView: nav.targetView || (targetDate ? "week" : null),
-    query
-  };
+  return parseNavigation(original, base, date);
 }
 
 export function resolveEventCandidates(query, events = [], {
