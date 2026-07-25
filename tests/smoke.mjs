@@ -254,10 +254,10 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-places-autocomplete"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-no-passive-caret"/);
   assert.match(home.text, /src="\/app\.js\?v=20260725-no-passive-autofocus"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
-  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-places-autocomplete"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-no-passive-caret"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(home.text, /<meta name="theme-color" content="#101c31" \/>/);
@@ -1839,6 +1839,11 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
+    /input:placeholder-shown,\s*textarea:placeholder-shown\s*\{[^}]*caret-color: transparent/s,
+    "Empty placeholder fields must not show a passive insertion caret"
+  );
+  assert.match(
+    eventComposerStyles.text,
     /#eventModal \.composer-schedule-section,\s*#eventModal \.composer-field-row\s*\{[^}]*grid-template-columns: 40px minmax\(0, 1fr\)[^}]*gap: 0[^}]*align-items: center/s,
     "Schedule and option rows must share one strict 40px icon gutter"
   );
@@ -1896,6 +1901,16 @@ try {
     eventComposerScript.text,
     /function openCreateRoomModal\(\)[\s\S]*?quickRoomNameInput\?\.focus\(\)/,
     "Opening the room composer must not place a text caret in the room name"
+  );
+  assert.doesNotMatch(
+    commandCentreScript.text,
+    /memberSearchInput\.focus\(/,
+    "Member navigation must not leave a text caret in the sidebar search field"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /participantStrip\.querySelectorAll\("\.member-calendar-checkbox\[data-participant-id\]"\)[\s\S]*?checkbox\.dataset\.participantId === id[\s\S]*?memberCheckbox\?\.focus\(\{ preventScroll: true \}\)/,
+    "Member navigation must move focus to the matched non-text control"
   );
   assert.match(eventComposerStyles.text, /@media \(max-width: 820px\)[\s\S]*?#eventModal \.event-composer[\s\S]*?width: min\(100vw - 16px, 360px\)/);
   assert.match(eventComposerStyles.text, /@media \(max-height: 720px\)[\s\S]*?#eventModal \.event-composer\s*\{[^}]*gap: 10px[^}]*padding: 14px 16px/s);

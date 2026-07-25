@@ -188,6 +188,11 @@ textarea::placeholder {
   color: var(--text-soft);
 }
 
+input:placeholder-shown,
+textarea:placeholder-shown {
+  caret-color: transparent;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;

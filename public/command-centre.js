@@ -1353,7 +1353,12 @@ async function commandExecuteNavigation(button) {
     memberSearchInput.value = commandParticipantName(id);
     setParticipantsPanelExpanded(true);
     filterParticipantRows();
-    window.requestAnimationFrame(() => memberSearchInput.focus({ preventScroll: true }));
+    window.requestAnimationFrame(() => {
+      const memberCheckbox = Array.from(
+        participantStrip.querySelectorAll(".member-calendar-checkbox[data-participant-id]")
+      ).find((checkbox) => checkbox.dataset.participantId === id);
+      memberCheckbox?.focus({ preventScroll: true });
+    });
     return;
   }
   if (kind === "date") {
