@@ -82,6 +82,7 @@ function commandCentreSetPhase(phase, announcement = "") {
 }
 
 function commandCentreSetBody(markup) {
+  window.closeLocationAutocompletes?.({ immediate: true, resetSession: true });
   commandCentreBody.innerHTML = markup;
 }
 
@@ -260,6 +261,7 @@ function closeCommandCentre({ restoreFocus = true, immediate = false } = {}) {
   commandCentreClearDebounce();
   commandCentreAbortRequest();
   commandCentreClearPrediction();
+  window.closeLocationAutocompletes?.({ immediate: true, resetSession: true });
   commandCentreState.generation += 1;
   const restoreTarget = commandCentreState.opener;
   const finish = () => {
@@ -547,10 +549,28 @@ function commandRenderCreatePreview(result, {
             <strong>All day</strong>
           </span>
         </label>
-        <label class="command-field command-field-wide">
-          <span>Location</span>
-          <input id="commandEventLocation" type="text" maxlength="200" value="${commandAttribute(location)}" placeholder="Optional" />
-        </label>
+        <div class="command-field command-field-wide location-autocomplete-host">
+          <label for="commandEventLocation">Location</label>
+          <input
+            id="commandEventLocation"
+            type="text"
+            maxlength="200"
+            value="${commandAttribute(location)}"
+            placeholder="Optional"
+            autocomplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-controls="commandEventLocationListbox"
+            aria-describedby="commandEventLocationStatus"
+          />
+          <div class="location-autocomplete-menu" id="commandEventLocationMenu" hidden>
+            <div class="location-autocomplete-list" id="commandEventLocationListbox" role="listbox" aria-label="Address suggestions"></div>
+            <div class="location-autocomplete-attribution" translate="no">Google Maps</div>
+          </div>
+          <span class="sr-only" id="commandEventLocationStatus" role="status" aria-live="polite"></span>
+        </div>
         <label class="command-field command-field-wide">
           <span>Description</span>
           <textarea id="commandEventDescription" maxlength="4000" placeholder="Optional">${commandEscape(description)}</textarea>
@@ -563,6 +583,7 @@ function commandRenderCreatePreview(result, {
       </div>
     </div>
   `);
+  window.initializeLocationAutocomplete?.(commandCentreBody.querySelector("#commandEventLocation"));
 }
 
 function commandCreateSummary(result) {
