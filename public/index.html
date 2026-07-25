@@ -24,7 +24,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20260724-appicon-new" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20260724-appicon-new" />
     <link rel="manifest" href="/site.webmanifest?v=20260724-appicon-new" />
-    <link rel="stylesheet" href="/styles.css?v=20260725-composer-clean-header" />
+    <link rel="stylesheet" href="/styles.css?v=20260725-composer-title-top" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -429,10 +429,27 @@
                 </label>
               </div>
 
-              <label class="event-panel-field">
-                <span>Location</span>
-                <input id="detailLocationInput" type="text" placeholder="Add location" autocomplete="off" />
-              </label>
+              <div class="event-panel-field location-autocomplete-host">
+                <label for="detailLocationInput">Location</label>
+                <input
+                  id="detailLocationInput"
+                  type="text"
+                  maxlength="200"
+                  placeholder="Add location"
+                  autocomplete="off"
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-haspopup="listbox"
+                  aria-expanded="false"
+                  aria-controls="detailLocationListbox"
+                  aria-describedby="detailLocationStatus"
+                />
+                <div class="location-autocomplete-menu" id="detailLocationMenu" hidden>
+                  <div class="location-autocomplete-list" id="detailLocationListbox" role="listbox" aria-label="Address suggestions"></div>
+                  <div class="location-autocomplete-attribution" translate="no">Google Maps</div>
+                </div>
+                <span class="sr-only" id="detailLocationStatus" role="status" aria-live="polite"></span>
+              </div>
 
               <label class="event-panel-field">
                 <span>Description</span>
@@ -545,11 +562,9 @@
       <form class="modal-card event-composer" id="eventForm">
         <h2 class="sr-only" id="eventComposerTitle">Create a group event</h2>
         <header class="composer-heading-section">
-          <div class="event-composer-top">
-            <button class="icon-button composer-close" id="cancelEventButton" type="button" aria-label="Close">
-              <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
-            </button>
-          </div>
+          <button class="icon-button composer-close" id="cancelEventButton" type="button" aria-label="Close">
+            <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
+          </button>
 
           <input class="composer-title" id="eventTitleInput" type="text" placeholder="Add title" aria-label="Event title" autocomplete="off" autofocus />
         </header>
@@ -644,10 +659,28 @@
             </div>
           </div>
 
-          <label class="composer-field-row composer-input-row" for="eventLocationInput">
-            <span class="composer-row-icon ui-icon ui-icon-map-pin" aria-hidden="true"></span>
-            <input id="eventLocationInput" type="text" placeholder="Add location" aria-label="Location" autocomplete="off" />
-          </label>
+          <div class="composer-field-row composer-input-row location-autocomplete-host">
+            <label class="composer-row-icon ui-icon ui-icon-map-pin" for="eventLocationInput" aria-label="Location"></label>
+            <input
+              id="eventLocationInput"
+              type="text"
+              maxlength="200"
+              placeholder="Add location"
+              aria-label="Location"
+              autocomplete="off"
+              role="combobox"
+              aria-autocomplete="list"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-controls="eventLocationListbox"
+              aria-describedby="eventLocationStatus"
+            />
+            <div class="location-autocomplete-menu" id="eventLocationMenu" hidden>
+              <div class="location-autocomplete-list" id="eventLocationListbox" role="listbox" aria-label="Address suggestions"></div>
+              <div class="location-autocomplete-attribution" translate="no">Google Maps</div>
+            </div>
+            <span class="sr-only" id="eventLocationStatus" role="status" aria-live="polite"></span>
+          </div>
 
           <label class="composer-field-row composer-input-row composer-description-row" for="eventDescriptionInput">
             <span class="composer-row-icon icon-lines" aria-hidden="true"></span>
@@ -710,8 +743,8 @@
       <p class="sr-only" id="emojiPickerStatus" role="status" aria-live="polite"></p>
     </div>
 
-    <script src="/app.js?v=20260725-command-composer"></script>
+    <script src="/app.js?v=20260725-places-autocomplete"></script>
     <script src="/command-centre-actions.js?v=20260725-flexible-availability"></script>
-    <script src="/command-centre.js?v=20260725-command-composer"></script>
+    <script src="/command-centre.js?v=20260725-places-autocomplete"></script>
   </body>
 </html>
