@@ -336,10 +336,20 @@ try {
     /<button class="calendar-google-button needs-connection button-with-icon" id="calendarGoogleButton" type="button" title="Connect Google Calendar" aria-label="Connect Google Calendar">/,
     "The calendar top bar must expose an explicit Google Calendar connection entry point"
   );
+  assert.match(
+    home.text,
+    /<button class="command-centre-trigger" id="commandCentreButton"[^>]*aria-label="Ask CommonGround"[^>]*aria-haspopup="dialog"[^>]*aria-controls="commandCentreDialog"[^>]*aria-expanded="false">[\s\S]*?Ask CommonGround[\s\S]*?<kbd id="commandCentreShortcutHint">Ctrl K<\/kbd>/,
+    "The calendar toolbar must expose an accessible Ask CommonGround trigger and shortcut hint"
+  );
   assertInOrder(
     home.text,
-    ['id="calendarGoogleButton"', 'id="refreshButton"', 'id="fullscreenButton"', 'id="settingsButton"', 'id="calendarViewMenu"'],
-    "Reload and fullscreen must sit immediately to the left of Settings"
+    ['id="commandCentreButton"', 'id="calendarGoogleButton"', 'id="refreshButton"', 'id="fullscreenButton"', 'id="settingsButton"', 'id="calendarViewMenu"'],
+    "Ask CommonGround, Google, reload, fullscreen, Settings, and the view menu must retain their toolbar order"
+  );
+  assert.match(
+    home.text,
+    /<dialog class="command-centre-dialog" id="commandCentreDialog" aria-labelledby="commandCentreTitle" aria-describedby="commandCentreDescription">[\s\S]*?<form class="command-centre-panel" id="commandCentreForm" novalidate>[\s\S]*?id="commandCentreInput" type="search"[^>]*maxlength="500"[^>]*placeholder="Create an event or find a time[\s\S]*?id="commandCentreStatus" role="status" aria-live="polite" aria-atomic="true"[\s\S]*?id="commandCentreBody" aria-live="off"/,
+    "The Command Centre must use a labelled semantic dialog, bounded search input, and live status region"
   );
   assert.match(
     home.text,
@@ -404,6 +414,74 @@ try {
   assert.equal(emojiDictionaryHead.text, "");
   assert.equal(Number(emojiDictionaryHead.response.headers.get("content-length")), Buffer.byteLength(emojiDictionaryResponse.text));
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
+  const commandCentreScript = await publicSession.request("/command-centre.js", { accept: "text/javascript" });
+  assert.match(
+    commandCentreScript.text,
+    /const commandCentrePhases = new Set\(\[[\s\S]*?"closed"[\s\S]*?"idle"[\s\S]*?"parsing"[\s\S]*?"needs_clarification"[\s\S]*?"preview"[\s\S]*?"searching_availability"[\s\S]*?"results"[\s\S]*?"confirming"[\s\S]*?"saving"[\s\S]*?"success"[\s\S]*?"error"/,
+    "The Command Centre must expose the complete interaction state machine"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /window\.setTimeout\(\(\) => \{[\s\S]*?requestCommandParse\(\{ submitted: false \}\);[\s\S]*?\}, 420\);/,
+    "Lightweight command parsing must be debounced"
+  );
+  for (const endpoint of ["parse", "availability", "create-event", "move-event"]) {
+    assert.match(
+      commandCentreScript.text,
+      new RegExp(`fetchJson\\(\\x60/api/rooms/\\$\\{roomCodeSnapshot\\}/command-centre/${endpoint}\\x60`),
+      `The Command Centre must use the room-scoped ${endpoint} endpoint`
+    );
+  }
+  assert.match(
+    commandCentreScript.text,
+    /const commandShortcut = \(event\.metaKey \|\| event\.ctrlKey\)[\s\S]*?event\.key\.toLowerCase\(\) === "k"[\s\S]*?openCommandCentre\(event\.target\)/,
+    "Cmd/Ctrl+K must open the Command Centre through the global capture handler"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /function commandRenderCreatePreview\([\s\S]*?data-command-edit-preview>Edit<\/button>[\s\S]*?data-command-confirm-create>Create event<\/button>/,
+    "Create commands must render editable fields and an explicit confirmation action"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /id="commandEventAllDay" type="checkbox"[\s\S]*?function commandReadCreateDraft\(\)[\s\S]*?const allDay = commandCentreBody\.querySelector\("#commandEventAllDay"\)\?\.checked === true;[\s\S]*?allDay,/,
+    "All-day commands must remain editable and produce authoritative all-day event payloads"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /async function commandOpenRoomEvent\(eventId\)[\s\S]*?roomEventById\(eventId\)[\s\S]*?goToDateInWeek\(new Date\(event\.start\)\)[\s\S]*?openEventDetail\(event\.id\)/,
+    "Opening a command result must navigate to its calendar week before showing event details"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /window\.commandCentreRenderAvailabilityHighlights[\s\S]*?command-availability-block[\s\S]*?window\.commandCentreReset/,
+    "Show-availability results must re-render inside the existing calendar lifecycle and reset on room changes"
+  );
+  assert.doesNotMatch(
+    commandCentreScript.text,
+    /openai|anthropic|gemini|chatgpt|api\.openai|localStorage|sessionStorage|https?:\/\//i,
+    "The Command Centre must not call an AI service or persist raw command history in browser storage"
+  );
+  assert.doesNotMatch(
+    serverSource,
+    /api\.openai|api\.anthropic|generativelanguage\.googleapis|OPENAI_API_KEY|ANTHROPIC_API_KEY|GEMINI_API_KEY/i,
+    "The server must not require or call an external AI provider"
+  );
+  assert.match(
+    serverSource,
+    /async function collectCommandBusyIntervals\([\s\S]*?if \(result\.calendarListError\) \{[\s\S]*?unavailableParticipantIds\.push\(participantId\)[\s\S]*?complete: unavailableParticipantIds\.length === 0/,
+    "Connected-calendar failures must make Command Centre availability incomplete rather than falsely free"
+  );
+  assert.match(
+    serverSource,
+    /async function revalidateCommandEventTime\([\s\S]*?if \(!collection\.complete\) \{[\s\S]*?httpError\(503,[\s\S]*?error\.code = "availability_unavailable"[\s\S]*?findConflicts/,
+    "Confirmed mutations must fail closed before conflict checking when provider availability is unavailable"
+  );
+  assert.match(
+    serverSource,
+    /async function withCommandMutation\(roomCode, task\)[\s\S]*?commandMutationQueues\.get\(key\)[\s\S]*?previous\.catch\(\(\) => \{\}\)\.then\(task\)/,
+    "Confirmed Command Centre mutations must serialize per room"
+  );
   assert.doesNotMatch(eventComposerScript.text, /\broomStatus\b/);
   assert.match(eventComposerScript.text, /const emojiKeywordDictionaryUrl = "https:\/\/unpkg\.com\/emojilib@3\.0\.11\/dist\/emoji-en-US\.json";/);
   assert.match(eventComposerScript.text, /const emojiKeywordDictionaryFallbackUrl = "\/assets\/emojilib\/3\.0\.11\/emoji-en-US\.json";/);
@@ -856,6 +934,31 @@ try {
     "Resize cancellation must be able to restore the original start and duration"
   );
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerStyles.text,
+    /\.free-glow-block\s*\{\s*padding:\s*6px 7px;\s*\}\s*\}\s*\/\* CommonGround Command Centre \*\//,
+    "The Command Centre styles must sit outside the legacy mobile calendar media block"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.command-centre-dialog\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*background:\s*transparent;[^}]*overflow:\s*hidden;/s,
+    "The Command Centre must own the full modal layer without native-dialog chrome"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.command-centre-panel\s*\{[^}]*width:\s*min\(640px, calc\(100vw - 32px\)\);[^}]*grid-template-rows:\s*auto minmax\(120px, 1fr\) auto;[^}]*border-radius:\s*16px;[^}]*will-change:\s*transform, opacity;/s,
+    "Desktop Command Centre layout must use the premium bounded panel"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-width: 760px\)\s*\{[\s\S]*?#roomPage \.calendar-nav-actions > #commandCentreButton\s*\{[^}]*position:\s*fixed;[^}]*bottom:\s*max\(16px, env\(safe-area-inset-bottom\)\);[^}]*width:\s*50px;[\s\S]*?\.command-centre-panel\s*\{[^}]*width:\s*100%;[^}]*max-height:\s*calc\(100dvh - 54px\);/s,
+    "Mobile must retain an accessible floating trigger and bottom-sheet layout"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(prefers-reduced-motion: reduce\)\s*\{[\s\S]*?\.command-centre-dialog\[open\] \.command-centre-panel[\s\S]*?animation-duration:\s*1ms !important;/s,
+    "Command Centre motion must respect reduced-motion preferences"
+  );
   assert.match(eventComposerStyles.text, /#syncSettingsCard\s*\{[^}]*display:\s*none/s);
   assert.match(eventComposerStyles.text, /#eventModal \.event-composer\s*\{[^}]*font-family:\s*"Avenir Next", "Segoe UI Variable", Inter/s);
   assert.match(eventComposerStyles.text, /#eventModal \.composer-time-grid input\s*\{[^}]*font-size:\s*15px[^}]*font-weight:\s*650[^}]*font-variant-numeric:\s*tabular-nums/s);
@@ -1170,6 +1273,17 @@ try {
   );
   assert.match(eventComposerStyles.text, /\.drag-create-preview\s*\{[^}]*container-type:\s*inline-size/s);
   assert.match(eventComposerStyles.text, /\.drag-create-preview strong\s*\{[^}]*font-size:\s*clamp\(9px, 7\.2cqw, 12px\)[^}]*text-overflow:\s*clip/s);
+  assert.match(eventComposerScript.text, /const titleText = "\(No title\)";/);
+  assert.match(
+    eventComposerScript.text,
+    /function dismissOutsideFloatingSurfaces\(target\)[\s\S]*?function handleOutsideFloatingSurfacePointer\(event\)[\s\S]*?event\.stopImmediatePropagation\(\)/,
+    "Outside clicks must dismiss an open surface before they can activate an underlying control"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /document\.addEventListener\("pointerdown", handleOutsideFloatingSurfacePointer, true\);[\s\S]*?document\.addEventListener\("click", handleOutsideFloatingSurfaceClick, true\);/,
+    "Outside surface dismissal must consume the follow-up click as well as the initial pointer press"
+  );
   assert.doesNotMatch(
     eventComposerStyles.text,
     /scale\(0\.9\)/,
