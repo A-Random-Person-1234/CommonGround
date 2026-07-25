@@ -248,7 +248,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-settings-panel"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-slot-time"/);
   assert.match(home.text, /src="\/app\.js\?v=20260724-room-card"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
@@ -1152,6 +1152,8 @@ try {
   );
   assert.match(eventComposerStyles.text, /\.drag-create-preview::before\s*\{[^}]*height:\s*var\(--preview-base-height[^}]*transform:\s*scaleY\(var\(--preview-scale/s);
   assert.match(eventComposerStyles.text, /\.drag-create-preview-cap\s*\{[^}]*transform:\s*translate3d\(0, var\(--preview-bottom-y, 0px\), 0\)/s);
+  assert.match(eventComposerStyles.text, /\.drag-create-preview\s*\{[^}]*container-type:\s*inline-size/s);
+  assert.match(eventComposerStyles.text, /\.drag-create-preview strong\s*\{[^}]*font-size:\s*clamp\(9px, 7\.2cqw, 12px\)[^}]*text-overflow:\s*clip/s);
   assert.doesNotMatch(
     eventComposerStyles.text,
     /scale\(0\.9\)/,

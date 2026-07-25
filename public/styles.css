@@ -2787,6 +2787,7 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   opacity: 1;
   pointer-events: none;
   z-index: 9;
+  container-type: inline-size;
   will-change: transform, opacity;
 }
 
@@ -2843,11 +2844,14 @@ button.free-block:not(:disabled):active {
 }
 
 .drag-create-preview-copy {
+  box-sizing: border-box;
   position: relative;
   z-index: 2;
   display: grid;
   align-content: start;
   gap: 6px;
+  width: 100%;
+  min-width: 0;
   padding: 8px 10px 10px;
 }
 
@@ -2860,7 +2864,10 @@ button.free-block:not(:disabled):active {
 
 .drag-create-preview strong {
   color: var(--ink);
-  font-size: 12px;
+  max-width: 100%;
+  font-size: clamp(9px, 7.2cqw, 12px);
+  letter-spacing: -0.02em;
+  text-overflow: clip;
 }
 
 .drag-create-preview span {
