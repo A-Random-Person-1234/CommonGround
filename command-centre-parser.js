@@ -618,6 +618,7 @@ export function parseDateRange(command, {
 function stripTitleNoise(command, { stripParticipantPhrase = true } = {}) {
   let title = normaliseCommand(command)
     .replace(/^(?:create|add|schedule)(?:\s+(?:an?\s+)?event)?\s+/i, "")
+    .replace(/^event(?=\s+(?:at|on|this|next|today|tomorrow|all day)\b)\s*/i, "")
     .replace(/^meet\s+/i, "");
   if (stripParticipantPhrase) {
     title = title.replace(
@@ -627,7 +628,7 @@ function stripTitleNoise(command, { stripParticipantPhrase = true } = {}) {
   }
   return title
     .replace(/\b(?:today|tomorrow|this weekend|next week)\b/gi, "")
-    .replace(new RegExp(`\\b(?:next\\s+)?(?:${weekdayNames.join("|")})\\b`, "gi"), "")
+    .replace(new RegExp(`\\b(?:on\\s+)?(?:(?:this|next)\\s+)?(?:${weekdayNames.join("|")})\\b`, "gi"), "")
     .replace(new RegExp(`\\b(?:on\\s+)?\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${monthNames.join("|")})(?:\\s+\\d{4})?\\b`, "gi"), "")
     .replace(new RegExp(`\\b(?:on\\s+)?(?:${monthNames.join("|")})\\s+\\d{1,2}(?:st|nd|rd|th)?(?:,?\\s+\\d{4})?\\b`, "gi"), "")
     .replace(/\bfrom\s+\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)?\s+(?:to|-)\s+\d{1,2}(?::[0-5]\d)?\s*(?:am|pm)?\b/gi, "")
@@ -643,7 +644,7 @@ function stripTitleNoise(command, { stripParticipantPhrase = true } = {}) {
 
 function detectIntent(text) {
   if (/^(?:move|reschedule)\b/.test(text)) return "move_event";
-  if (/^(?:create|add|schedule|meet)\b/.test(text)) return "create_event";
+  if (/^(?:create|add|schedule|meet|event)\b/.test(text)) return "create_event";
   if (isGoogleConnectCommand(text)) return "connect_google";
   if (isRoomCodeCommand(text)) return "update_room_code";
   if (isViewCommand(text)) return "navigate_view";
@@ -758,6 +759,7 @@ export function parseCommand(command, {
       end: end?.toISOString() || null,
       durationMinutes: resolvedDuration,
       dateKey: date.dateKey,
+      startMinute: time.startMinute,
       timeOfDay: time.timeOfDay,
       allDay,
       description: ""
