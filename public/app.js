@@ -3982,7 +3982,7 @@ function ensureDragPreview() {
   dragPreviewNode.style.setProperty("--event-owner-color", previewColor);
   dragPreviewNode.style.setProperty("--event-color", previewColor);
   dragPreviewNode.dataset.previewTimeRange = formatEventRange(selection.startHour, selection.endHour);
-  const titleText = "Create group event";
+  const titleText = "(No title)";
   const timeRange = formatEventRange(selection.startHour, selection.endHour);
   const compactLine = [titleText, formatEventClock(selection.startHour)].filter(Boolean).join(", ");
   const timeLine = durationClass === "event-15" ? compactLine : timeRange;
