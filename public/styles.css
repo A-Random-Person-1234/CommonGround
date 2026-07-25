@@ -2027,6 +2027,10 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   background: transparent;
 }
 
+#syncSettingsCard {
+  display: none;
+}
+
 .settings-card > div:first-child,
 .host-toggle-row > div {
   min-width: 0;

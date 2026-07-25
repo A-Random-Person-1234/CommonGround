@@ -248,7 +248,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260724-room-card"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-settings-panel"/);
   assert.match(home.text, /src="\/app\.js\?v=20260724-room-card"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
@@ -855,6 +855,7 @@ try {
     "Resize cancellation must be able to restore the original start and duration"
   );
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(eventComposerStyles.text, /#syncSettingsCard\s*\{[^}]*display:\s*none/s);
   assert.match(
     eventComposerScript.text,
     /function formatRange\(\{ includeYear = false \} = \{\}\)[\s\S]*?typeof rangeFormatter\.formatRange === "function"[\s\S]*?rangeFormatter\.formatRange\(start, end\)[\s\S]*?sameMonth[\s\S]*?sameYear/,
