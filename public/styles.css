@@ -10065,7 +10065,7 @@ button.identity-name-button:not(:disabled):active,
   height: auto;
   overflow: hidden;
   border: 0;
-  border-right: 1px solid var(--shell-line);
+  border-right: 0;
   border-radius: 0;
   background: var(--shell-panel);
   box-shadow: none;
@@ -10909,7 +10909,7 @@ button.identity-name-button:not(:disabled):active,
     bottom: 0;
     width: min(284px, calc(100vw - 48px));
     height: auto;
-    border-right: 1px solid var(--shell-line);
+    border-right: 0;
     box-shadow: 18px 0 36px rgba(0, 0, 0, 0.38);
     opacity: 0;
     transform: translate3d(-100%, 0, 0);

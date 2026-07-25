@@ -250,7 +250,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-calendar-popout"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-calendar-popout-r2"/);
   assert.match(home.text, /src="\/app\.js\?v=20260725-command-composer"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260725-command-composer"/);
@@ -1846,8 +1846,13 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.participants-sidebar\s*\{[^}]*grid-area:\s*sidebar[^}]*position:\s*relative[^}]*border-right:\s*1px solid var\(--shell-line\)[^}]*background:\s*var\(--shell-panel\)[^}]*opacity:\s*1/s,
-    "The Members sidebar must be a persistent application-shell column"
+    /#roomPage \.participants-sidebar\s*\{[^}]*grid-area:\s*sidebar[^}]*position:\s*relative[^}]*border-right:\s*0[^}]*background:\s*var\(--shell-panel\)[^}]*opacity:\s*1/s,
+    "The Members sidebar must remain a seamless application-shell column without a divider"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-width: 760px\)[\s\S]*?#roomPage \.participants-sidebar\s*\{[^}]*position:\s*fixed[^}]*border-right:\s*0/s,
+    "The compact Members drawer must not reintroduce the vertical divider"
   );
   assert.match(
     eventComposerStyles.text,
