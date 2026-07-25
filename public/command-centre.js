@@ -372,5 +372,1168 @@ function commandRenderAvailabilityClarification(result) {
       <div class="command-actions">
         <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
         <button class="command-primary-action" type="button" data-command-continue-availability>Find times</button>
-     ×M¸òÚ$z{-®éÜj×r‡&W7VÇBÂ&W7VÇBæWfVçD6æF–FFW5³Ò“°¢&WGW&ã°¢Ğ¢6öÖÖæE&VæFW$æf–vFR‡&W7VÇB“°§Ğ ¦7–æ2gVæ7F–öâ&ö6W75W6W$–çFVçB†–çWEFW‡BÂ²7V&Ö—GFVBÒG'VRÒÒ·Ò’°¢6öç7B6öÖÖæBÒ7G&–ær†–çWEFW‡BÇÂ""’çG&–Ò‚“°¢–b†6öÖÖæBæÆVæwF‚Â"ÇÂ7W'&VçE&ööÓòæ6öFR’°¢6öÖÖæD6VçG&U&VæFW$–çG&ò‚“°¢&WGW&â°¢7V66W73¢fÇ6RÀ¢ÖW76vS¢7W'&VçE&ööÓòæ6öFRò$VçFW"6ÆVæF"6öÖÖæBâ"¢$÷Vâ&ööÒ&Vf÷&RW6–ær6öÖÖæB6VçG&Râ ¢Ó°¢Ğ¢6öÖÖæD6VçG&T6ÆV$FV&÷Væ6R‚“°¢6öÖÖæD6VçG&T&÷'E&WVW7B‚“°¢6öç7B6öçG&öÆÆW"ÒæWr&÷'D6öçG&öÆÆW"‚“°¢6öç7BvVæW&F–öâÒ²¶6öÖÖæD6VçG&U7FFRævVæW&F–öã°¢6öç7B&ööÔ6öFU6æ6†÷BÒ7W'&VçE&ööÒæ6öFS°¢6öÖÖæD6VçG&U7FFRæ6öçG&öÆÆW"Ò6öçG&öÆÆW#°¢6öÖÖæD6VçG&U6WE†6R‚''6–ær"Â%VæFW'7FæF–ær6öÖÖæBâ"“°¢6öÖÖæD6VçG&U&VæFW$ÆöF–ær‚%VæFW'7FæF–ær–÷W"6öÖÖæN(
-b"“°¢G'’°¢6öç7BFFÒv—BfWF6„§6öâ†ö’÷&öö×2òG·&ööÔ6öFU6æ6†÷GÒö6öÖÖæBÖ6VçG&R÷'6VÂ°¢ÖWF†öC¢%õ5B"À¢†VFW'3¢²$6öçFVçBÕG—R#¢&Æ–6F–öâö§6öâ"ÒÀ¢&öG“¢¥4ôâç7G&–æv–g’‡°¢6öÖÖæBÀ¢F–ÖW¦öæS¢6öÖÖæD6VçG&UF–ÖW¦öæR‚¢Ò’À¢6–væÃ¢6öçG&öÆÆW"ç6–væÀ¢Ò“°¢–b€¢vVæW&F–öâÓÒ6öÖÖæD6VçG&U7FFRævVæW&F–öâÇÀ¢7W'&VçE&ööÓòæ6öFRÓÒ&ööÔ6öFU6æ6†÷BÇÀ¢6öÖÖæD6VçG&TF–Æöræ÷Và¢’°¢&WGW&â°¢7V66W73¢fÇ6RÀ¢ÖW76vS¢%F†R6öÖÖæB&W7VÇBv2–væ÷&VB&V6W6RF†R7F—fR&ööÒ6†ævVBâ"À¢6öFS¢'7FÆUö6öÖÖæB ¢Ó°¢Ğ¢6öÖÖæD6öçF–çVU'6VE&W7VÇB†FFç&W7VÇBÂ²7V&Ö—GFVBÒ“°¢&WGW&â°¢7V66W73¢G'VRÀ¢ÖW76vS¢$6öÖÖæBVæFW'7FööBâ"À¢–ÆöC¢FFç&W7VÇ@¢Ó°¢Ò6F6‚†W'&÷"’°¢–b†W'&÷"ææÖRÓÓÒ$&÷'DW'&÷""’°¢&WGW&â°¢7V66W73¢fÇ6RÀ¢ÖW76vS¢$6öÖÖæB6æ6VÆÆVBâ"À¢6öFS¢&&÷'FVB ¢Ó°¢Ğ¢6öÖÖæD6VçG&U&VæFW$ÖW76vR‚$6öÖÖæBf–ÆVB"ÂW'&÷"æÖW76vRÇÂ%G'’v–ââ"“°¢&WGW&â°¢7V66W73¢fÇ6RÀ¢ÖW76vS¢W'&÷"æÖW76vRÇÂ%G'’v–ââ"À¢6öFS¢W'&÷"æ6öFRÇÂçVÆÀ¢Ó°¢Òf–æÆÇ’°¢–b†6öÖÖæD6VçG&U7FFRæ6öçG&öÆÆW"ÓÓÒ6öçG&öÆÆW"’6öÖÖæD6VçG&U7FFRæ6öçG&öÆÆW"ÒçVÆÃ°¢Ğ§Ğ ¦7–æ2gVæ7F–öâ&WVW7D6öÖÖæE'6R‡²7V&Ö—GFVBÒG'VRÒÒ·Ò’°¢&WGW&â&ö6W75W6W$–çFVçB†6öÖÖæD6VçG&T–çWBçfÇVRÂ²7V&Ö—GFVBÒ“°§Ğ §v–æF÷rç&ö6W75W6W$–çFVçBÒ&ö6W75W6W$–çFVçC°§v–æF÷rä6öÖÖöäw&÷VæD6öÖÖæE&÷WFW"Òö&¦V7Bæg&VW¦R‡°¢&ö6W75W6W$–çFVçBÀ¢ââçv–æF÷rä6öÖÖöäw&÷VæD6öÖÖæD7F–öç0§Ò“° ¦gVæ7F–öâ6öÖÖæD6VçG&U6VÆV7F&ÆT÷F–öç2‚’°¢&WGW&â²ââæ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷$ÆÂ‚%¶FFÖ6öÖÖæBÖ÷F–öåÒ"•Ó°§Ğ ¦gVæ7F–öâ6öÖÖæD6VçG&U6VÆV7D–æFW‚†æW‡D–æFW‚’°¢6öç7B÷F–öç2Ò6öÖÖæD6VçG&U6VÆV7F&ÆT÷F–öç2‚“°¢–b‚÷F–öç2æÆVæwF‚’&WGW&ã°¢6öç7Bæ÷&ÖÆ—¦VBÒ‚†æW‡D–æFW‚R÷F–öç2æÆVæwF‚’²÷F–öç2æÆVæwF‚’R÷F–öç2æÆVæwFƒ°¢6öÖÖæD6VçG&U7FFRç6VÆV7FVD–æFW‚Òæ÷&ÖÆ—¦VC°¢÷F–öç2æf÷$V6‚‚†÷F–öâÂ–æFW‚’Óâ°¢6öç7B6VÆV7FVBÒ–æFW‚ÓÓÒæ÷&ÖÆ—¦VC°¢÷F–öâæ6Æ74Æ—7BçFövvÆR‚&—2×6VÆV7FVB"Â6VÆV7FVB“°¢÷F–öâç6WDGG&–'WFR‚&&–×6VÆV7FVB"Â7G&–ær‡6VÆV7FVB’“°¢Ò“°¢÷F–öç5¶æ÷&ÖÆ—¦VEÒç67&öÆÄ–çFõf–Wr‡²&Æö6³¢&æV&W7B"Ò“°§Ğ ¦gVæ7F–öâ6öÖÖæD6VçG&T7F—fFU6VÆV7FVB‚’°¢6öç7B÷F–öç2Ò6öÖÖæD6VçG&U6VÆV7F&ÆT÷F–öç2‚“°¢÷F–öç5¶6öÖÖæD6VçG&U7FFRç6VÆV7FVD–æFW…Óòæ6Æ–6²‚“°§Ğ ¦gVæ7F–öâ6öÖÖæE&Vf–æTf–Æ&–Æ—G’†¶–æB’°¢6öç7B&W7VÇBÒ²ââæ6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÓ°¢–b†¶–æBÓÓÒ'6†÷'FW""’&W7VÇBæGW&F–öäÖ–çWFW2Ò3°¢–b†¶–æBÓÓÒ&WfVæ–æw2"’°¢&W7VÇBçF–ÖTödF’ÒçVÆÃ°¢&W7VÇBæV&Æ–W7DÖ–çWFRÒ‚¢c°¢&W7VÇBæÆFW7DÖ–çWFRÒ#¢c°¢Ğ¢–b†¶–æBÓÓÒ&W‡æB"’°¢&W7VÇBç&ævTVæBÒæWrFFR†æWrFFR‡&W7VÇBç&ævTVæB’ævWEF–ÖR‚’²r¢#B¢c¢c¢’çFô•4õ7G&–ær‚“°¢Ğ¢6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÒ&W7VÇC°¢6öÖÖæDÆöDf–Æ&–Æ—G’‡&W7VÇB“°§Ğ ¦7–æ2gVæ7F–öâ6öÖÖæE6†÷tf–Æ&–Æ—G”öä6ÆVæF"‚’°¢6öç7Bf–Æ&–Æ—G’Ò6öÖÖæD6VçG&U7FFRæf–Æ&–Æ—G“°¢6öç7B&W7VÇBÒ6öÖÖæD6VçG&U7FFRç'6U&W7VÇC°¢–b‚f–Æ&–Æ—G“òæg&VT–çFW'fÇ3òæÆVæwF‚’&WGW&ã°¢6öÖÖæD6VçG&U7FFRæ†–v†Æ–v‡BÒ°¢&ööÔ6öFS¢7W'&VçE&ööÓòæ6öFRÀ¢'F–6—çD–G3¢²ââç&W7VÇBç'F–6—çD–G5ÒÀ¢–çFW'fÇ3¢f–Æ&–Æ—G’æg&VT–çFW'fÇ2ç6Æ–6RƒÂƒ’À¢7&VFVDC¢FFRææ÷r‚¢Ó°¢6öç7Bf—'7BÒæWrFFR†f–Æ&–Æ—G’æg&VT–çFW'fÇ5³Òç7F'B“°¢6Æ÷6T6öÖÖæD6VçG&R‡²&W7F÷&Tfö7W3¢fÇ6RÒ“°¢v—BvõFôFFT–åvVV²†f—'7B“°¢6ÆVæF%7FGW2çFW‡D6öçFVçBÒ6†÷v–ær6†&VBf–Æ&–Æ—G’f÷"G¶6öÖÖæE'F–6—çDæÖW2‡&W7VÇBç'F–6—çD–G2’æ¦ö–â‚"Â"—Òæ°§Ğ §v–æF÷ræ6öÖÖæD6VçG&U&VæFW$f–Æ&–Æ—G”†–v†Æ–v‡G2Ò†WfVçG4Æ–W"ÂF—2’Óâ°¢6öç7B†–v†Æ–v‡BÒ6öÖÖæD6VçG&U7FFRæ†–v†Æ–v‡C°¢–b‚†–v†Æ–v‡BÇÂ†–v†Æ–v‡Bç&ööÔ6öFRÓÒ7W'&VçE&ööÓòæ6öFRÇÂWfVçG4Æ–W"’&WGW&ã°¢f÷"†6öç7B¶F”–æFW‚ÂF•ÒöbF—2æVçG&–W2‚’’°¢6öç7BF•7F'BÒ7F'DödF’†F’æFFR“°¢6öç7BF”VæBÒFDF—2†F•7F'BÂ“°¢f÷"†6öç7B–çFW'fÂöb†–v†Æ–v‡Bæ–çFW'fÇ2’°¢6öç7B&u7F'BÒæWrFFR†–çFW'fÂç7F'B“°¢6öç7B&tVæBÒæWrFFR†–çFW'fÂæVæB“°¢–b‡&u7F'BãÒF”VæBÇÂ&tVæBÃÒF•7F'B’6öçF–çVS°¢6öç7B7F'BÒ&u7F'BâF•7F'Bò&u7F'B¢F•7F'C°¢6öç7BVæBÒ&tVæBÂF”VæBò&tVæB¢F”VæC°¢6öç7B7F'D†÷W"Ò7F'BævWD†÷W'2‚’²7F'BævWDÖ–çWFW2‚’òc°¢6öç7BVæD†÷W"ÒVæBãÒF”VæBò#B¢VæBævWD†÷W'2‚’²VæBævWDÖ–çWFW2‚’òc°¢–b†VæD†÷W"ÃÒ7F'D†÷W"’6öçF–çVS°¢6öç7B&Æö6²ÒFö7VÖVçBæ7&VFTVÆVÖVçB‚&F—b"“°¢&Æö6²æ6Æ74æÖRÒ&6öÖÖæBÖf–Æ&–Æ—G’Ö&Æö6²#°¢&Æö6²ç7G–ÆRç6WE&÷W'G’‚"ÒÖF’Ö–æFW‚"Â7G&–ær†F”–æFW‚’“°¢&Æö6²ç7G–ÆRç6WE&÷W'G’‚"Ò×7F'B"Â7G&–ær‡7F'D†÷W"Ò6ÆVæF%7F'D†÷W"’“°¢&Æö6²ç7G–ÆRç6WE&÷W'G’‚"ÒÖGW&F–öâ"Â7G&–ær†VæD†÷W"Ò7F'D†÷W"’“°¢&Æö6²ç6WDGG&–'WFR‚&&–Ö†–FFVâ"Â'G'VR"“°¢6öç7BF—FÆRÒFö7VÖVçBæ7&VFTVÆVÖVçB‚'7G&öær"“°¢6öç7BF–ÖRÒFö7VÖVçBæ7&VFTVÆVÖVçB‚'7â"“°¢F—FÆRçFW‡D6öçFVçBÒ%6†&VBg&VRF–ÖR#°¢F–ÖRçFW‡D6öçFVçBÒf÷&ÖDWfVçE&ævR‡7F'D†÷W"ÂVæD†÷W"“°¢&Æö6²æVæB‡F—FÆRÂF–ÖR“°¢WfVçG4Æ–W"æVæD6†–ÆB†&Æö6²“°¢Ğ¢Ğ§Ó° §v–æF÷ræ6öÖÖæD6VçG&U&W6WBÒ‚’Óâ°¢6öÖÖæD6VçG&U7FFRæ†–v†Æ–v‡BÒçVÆÃ°¢6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÒçVÆÃ°¢6öÖÖæD6VçG&U7FFRæf–Æ&–Æ—G’ÒçVÆÃ°¢6öÖÖæD6VçG&U7FFRæÖ÷fT6æF–FFRÒçVÆÃ°¢6öÖÖæD6VçG&U7FFRæ6öæfÆ–7DG&gBÒçVÆÃ°¢6öÖÖæD6VçG&T6ÆV$FV&÷Væ6R‚“°¢6öÖÖæD6VçG&T&÷'E&WVW7B‚“°¢–b†6öÖÖæD6VçG&TF–Æöræ÷Vâ’6Æ÷6T6öÖÖæD6VçG&R‡²&W7F÷&Tfö7W3¢fÇ6RÂ–ÖÖVF–FS¢G'VRÒ“°§Ó° ¦6öÖÖæD6VçG&T'WGFöãòæFDWfVçDÆ—7FVæW"‚&6Æ–6²"Â‚’Óâ°¢–b†6öÖÖæD6VçG&TF–Æöræ÷Vâ’6Æ÷6T6öÖÖæD6VçG&R‚“°¢VÇ6R÷Vä6öÖÖæD6VçG&R†6öÖÖæD6VçG&T'WGFöâ“°§Ò“° ¦6öÖÖæD6VçG&T6Æ÷6T'WGFöãòæFDWfVçDÆ—7FVæW"‚&6Æ–6²"Â‚’Óâ6Æ÷6T6öÖÖæD6VçG&R‚’“° ¦6öÖÖæD6VçG&T–çWCòæFDWfVçDÆ—7FVæW"‚&–çWB"Â6öÖÖæD6VçG&U66†VGVÆU'6R“° ¦6öÖÖæD6VçG&Tf÷&ÓòæFDWfVçDÆ—7FVæW"‚'7V&Ö—B"Â†WfVçB’Óâ°¢WfVçBç&WfVçDFVfVÇB‚“°¢–b†6öÖÖæD6VçG&U7FFRç†6RÓÓÒ'&W7VÇG2"bb6öÖÖæD6VçG&U6VÆV7F&ÆT÷F–öç2‚’æÆVæwF‚’°¢6öÖÖæD6VçG&T7F—fFU6VÆV7FVB‚“°¢&WGW&ã°¢Ğ¢&WVW7D6öÖÖæE'6R‡²7V&Ö—GFVC¢G'VRÒ“°§Ò“° ¦6öÖÖæD6VçG&T&öG“òæFDWfVçDÆ—7FVæW"‚&6Æ–6²"Â7–æ2†WfVçB’Óâ°¢6öç7BW†×ÆRÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖW†×ÆUÒ"“°¢–b†W†×ÆR’°¢6öÖÖæD6VçG&T–çWBçfÇVRÒW†×ÆRæFF6WBæ6öÖÖæDW†×ÆS°¢v—B&WVW7D6öÖÖæE'6R‡²7V&Ö—GFVC¢G'VRÒ“°¢&WGW&ã°¢Ğ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6æ6VÅÒÂ¶FFÖ6öÖÖæBÖ6Æ÷6UÒ"’’°¢6Æ÷6T6öÖÖæD6VçG&R‚“°¢&WGW&ã°¢Ğ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖVF—B×&Wf–WuÒ"’’°¢6öç7Bf–VÆBÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚u¶&–Ö–çfÆ–CÒ'G'VR%ÒÂ66öÖÖæDWfVçEF—FÆRr“°¢f–VÆCòæfö7W2‡²&WfVçE67&öÆÃ¢G'VRÒ“°¢&WGW&ã°¢Ğ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖVF—BÖ6öæfÆ–7EÒ"’’°¢6öç7BG&gBÒ6öÖÖæD6VçG&U7FFRæ6öæfÆ–7DG&gC°¢–b†G&gB’°¢6öÖÖæE&VæFW$7&VFU&Wf–Wr‡°¢ââæ6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÀ¢–çFVçC¢&7&VFUöWfVçB"À¢F—FÆS¢G&gBçF—FÆRÀ¢7F'C¢G&gBç7F'BÀ¢VæC¢G&gBæVæBÀ¢'F–6—çD–G3¢G&gBæ–çf—FVU'F–6—çD–G2À¢Æö6F–öã¢G&gBæÆö6F–öâÀ¢FW67&—F–öã¢G&gBæFW67&—F–öâÀ¢ÆÄF“¢G&gBæÆÄF’ÓÓÒG'VRÀ¢Ö—76–ætf–VÆG3¢µÒÀ¢Ö&–wV—F–W3¢µĞ¢Ò“°¢Ğ¢&WGW&ã°¢Ğ¢6öç7B'F–6—çD÷F–öâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×'F–6—çBÖ÷F–öåÒ"“°¢–b‡'F–6—çD÷F–öâ’°¢6öç7B&W7VÇBÒ°¢ââæ6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÀ¢'F–6—çD–G3¢°¢âââ†6öÖÖæD6VçG&U7FFRç'6U&W7VÇBç'F–6—çD–G2ÇÂµÒ’À¢'F–6—çD÷F–öâæFF6WBæ6öÖÖæE'F–6—çD÷F–öà¢ÒÀ¢Ö&–wV—F–W3¢†6öÖÖæD6VçG&U7FFRç'6U&W7VÇBæÖ&–wV—F–W2ÇÂµÒ’ç6Æ–6Rƒ¢Ó°¢6öÖÖæD6öçF–çVU'6VE&W7VÇB‡&W7VÇBÂ²7V&Ö—GFVC¢G'VRÒ“°¢&WGW&ã°¢Ğ¢6öç7B6Æ÷D'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×6Æ÷BÖ–æFW…Ò"“°¢–b‡6Æ÷D'WGFöâ’°¢6öç7B6Æ÷BÒ6öÖÖæD6VçG&U7FFRæf–Æ&–Æ—G“òç6Æ÷G3òå´çVÖ&W"‡6Æ÷D'WGFöâæFF6WBæ6öÖÖæE6Æ÷D–æFW‚•Ó°¢–b‚6Æ÷B’&WGW&ã°¢–b†6öÖÖæD6VçG&U7FFRç'6U&W7VÇBæ–çFVçBÓÓÒ'6†÷uöf–Æ&–Æ—G’"’°¢v—B6öÖÖæE6†÷tf–Æ&–Æ—G”öä6ÆVæF"‚“°¢ÒVÇ6R°¢6öÖÖæD7&VFTG&gDg&öÕ6Æ÷B†6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÂ6Æ÷B“°¢Ğ¢&WGW&ã°¢Ğ¢6öç7B6æF–FFT'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖWfVçBÖ6æF–FFUÒ"“°¢–b†6æF–FFT'WGFöâ’°¢6öç7B6æF–FFRÒ6öÖÖæD6VçG&U7FFRç'6U&W7VÇBæWfVçD6æF–FFW0¢æf–æB‚†VçG'’’ÓâVçG'’æ–BÓÓÒ6æF–FFT'WGFöâæFF6WBæ6öÖÖæDWfVçD6æF–FFR“°¢–b†6æF–FFR’6öÖÖæE&VæFW$Ö÷fU&Wf–Wr†6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÂ6æF–FFR“°¢&WGW&ã°¢Ğ¢6öç7Bæf–vF–öä'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖæf–vFRÖ¶–æEÒ"“°¢–b†æf–vF–öä'WGFöâ’°¢v—B6öÖÖæDW†V7WFTæf–vF–öâ†æf–vF–öä'WGFöâ“°¢&WGW&ã°¢Ğ¢6öç7Bf–Wt'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ÷Vâ×f–WuÒ"“°¢–b‡f–Wt'WGFöâ’°¢v—B6öÖÖæDW†V7WFUf–Wr‡f–Wt'WGFöâæFF6WBæ6öÖÖæD÷Våf–Wr“°¢&WGW&ã°¢Ğ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6öææV7BÖvöövÆUÒ"’’°¢6öÖÖæDW†V7WFTvöövÆT6öææV7B‚“°¢&WGW&ã°¢Ğ¢6öç7B&ööÔ6öFT'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×WFFR×&ööÒÖ6öFUÒ"“°¢–b‡&ööÔ6öFT'WGFöâ’°¢v—B6öÖÖæDW†V7WFU&ööÔ6öFR‡&ööÔ6öFT'WGFöâæFF6WBæ6öÖÖæEWFFU&ööÔ6öFR“°¢&WGW&ã°¢Ğ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6öæf—&ÒÖ7&VFUÒ"’’°¢v—B6öÖÖæD6öæf—&Ô7&VFR‚“°¢&WGW&ã°¢Ğ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6öæf—&ÒÖÖ÷fUÒ"’’°¢v—B6öÖÖæD6öæf—&ÔÖ÷fR‚“°¢&WGW&ã°¢Ğ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×6V&6‚Öf–Æ&–Æ—G•Ò"’’°¢v—B6öÖÖæDÆöDf–Æ&–Æ—G’†6öÖÖæD6VçG&U7FFRç'6U&W7VÇB“°¢&WGW&ã°¢Ğ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6öçF–çVRÖf–Æ&–Æ—G•Ò"’’°¢G'’°¢6öç7B&W7VÇBÒ6öÖÖæDf–Æ&–Æ—G•&WVW7Dg&öÔ6Æ&–f–6F–öâ†6öÖÖæD6VçG&U7FFRç'6U&W7VÇB“°¢6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÒ&W7VÇC°¢v—B6öÖÖæDÆöDf–Æ&–Æ—G’‡&W7VÇB“°¢Ò6F6‚†W'&÷"’°¢6öÖÖæE6WE&Wf–WtW'&÷"†W'&÷"æÖW76vR“°¢Ğ¢&WGW&ã°¢Ğ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×6†÷rÖf–Æ&–Æ—G•Ò"’’°¢v—B6öÖÖæE6†÷tf–Æ&–Æ—G”öä6ÆVæF"‚“°¢&WGW&ã°¢Ğ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×VæFòÖ7&VFUÒ"’’°¢v—BVæFôÆ7DWfVçD7&VF–öâ‚“°¢6öÖÖæD6VçG&U7FFRæ6öæfÆ–7DG&gBÒçVÆÃ°¢6öÖÖæD6VçG&U&VæFW$ÖW76vR‚$WfVçB&VÖ÷fVB"Â%F†RWfVçBæB—G26öææV7FVBÖ6ÆVæF"6÷’vW&R&VÖ÷fVBâ"Â°¢†6S¢'7V66W72"À¢7F–öç3¢sÆ'WGFöâ6Æ73Ò&6öÖÖæB×&–Ö'’Ö7F–öâ"G—SÒ&'WGFöâ"FFÖ6öÖÖæBÖ6Æ÷6SäFöæSÂö'WGFöãâp¢Ò“°¢&WGW&ã°¢Ğ¢6öç7B&Vf–æT'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×&Vf–æUÒ"“°¢–b‡&Vf–æT'WGFöâ’°¢6öÖÖæE&Vf–æTf–Æ&–Æ—G’‡&Vf–æT'WGFöâæFF6WBæ6öÖÖæE&Vf–æR“°¢&WGW&ã°¢Ğ¢6öç7B÷VäWfVçD'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ÷VâÖWfVçEÒ"“°¢–b†÷VäWfVçD'WGFöâ’°¢v—B6öÖÖæD÷Vå&ööÔWfVçB†÷VäWfVçD'WGFöâæFF6WBæ6öÖÖæD÷VäWfVçB“°¢Ğ§Ò“° ¦f÷"†6öç7BWfVçDæÖRöb²&–çWB"Â&6†ævR%Ò’°¢6öÖÖæD6VçG&T&öG“òæFDWfVçDÆ—7FVæW"†WfVçDæÖRÂ†WfVçB’Óâ°¢–b†WfVçBçF&vWBæÖF6†W2‚"66öÖÖæDWfVçDÆÄF’"’’°¢6öç7B6†V6¶VBÒWfVçBçF&vWBæ6†V6¶VC°¢6öç7B7F'BÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDWfVçE7F'B"“°¢6öç7BVæBÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDWfVçDVæB"“°¢–b‚6†V6¶VBbb‚7F'BçfÇVRÇÂ7F'BçfÇVRÓÓÒ#£"’bb‚VæBçfÇVRÇÂVæBçfÇVRÓÓÒ#£"’’°¢7F'BçfÇVRÒ#“£#°¢VæBçfÇVRÒ#£#°¢Ğ¢7F'BæF—6&ÆVBÒ6†V6¶VC°¢VæBæF—6&ÆVBÒ6†V6¶VC°¢7F'BçFövvÆTGG&–'WFR‚&&–Ö–çfÆ–B"Â6†V6¶VBbb7F'BçfÇVR“°¢VæBçFövvÆTGG&–'WFR‚&&–Ö–çfÆ–B"Â6†V6¶VBbbVæBçfÇVR“°¢&WGW&ã°¢Ğ¢–b‚WfVçBçF&vWBæÖF6†W2‚"66öÖÖæDÖ÷fTFFRÂ66öÖÖæDÖ÷fU7F'BÂ66öÖÖæDÖ÷fTVæB"’’&WGW&ã°¢G'’°¢6öç7BÖ÷fRÒ6öÖÖæE&VDÖ÷fTG&gB‚“°¢6öç7B7VÖÖ'’Ò6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDÖ÷fTæWu7VÖÖ'’"“°¢–b‡7VÖÖ'’’7VÖÖ'’çFW‡D6öçFVçBÒ6öÖÖæD‡VÖå&ævR†Ö÷fRç7F'BÂÖ÷fRæVæB“°¢Ò6F6‚°¢òòF†Rfö7W6VBVF—B&VÖ–ç2f—6–&ÆRVçF–ÂÆÂF‡&VRf–VÆG2f÷&ÒfÆ–B&ævRà¢Ğ¢Ò“°§Ğ ¦6öÖÖæD6VçG&TF–ÆösòæFDWfVçDÆ—7FVæW"‚&6Æ–6²"Â†WfVçB’Óâ°¢–b†WfVçBçF&vWBÓÓÒ6öÖÖæD6VçG&TF–Æör’6Æ÷6T6öÖÖæD6VçG&R‚“°§Ò“° ¦6öÖÖæD6VçG&TF–ÆösòæFDWfVçDÆ—7FVæW"‚&6æ6VÂ"Â†WfVçB’Óâ°¢WfVçBç&WfVçDFVfVÇB‚“°¢6Æ÷6T6öÖÖæD6VçG&R‚“°§Ò“° §v–æF÷ræFDWfVçDÆ—7FVæW"‚&¶W–F÷vâ"Â†WfVçB’Óâ°¢6öç7B6öÖÖæE6†÷'F7WBÒ†WfVçBæÖWF¶W’ÇÂWfVçBæ7G&Ä¶W’’bbWfVçBæÇD¶W’bbWfVçBæ¶W’çFôÆ÷vW$66R‚’ÓÓÒ&²#°¢6öç7B6Æ6…6†÷'F7WBÒWfVçBæ¶W’ÓÓÒ"ò"bbWfVçBæÖWF¶W’bbWfVçBæ7G&Ä¶W’bbWfVçBæÇD¶W’bb6†÷VÆD–væ÷&Uf–Wu6†÷'F7WB†WfVçBçF&vWB“°¢–b†6öÖÖæE6†÷'F7WBÇÂ6Æ6…6†÷'F7WB’°¢–b‚7W'&VçE&ööÓòæ6öFRÇÂ&ööÕvRæ6Æ74Æ—7Bæ6öçF–ç2‚&†–FFVâ"’’&WGW&ã°¢WfVçBç&WfVçDFVfVÇB‚“°¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°¢–b†6öÖÖæD6VçG&TF–Æöræ÷Vâ’6Æ÷6T6öÖÖæD6VçG&R‚“°¢VÇ6R÷Vä6öÖÖæD6VçG&R†WfVçBçF&vWB“°¢&WGW&ã°¢Ğ¢–b‚6öÖÖæD6VçG&TF–Æöræ÷Vâ’&WGW&ã°¢–b†WfVçBæ¶W’ÓÓÒ$W66R"’°¢WfVçBç&WfVçDFVfVÇB‚“°¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°¢6Æ÷6T6öÖÖæD6VçG&R‚“°¢&WGW&ã°¢Ğ¢–b†WfVçBæ¶W’ÓÓÒ$'&÷tF÷vâ"ÇÂWfVçBæ¶W’ÓÓÒ$'&÷uW"’°¢6öç7B÷F–öç2Ò6öÖÖæD6VçG&U6VÆV7F&ÆT÷F–öç2‚“°¢–b‚÷F–öç2æÆVæwF‚’&WGW&ã°¢WfVçBç&WfVçDFVfVÇB‚“°¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°¢6öÖÖæD6VçG&U6VÆV7D–æFW‚†6öÖÖæD6VçG&U7FFRç6VÆV7FVD–æFW‚²†WfVçBæ¶W’ÓÓÒ$'&÷tF÷vâ"ò¢Ó’“°¢&WGW&ã°¢Ğ¢–b‚†WfVçBæÖWF¶W’ÇÂWfVçBæ7G&Ä¶W’’bbWfVçBæ¶W’ÓÓÒ$VçFW""’°¢6öç7B7F–öâÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"æ6öÖÖæB×&–Ö'’Ö7F–öã¦æ÷Bƒ¦F—6&ÆVB’"“°¢–b‚7F–öâ’&WGW&ã°¢WfVçBç&WfVçDFVfVÇB‚“°¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°¢7F–öâæ6Æ–6²‚“°¢&WGW&ã°¢Ğ¢–b†WfVçBæ¶W’ÓÓÒ$VçFW""bbWfVçBçF&vWBÓÓÒ6öÖÖæD6VçG&T–çWBbb6öÖÖæD6VçG&U6VÆV7F&ÆT÷F–öç2‚’æÆVæwF‚’°¢WfVçBç&WfVçDFVfVÇB‚“°¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°¢6öÖÖæD6VçG&T7F—fFU6VÆV7FVB‚“°¢Ğ§ÒÂG'VR“° ¦6öç7B6öÖÖæEW6W4Ö56†÷'F7WBÒôÖ7Æ•†öæWÆ•GÆ•öBö’çFW7B†æf–vF÷"çÆFf÷&ÒÇÂæf–vF÷"çW6W$vVçB“°¦–b†6öÖÖæD6VçG&U6†÷'F7WD†–çB’6öÖÖæD6VçG&U6†÷'F7WD†–çBçFW‡D6öçFVçBÒ6öÖÖæEW6W4Ö56†÷'F7WBò.(É‚²"¢$7G&Â²#°
+      </div>
+    </div>
+  `);
+}
+
+function commandSelectedParticipantIds() {
+  const ids = [...commandCentreBody.querySelectorAll("[data-command-participant]:checked")]
+    .map((input) => input.value);
+  if (currentParticipant?.id && !ids.includes(currentParticipant.id)) ids.unshift(currentParticipant.id);
+  return ids;
+}
+
+function commandReadCreateDraft() {
+  const title = commandCentreBody.querySelector("#commandEventTitle")?.value.trim();
+  const date = commandCentreBody.querySelector("#commandEventDate")?.value;
+  const startTime = commandCentreBody.querySelector("#commandEventStart")?.value;
+  const endTime = commandCentreBody.querySelector("#commandEventEnd")?.value;
+  const allDay = commandCentreBody.querySelector("#commandEventAllDay")?.checked === true;
+  if (!title || !date) {
+    throw new Error("Add a title and date.");
+  }
+  if (!allDay && (!startTime || !endTime)) {
+    throw new Error("Add a title, date, start time and end time.");
+  }
+  const start = new Date(`${date}T${allDay ? "00:00" : startTime}`);
+  const end = allDay ? new Date(start) : new Date(`${date}T${endTime}`);
+  if (allDay || (!Number.isNaN(end.getTime()) && end <= start && endTime === "00:00")) {
+    end.setDate(end.getDate() + 1);
+  }
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    throw new Error("The end time must be after the start time.");
+  }
+  return {
+    title,
+    start: start.toISOString(),
+    end: end.toISOString(),
+    timezone: commandCentreTimezone(),
+    allDay,
+    location: commandCentreBody.querySelector("#commandEventLocation")?.value.trim() || "",
+    description: commandCentreBody.querySelector("#commandEventDescription")?.value.trim() || "",
+    inviteeParticipantIds: commandSelectedParticipantIds(),
+    syncToGoogle: Boolean(calendarEventSyncEnabled())
+  };
+}
+
+function commandSetPreviewError(message) {
+  const existing = commandCentreBody.querySelector(".command-clarification");
+  if (existing) {
+    existing.textContent = message;
+  } else {
+    commandCentreBody.querySelector(".command-preview-card")?.insertAdjacentHTML(
+      "beforebegin",
+      `<div class="command-clarification">${commandEscape(message)}</div>`
+    );
+  }
+  commandCentreSetPhase("error", message);
+}
+
+async function commandSuggestConflictTimes(payload, failure) {
+  const start = new Date(payload.start);
+  const rangeStart = new Date(start);
+  rangeStart.setHours(0, 0, 0, 0);
+  const rangeEnd = new Date(rangeStart);
+  rangeEnd.setDate(rangeEnd.getDate() + 7);
+  const durationMinutes = Math.max(
+    15,
+    Math.round((new Date(payload.end).getTime() - start.getTime()) / 60000)
+  );
+  commandCentreState.conflictDraft = payload;
+  commandCentreSetPhase("searching_availability", "That time is busy. Looking for alternatives.");
+  commandCentreRenderLoading("That time is busy. Finding the next available optionsâ€¦");
+  const result = await window.CommonGroundCommandActions.findOverlapAvailability(
+    payload.inviteeParticipantIds,
+    null,
+    durationMinutes,
+    {
+      intent: "find_time",
+      rangeStart: rangeStart.toISOString(),
+      rangeEnd: rangeEnd.toISOString(),
+      earliestMinute: 8 * 60,
+      latestMinute: 21 * 60,
+      timezone: payload.timezone
+    }
+  );
+  if (!result.success) {
+    commandCentreRenderMessage(
+      "That time is busy",
+      `${failure.message} ${result.message}`.trim(),
+      {
+        actions: '<button class="command-secondary-action" type="button" data-command-edit-conflict>Edit event</button>'
+      }
+    );
+    return;
+  }
+  const availability = result.payload.availability;
+  const parsedResult = {
+    intent: "find_time",
+    participantIds: result.payload.participantIds,
+    durationMinutes,
+    rangeStart: result.payload.rangeStart,
+    rangeEnd: result.payload.rangeEnd,
+    earliestMinute: 8 * 60,
+    latestMinute: 21 * 60,
+    timeOfDay: null,
+    missingFields: [],
+    ambiguities: []
+  };
+  commandCentreState.parseResult = parsedResult;
+  commandCentreState.availability = availability;
+  if (!availability.complete) {
+    commandCentreRenderMessage(
+      "That time is busy",
+      "A connected calendar could not be refreshed, so CommonGround did not guess at an alternative.",
+      {
+        actions: '<button class="command-secondary-action" type="button" data-command-edit-conflict>Edit event</button>'
+      }
+    );
+    return;
+  }
+  commandRenderAvailabilityResults(parsedResult, availability);
+  commandCentreBody.insertAdjacentHTML(
+    "afterbegin",
+    `<div class="command-clarification">That time conflicts with an existing busy block. Choose a safe alternative or edit the event.</div>
+     <div class="command-actions command-conflict-actions">
+       <button class="command-secondary-action" type="button" data-command-edit-conflict>Edit event</button>
+     </div>`
+  );
+}
+
+async function commandConfirmCreate() {
+  if (commandCentreState.phase === "saving" || !currentRoom?.code) return;
+  let payload;
+  try {
+    payload = commandReadCreateDraft();
+  } catch (error) {
+    commandSetPreviewError(error.message);
+    return;
+  }
+  const roomCodeSnapshot = currentRoom.code;
+  commandCentreSetPhase("confirming", "Confirming event details.");
+  commandCentreSetPhase("saving", "Creating event.");
+  const action = commandCentreBody.querySelector("[data-command-confirm-create]");
+  if (action) {
+    action.disabled = true;
+    action.textContent = "Creatingâ€¦";
+  }
+  try {
+    const outcome = await window.CommonGroundCommandActions.createCalendarEvent({
+      ...payload,
+      roomCode: roomCodeSnapshot,
+      participants: payload.inviteeParticipantIds,
+      startTime: payload.start,
+      endTime: payload.end
+    });
+    if (currentRoom?.code !== roomCodeSnapshot) return;
+    if (!outcome.success) {
+      if (outcome.code === "availability_conflict") {
+        await commandSuggestConflictTimes(payload, outcome);
+        return;
+      }
+      commandSetPreviewError(outcome.message || "The event could not be created.");
+      if (action) {
+        action.disabled = false;
+        action.textContent = "Create event";
+      }
+      return;
+    }
+    commandCentreState.conflictDraft = null;
+    commandCentreRenderSuccess(outcome.payload.event, "Event created", { allowUndo: true });
+  } catch (error) {
+    commandSetPreviewError(error.message || "The event could not be created.");
+    if (action) {
+      action.disabled = false;
+      action.textContent = "Create event";
+    }
+  }
+}
+
+function commandCentreRenderSuccess(event, title, { allowUndo = false } = {}) {
+  commandCentreSetPhase("success", `${title}: ${event.title}`);
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <div class="command-success-mark" aria-hidden="true">âœ“</div>
+      <h3>${commandEscape(title)}</h3>
+      <p>${commandEscape(event.title)} Â· ${commandEscape(commandHumanRange(event.start, event.end))}</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-close>Done</button>
+        ${allowUndo ? '<button class="command-secondary-action" type="button" data-command-undo-create>Undo</button>' : ""}
+        <button class="command-primary-action" type="button" data-command-open-event="${commandAttribute(event.id)}">View event</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandAvailabilityRequestFromClarification(result) {
+  const startDate = commandCentreBody.querySelector("#commandRangeStartDate")?.value;
+  const endDate = commandCentreBody.querySelector("#commandRangeEndDate")?.value || startDate;
+  const durationMinutes = Number(commandCentreBody.querySelector("#commandDuration")?.value || result.durationMinutes || 60);
+  const participantIds = commandSelectedParticipantIds();
+  if (!startDate || !endDate || endDate < startDate) throw new Error("Choose a valid date range.");
+  if (!participantIds.length) throw new Error("Choose at least one room member.");
+  const rangeStart = new Date(`${startDate}T00:00`);
+  const rangeEnd = new Date(`${endDate}T00:00`);
+  rangeEnd.setDate(rangeEnd.getDate() + 1);
+  return {
+    ...result,
+    participantIds,
+    rangeStart: rangeStart.toISOString(),
+    rangeEnd: rangeEnd.toISOString(),
+    durationMinutes,
+    missingFields: []
+  };
+}
+
+function commandRenderAvailabilityReady(result) {
+  const people = commandParticipantNames(result.participantIds).join(", ");
+  commandCentreSetPhase("preview", "Availability request ready.");
+  commandCentreSetBody(`
+    <div class="command-preview-card">
+      <h3>Search shared availability</h3>
+      <p>${commandEscape(people || "Selected room members")} Â· ${commandEscape(result.durationMinutes)} minutes</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-search-availability>Find times</button>
+      </div>
+    </div>
+  `);
+}
+
+async function commandLoadAvailability(result) {
+  if (!currentRoom?.code) return;
+  commandCentreAbortRequest();
+  const controller = new AbortController();
+  const generation = ++commandCentreState.generation;
+  const roomCodeSnapshot = currentRoom.code;
+  commandCentreState.controller = controller;
+  commandCentreSetPhase("searching_availability", "Checking room availability.");
+  commandCentreRenderLoading("Checking everyoneâ€™s availabilityâ€¦");
+  try {
+    const outcome = await window.CommonGroundCommandActions.findOverlapAvailability(
+      result.participantIds,
+      null,
+      result.durationMinutes,
+      {
+        intent: result.intent,
+        rangeStart: result.rangeStart,
+        rangeEnd: result.rangeEnd,
+        earliestMinute: result.earliestMinute,
+        latestMinute: result.latestMinute,
+        timeOfDay: result.timeOfDay,
+        timezone: commandCentreTimezone(),
+        signal: controller.signal
+      }
+    );
+    if (controller.signal.aborted) return;
+    if (!outcome.success) {
+      commandCentreRenderMessage("Couldnâ€™t check availability", outcome.message || "Try again shortly.", {
+        actions: '<button class="command-secondary-action" type="button" data-command-search-availability>Try again</button>'
+      });
+      return;
+    }
+    if (
+      generation !== commandCentreState.generation ||
+      currentRoom?.code !== roomCodeSnapshot ||
+      !commandCentreDialog.open
+    ) {
+      return;
+    }
+    result.participantIds = outcome.payload.participantIds;
+    commandCentreState.parseResult = result;
+    commandCentreState.availability = outcome.payload.availability;
+    if (!outcome.payload.availability.complete) {
+      commandCentreRenderMessage(
+        "Availability unavailable",
+        "A connected calendar could not be refreshed, so CommonGround will not guess that the time is free.",
+        {
+          actions: '<button class="command-secondary-action" type="button" data-command-search-availability>Try again</button>'
+        }
+      );
+      return;
+    }
+    commandRenderAvailabilityResults(result, outcome.payload.availability);
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    commandCentreRenderMessage("Couldnâ€™t check availability", error.message || "Try again shortly.", {
+      actions: '<button class="command-secondary-action" type="button" data-command-search-availability>Try again</button>'
+    });
+  } finally {
+    if (commandCentreState.controller === controller) commandCentreState.controller = null;
+  }
+}
+
+function commandRenderNoSlots(result) {
+  commandCentreSetPhase("results", "No matching time was found.");
+  const reduceAction = result.durationMinutes > 30
+    ? '<button class="command-secondary-action" type="button" data-command-refine="shorter">Try 30 minutes</button>'
+    : "";
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>No shared time found</h3>
+      <p>Try expanding the date range, reducing the duration, removing a participant, or including evenings.</p>
+      <div class="command-actions">
+        ${reduceAction}
+        <button class="command-secondary-action" type="button" data-command-refine="evenings">Include evenings</button>
+        <button class="command-primary-action" type="button" data-command-refine="expand">Expand one week</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandRenderAvailabilityResults(result, availability) {
+  const slots = availability.slots || [];
+  if (!slots.length) {
+    commandRenderNoSlots(result);
+    return;
+  }
+  commandCentreSetPhase("results", `Found ${slots.length} possible ${slots.length === 1 ? "time" : "times"}.`);
+  const showMode = result.intent === "show_availability";
+  commandCentreState.selectedIndex = 0;
+  commandCentreSetBody(`
+    <div class="command-results-heading">
+      <h3>${showMode ? "Shared availability" : `Found ${slots.length} possible times`}</h3>
+      <span>${commandEscape(result.durationMinutes)} minutes</span>
+    </div>
+    <div class="command-slot-list" role="listbox" aria-label="Available times">
+      ${slots.map((slot, index) => `
+        <button class="command-slot ${index === 0 ? "is-selected" : ""}" type="button" role="option" aria-selected="${index === 0}" data-command-option data-command-slot-index="${index}">
+          <span class="command-slot-copy">
+            <strong>${commandEscape(commandHumanDate(slot.start))}</strong>
+            <span>${commandEscape(commandHumanTime(slot.start))}â€“${commandEscape(commandHumanTime(slot.end))} Â· Everyone selected is free</span>
+          </span>
+          <span>${showMode ? "Show" : "Select"}</span>
+        </button>
+      `).join("")}
+    </div>
+    ${showMode ? `
+      <div class="command-actions">
+        <button class="command-primary-action" type="button" data-command-show-availability>Show all on calendar</button>
+      </div>
+    ` : ""}
+  `);
+}
+
+function commandCreateDraftFromSlot(result, slot) {
+  const conflictDraft = commandCentreState.conflictDraft;
+  if (conflictDraft) {
+    commandRenderCreatePreview({
+      ...result,
+      intent: "create_event",
+      title: conflictDraft.title,
+      start: slot.start,
+      end: slot.end,
+      participantIds: conflictDraft.inviteeParticipantIds,
+      location: conflictDraft.location,
+      description: conflictDraft.description,
+      allDay: conflictDraft.allDay === true,
+      missingFields: [],
+      ambiguities: []
+    });
+    return;
+  }
+  const otherNames = commandParticipantNames(result.participantIds, { includeCurrent: false });
+  const title = otherNames.length ? `Meeting with ${otherNames.join(" and ")}` : "New event";
+  commandRenderCreatePreview({
+    ...result,
+    intent: "create_event",
+    title,
+    start: slot.start,
+    end: slot.end,
+    missingFields: [],
+    ambiguities: []
+  });
+}
+
+function commandMoveTargetForCandidate(result, candidate) {
+  const originalStart = new Date(candidate.start);
+  const originalEnd = new Date(candidate.end);
+  const durationMinutes = result.durationMinutes || Math.max(
+    15,
+    Math.round((originalEnd.getTime() - originalStart.getTime()) / 60000)
+  );
+  const targetDate = result.targetDateKey || commandLocalDateValue(originalStart);
+  const targetMinute = result.targetStartMinute ?? (originalStart.getHours() * 60 + originalStart.getMinutes());
+  const targetStart = new Date(`${targetDate}T${String(Math.floor(targetMinute / 60)).padStart(2, "0")}:${String(targetMinute % 60).padStart(2, "0")}`);
+  return {
+    start: targetStart.toISOString(),
+    end: new Date(targetStart.getTime() + durationMinutes * 60000).toISOString()
+  };
+}
+
+function commandRenderEventCandidates(result) {
+  const candidates = result.eventCandidates || [];
+  commandCentreSetPhase("needs_clarification", `I found ${candidates.length} matching events.`);
+  commandCentreState.selectedIndex = 0;
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>Which event should move?</h3>
+      <p>Select the exact CommonGround event. External calendar titles remain private.</p>
+    </div>
+    <div class="command-event-candidate-list" role="listbox" aria-label="Matching events">
+      ${candidates.map((candidate, index) => `
+        <button class="command-event-candidate ${index === 0 ? "is-selected" : ""}" type="button" role="option" aria-selected="${index === 0}" data-command-option data-command-event-candidate="${commandAttribute(candidate.id)}">
+          <span class="command-candidate-copy">
+            <strong>${commandEscape(candidate.title)}</strong>
+            <span>${commandEscape(commandHumanRange(candidate.start, candidate.end))}</span>
+          </span>
+          <span>Select</span>
+        </button>
+      `).join("")}
+    </div>
+  `);
+}
+
+function commandRenderMovePreview(result, candidate) {
+  const target = result.targetStart && result.targetEnd
+    ? { start: result.targetStart, end: result.targetEnd }
+    : commandMoveTargetForCandidate(result, candidate);
+  commandCentreState.moveCandidate = candidate;
+  const question = commandMissingQuestion(result);
+  commandCentreSetPhase(question ? "needs_clarification" : "preview", question || "Move preview ready.");
+  commandCentreSetBody(`
+    ${question ? `<div class="command-clarification">${commandEscape(question)}</div>` : ""}
+    <div class="command-preview-card">
+      <h3>${commandEscape(candidate.title)}</h3>
+      <p>Review the new time before saving.</p>
+      <div class="command-before-after">
+        <div class="command-time-card">
+          <span>Current</span>
+          <strong>${commandEscape(commandHumanRange(candidate.start, candidate.end))}</strong>
+        </div>
+        <div class="command-time-card">
+          <span>New</span>
+          <strong id="commandMoveNewSummary">${commandEscape(commandHumanRange(target.start, target.end))}</strong>
+        </div>
+      </div>
+      <div class="command-preview-grid">
+        <label class="command-field">
+          <span>Date</span>
+          <input id="commandMoveDate" type="date" value="${commandAttribute(commandLocalDateValue(target.start))}" />
+        </label>
+        <label class="command-field">
+          <span>Start</span>
+          <input id="commandMoveStart" type="time" step="900" value="${commandAttribute(commandLocalTimeValue(target.start))}" />
+        </label>
+        <label class="command-field">
+          <span>End</span>
+          <input id="commandMoveEnd" type="time" step="900" value="${commandAttribute(commandLocalTimeValue(target.end))}" />
+        </label>
+      </div>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-confirm-move>Move event</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandReadMoveDraft() {
+  const candidate = commandCentreState.moveCandidate;
+  const date = commandCentreBody.querySelector("#commandMoveDate")?.value;
+  const startTime = commandCentreBody.querySelector("#commandMoveStart")?.value;
+  const endTime = commandCentreBody.querySelector("#commandMoveEnd")?.value;
+  if (!candidate || !date || !startTime || !endTime) throw new Error("Choose a new date, start time and end time.");
+  const start = new Date(`${date}T${startTime}`);
+  const end = new Date(`${date}T${endTime}`);
+  if (!Number.isNaN(end.getTime()) && end <= start && endTime === "00:00") end.setDate(end.getDate() + 1);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    throw new Error("The new end time must be after the start time.");
+  }
+  return {
+    eventId: candidate.id,
+    expectedUpdatedAt: candidate.updatedAt,
+    start: start.toISOString(),
+    end: end.toISOString(),
+    timezone: commandCentreTimezone()
+  };
+}
+
+async function commandConfirmMove() {
+  if (commandCentreState.phase === "saving" || !currentRoom?.code) return;
+  let payload;
+  try {
+    payload = commandReadMoveDraft();
+  } catch (error) {
+    commandSetPreviewError(error.message);
+    return;
+  }
+  const roomCodeSnapshot = currentRoom.code;
+  commandCentreSetPhase("confirming", "Confirming the new event time.");
+  commandCentreSetPhase("saving", "Moving event.");
+  const action = commandCentreBody.querySelector("[data-command-confirm-move]");
+  if (action) {
+    action.disabled = true;
+    action.textContent = "Movingâ€¦";
+  }
+  try {
+    const data = await fetchJson(`/api/rooms/${roomCodeSnapshot}/command-centre/move-event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (currentRoom?.code !== roomCodeSnapshot) return;
+    currentRoom.events = currentRoom.events.map((event) => event.id === data.event.id ? data.event : event);
+    render();
+    fetchNotifications();
+    commandCentreRenderSuccess(data.event, "Event moved");
+  } catch (error) {
+    commandSetPreviewError(error.message || "The event could not be moved.");
+    if (action) {
+      action.disabled = false;
+      action.textContent = "Move event";
+    }
+  }
+}
+
+function commandRenderViewAction(result) {
+  const view = result.targetView;
+  if (!view) {
+    commandCentreRenderMessage("Choose a view", "Try day, week, month, year, or settings.");
+    return;
+  }
+  const label = view === "settings"
+    ? "Open settings"
+    : `Open ${view} view`;
+  commandCentreSetPhase("preview", `${label} is ready.`);
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>${commandEscape(label)}</h3>
+      <p>This changes only what you are viewing. No calendar data will be edited.</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-open-view="${commandAttribute(view)}">${commandEscape(label)}</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandRenderGoogleAction() {
+  const connected = currentUserConnected() && currentParticipantConnected() && calendarWriteReady();
+  commandCentreSetPhase("preview", connected ? "Google Calendar is connected." : "Google connection ready.");
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>${connected ? "Google Calendar connected" : "Connect Google Calendar"}</h3>
+      <p>${connected
+        ? "Open settings to review event sync."
+        : "Authorization opens in CommonGroundâ€™s secure, centered Google popup."}</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-connect-google>${connected ? "Open sync settings" : "Connect Google"}</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandRenderRoomCodePreview(result) {
+  const code = result.newRoomCode;
+  const question = commandMissingQuestion(result);
+  if (question || !code) {
+    commandCentreRenderMessage("Room code needed", question || "Enter a valid six-character room code.");
+    return;
+  }
+  commandCentreSetPhase("preview", `Room code change to ${code} ready.`);
+  commandCentreSetBody(`
+    <div class="command-preview-card">
+      <h3>Change room code</h3>
+      <p>This updates the room link for everyone. Existing events and integrations stay attached.</p>
+      <div class="command-room-code-change" aria-label="Room code change">
+        <strong>${commandEscape(currentRoom?.code || "")}</strong>
+        <span aria-hidden="true">â†’</span>
+        <strong>${commandEscape(code)}</strong>
+      </div>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-update-room-code="${commandAttribute(code)}">Change room code</button>
+      </div>
+    </div>
+  `);
+}
+
+async function commandExecuteView(view) {
+  closeCommandCentre({ restoreFocus: false, immediate: true });
+  if (view === "settings") {
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+  }
+  const outcome = await window.CommonGroundCommandActions.navigateToView(view);
+  if (!outcome.success) calendarStatus.textContent = outcome.message;
+}
+
+function commandExecuteGoogleConnect() {
+  const outcome = window.CommonGroundCommandActions.connectGoogleCalendar();
+  if (!outcome.success) {
+    commandCentreRenderMessage("Google connection blocked", outcome.message, {
+      actions: '<button class="command-primary-action" type="button" data-command-connect-google>Try again</button>'
+    });
+    return;
+  }
+  if (outcome.payload.connected) {
+    closeCommandCentre({ restoreFocus: false, immediate: true });
+    return;
+  }
+  commandCentreRenderMessage("Google authorization opened", outcome.message, {
+    phase: "success",
+    actions: '<button class="command-secondary-action" type="button" data-command-close>Done</button>'
+  });
+}
+
+async function commandExecuteRoomCode(code) {
+  if (commandCentreState.phase === "saving") return;
+  commandCentreSetPhase("saving", "Updating room code.");
+  commandCentreRenderLoading("Updating the room codeâ€¦");
+  const outcome = await window.CommonGroundCommandActions.updateCustomRoomCode(code);
+  if (!outcome.success) {
+    commandCentreRenderMessage("Room code not changed", outcome.message, {
+      actions: '<button class="command-secondary-action" type="button" data-command-close>Done</button>'
+    });
+    return;
+  }
+  commandCentreState.roomCode = outcome.payload.newCode;
+  commandCentreRenderMessage("Room code updated", outcome.message, {
+    phase: "success",
+    actions: '<button class="command-primary-action" type="button" data-command-close>Done</button>'
+  });
+}
+
+function commandRenderNavigate(result) {
+  const options = [];
+  if (result.targetDate) {
+    options.push({
+      kind: "date",
+      id: result.targetDate,
+      label: result.targetView === "month" ? `Open ${commandHumanDate(`${result.targetDate}T12:00`)}` : `Go to ${commandHumanDate(`${result.targetDate}T12:00`)}`,
+      meta: result.targetView === "month" ? "Month view" : "Week view"
+    });
+  }
+  for (const participant of result.participantCandidates || []) {
+    options.push({
+      kind: "participant",
+      id: participant.id,
+      label: participant.displayName,
+      meta: "Show room member"
+    });
+  }
+  for (const event of result.eventCandidates || []) {
+    options.push({
+      kind: "event",
+      id: event.id,
+      label: event.title,
+      meta: commandHumanRange(event.start, event.end)
+    });
+  }
+  if (!options.length) {
+    commandCentreRenderMessage("Nothing matched", "Try a month, date, room member, or CommonGround event title.");
+    return;
+  }
+  commandCentreSetPhase("results", `${options.length} navigation ${options.length === 1 ? "result" : "results"}.`);
+  commandCentreState.selectedIndex = 0;
+  commandCentreSetBody(`
+    <div class="command-results-heading">
+      <h3>Open in CommonGround</h3>
+      <span>No changes will be made</span>
+    </div>
+    <div class="command-event-candidate-list" role="listbox" aria-label="Navigation results">
+      ${options.map((option, index) => `
+        <button class="command-option ${index === 0 ? "is-selected" : ""}" type="button" role="option" aria-selected="${index === 0}" data-command-option data-command-navigate-kind="${commandAttribute(option.kind)}" data-command-navigate-id="${commandAttribute(option.id)}" data-command-navigate-view="${commandAttribute(result.targetView || "")}">
+          <span class="command-candidate-copy">
+            <strong>${commandEscape(option.label)}</strong>
+            <span>${commandEscape(option.meta)}</span>
+          </span>
+          <span>Open</span>
+        </button>
+      `).join("")}
+    </div>
+  `);
+}
+
+async function commandExecuteNavigation(button) {
+  const kind = button.dataset.commandNavigateKind;
+  const id = button.dataset.commandNavigateId;
+  const view = button.dataset.commandNavigateView;
+  if (kind === "event") {
+    await commandOpenRoomEvent(id);
+    return;
+  }
+  closeCommandCentre({ restoreFocus: false });
+  if (kind === "participant") {
+    memberSearchInput.value = commandParticipantName(id);
+    setParticipantsPanelExpanded(true);
+    filterParticipantRows();
+    window.requestAnimationFrame(() => memberSearchInput.focus({ preventScroll: true }));
+    return;
+  }
+  if (kind === "date") {
+    if (view === "month") {
+      const alreadyMonth = currentView === "month";
+      currentFocusDate = new Date(`${id}T12:00`);
+      syncMiniCalendarToFocus();
+      const outcome = await window.CommonGroundCommandActions.navigateToView("month");
+      if (outcome.success && alreadyMonth) await refreshCalendarAfterImmediateRender();
+      if (!outcome.success) calendarStatus.textContent = outcome.message;
+    } else {
+      const outcome = await window.CommonGroundCommandActions.navigateToDate(id);
+      if (!outcome.success) calendarStatus.textContent = outcome.message;
+    }
+  }
+}
+
+async function commandOpenRoomEvent(eventId) {
+  const event = roomEventById(eventId);
+  closeCommandCentre({ restoreFocus: false });
+  if (!event) {
+    calendarStatus.textContent = "That event is no longer available. Refresh and try again.";
+    return;
+  }
+  await goToDateInWeek(new Date(event.start));
+  openEventDetail(event.id);
+}
+
+function commandContinueParsedResult(result, { submitted = false } = {}) {
+  commandCentreState.parseResult = result;
+  if (result.ambiguities?.length) {
+    commandRenderAmbiguity(result);
+    return;
+  }
+  if (result.intent === "unsupported") {
+    commandCentreRenderMessage("Calendar commands only", result.reason);
+    return;
+  }
+  if (result.intent === "navigate_view") {
+    commandRenderViewAction(result);
+    return;
+  }
+  if (result.intent === "connect_google") {
+    commandRenderGoogleAction();
+    return;
+  }
+  if (result.intent === "update_room_code") {
+    commandRenderRoomCodePreview(result);
+    return;
+  }
+  if (result.intent === "create_event") {
+    commandCentreState.conflictDraft = null;
+    commandRenderCreatePreview(result);
+    return;
+  }
+  if (result.intent === "find_time" || result.intent === "show_availability") {
+    commandCentreState.conflictDraft = null;
+    if (result.missingFields?.length) {
+      commandRenderAvailabilityClarification(result);
+      return;
+    }
+    if (submitted) commandLoadAvailability(result);
+    else commandRenderAvailabilityReady(result);
+    return;
+  }
+  if (result.intent === "move_event") {
+    if (!result.eventCandidates?.length) {
+      commandCentreRenderMessage("Event not found", "Try the eventâ€™s exact CommonGround title.");
+      return;
+    }
+    if (result.eventCandidates.length > 1) {
+      commandRenderEventCandidates(result);
+      return;
+    }
+    commandRenderMovePreview(result, result.eventCandidates[0]);
+    return;
+  }
+  commandRenderNavigate(result);
+}
+
+async function processUserIntent(inputText, { submitted = true } = {}) {
+  const command = String(inputText || "").trim();
+  if (command.length < 2 || !currentRoom?.code) {
+    commandCentreRenderIntro();
+    return {
+      success: false,
+      message: currentRoom?.code ? "Enter a calendar command." : "Open a room before using Command Centre."
+    };
+  }
+  commandCentreClearDebounce();
+  commandCentreAbortRequest();
+  const controller = new AbortController();
+  const generation = ++commandCentreState.generation;
+  const roomCodeSnapshot = currentRoom.code;
+  commandCentreState.controller = controller;
+  commandCentreSetPhase("parsing", "Understanding command.");
+  commandCentreRenderLoading("Understanding your commandâ€¦");
+  try {
+    const data = await fetchJson(`/api/rooms/${roomCodeSnapshot}/command-centre/parse`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        command,
+        timezone: commandCentreTimezone()
+      }),
+      signal: controller.signal
+    });
+    if (
+      generation !== commandCentreState.generation ||
+      currentRoom?.code !== roomCodeSnapshot ||
+      !commandCentreDialog.open
+    ) {
+      return {
+        success: false,
+        message: "The command result was ignored because the active room changed.",
+        code: "stale_command"
+      };
+    }
+    commandContinueParsedResult(data.result, { submitted });
+    return {
+      success: true,
+      message: "Command understood.",
+      payload: data.result
+    };
+  } catch (error) {
+    if (error.name === "AbortError") {
+      return {
+        success: false,
+        message: "Command cancelled.",
+        code: "aborted"
+      };
+    }
+    commandCentreRenderMessage("Command failed", error.message || "Try again.");
+    return {
+      success: false,
+      message: error.message || "Try again.",
+      code: error.code || null
+    };
+  } finally {
+    if (commandCentreState.controller === controller) commandCentreState.controller = null;
+  }
+}
+
+async function requestCommandParse({ submitted = true } = {}) {
+  return processUserIntent(commandCentreInput.value, { submitted });
+}
+
+window.processUserIntent = processUserIntent;
+window.CommonGroundCommandRouter = Object.freeze({
+  processUserIntent,
+  ...window.CommonGroundCommandActions
+});
+
+function commandCentreSelectableOptions() {
+  return [...commandCentreBody.querySelectorAll("[data-command-option]")];
+}
+
+function commandCentreSelectIndex(nextIndex) {
+  const options = commandCentreSelectableOptions();
+  if (!options.length) return;
+  const normalized = ((nextIndex % options.length) + options.length) % options.length;
+  commandCentreState.selectedIndex = normalized;
+  options.forEach((option, index) => {
+    const selected = index === normalized;
+    option.classList.toggle("is-selected", selected);
+    option.setAttribute("aria-selected", String(selected));
+  });
+  options[normalized].scrollIntoView({ block: "nearest" });
+}
+
+function commandCentreActivateSelected() {
+  const options = commandCentreSelectableOptions();
+  options[commandCentreState.selectedIndex]?.click();
+}
+
+function commandRefineAvailability(kind) {
+  const result = { ...commandCentreState.parseResult };
+  if (kind === "shorter") result.durationMinutes = 30;
+  if (kind === "evenings") {
+    result.timeOfDay = null;
+    result.earliestMinute = 8 * 60;
+    result.latestMinute = 21 * 60;
+  }
+  if (kind === "expand") {
+    result.rangeEnd = new Date(new Date(result.rangeEnd).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  }
+  commandCentreState.parseResult = result;
+  commandLoadAvailability(result);
+}
+
+async function commandShowAvailabilityOnCalendar() {
+  const availability = commandCentreState.availability;
+  const result = commandCentreState.parseResult;
+  if (!availability?.freeIntervals?.length) return;
+  commandCentreState.highlight = {
+    roomCode: currentRoom?.code,
+    participantIds: [...result.participantIds],
+    intervals: availability.freeIntervals.slice(0, 80),
+    createdAt: Date.now()
+  };
+  const first = new Date(availability.freeIntervals[0].start);
+  closeCommandCentre({ restoreFocus: false });
+  await goToDateInWeek(first);
+  calendarStatus.textContent = `Showing shared availability for ${commandParticipantNames(result.participantIds).join(", ")}.`;
+}
+
+window.commandCentreRenderAvailabilityHighlights = (eventsLayer, days) => {
+  const highlight = commandCentreState.highlight;
+  if (!highlight || highlight.roomCode !== currentRoom?.code || !eventsLayer) return;
+  for (const [dayIndex, day] of days.entries()) {
+    const dayStart = startOfDay(day.date);
+    const dayEnd = addDays(dayStart, 1);
+    for (const interval of highlight.intervals) {
+      const rawStart = new Date(interval.start);
+      const rawEnd = new Date(interval.end);
+      if (rawStart >= dayEnd || rawEnd <= dayStart) continue;
+      const start = rawStart > dayStart ? rawStart : dayStart;
+      const end = rawEnd < dayEnd ? rawEnd : dayEnd;
+      const startHour = start.getHours() + start.getMinutes() / 60;
+      const endHour = end >= dayEnd ? 24 : end.getHours() + end.getMinutes() / 60;
+      if (endHour <= startHour) continue;
+      const block = document.createElement("div");
+      block.className = "command-availability-block";
+      block.style.setProperty("--day-index", String(dayIndex));
+      block.style.setProperty("--start", String(startHour - calendarStartHour));
+      block.style.setProperty("--duration", String(endHour - startHour));
+      block.setAttribute("aria-hidden", "true");
+      const title = document.createElement("strong");
+      const time = document.createElement("span");
+      title.textContent = "Shared free time";
+      time.textContent = formatEventRange(startHour, endHour);
+      block.append(title, time);
+      eventsLayer.appendChild(block);
+    }
+  }
+};
+
+window.commandCentreReset = () => {
+  commandCentreState.highlight = null;
+  commandCentreState.parseResult = null;
+  commandCentreState.availability = null;
+  commandCentreState.moveCandidate = null;
+  commandCentreState.conflictDraft = null;
+  commandCentreClearDebounce();
+  commandCentreAbortRequest();
+  if (commandCentreDialog.open) closeCommandCentre({ restoreFocus: false, immediate: true });
+};
+
+commandCentreButton?.addEventListener("click", () => {
+  if (commandCentreDialog.open) closeCommandCentre();
+  else openCommandCentre(commandCentreButton);
+});
+
+commandCentreCloseButton?.addEventListener("click", () => closeCommandCentre());
+
+commandCentreInput?.addEventListener("input", commandCentreScheduleParse);
+
+commandCentreForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (commandCentreState.phase === "results" && commandCentreSelectableOptions().length) {
+    commandCentreActivateSelected();
+    return;
+  }
+  requestCommandParse({ submitted: true });
+});
+
+commandCentreBody?.addEventListener("click", async (event) => {
+  const example = event.target.closest("[data-command-example]");
+  if (example) {
+    commandCentreInput.value = example.dataset.commandExample;
+    await requestCommandParse({ submitted: true });
+    return;
+  }
+  if (event.target.closest("[data-command-cancel], [data-command-close]")) {
+    closeCommandCentre();
+    return;
+  }
+  if (event.target.closest("[data-command-edit-preview]")) {
+    const field = commandCentreBody.querySelector('[aria-invalid="true"], #commandEventTitle');
+    field?.focus({ preventScroll: true });
+    return;
+  }
+  if (event.target.closest("[data-command-edit-conflict]")) {
+    const draft = commandCentreState.conflictDraft;
+    if (draft) {
+      commandRenderCreatePreview({
+        ...commandCentreState.parseResult,
+        intent: "create_event",
+        title: draft.title,
+        start: draft.start,
+        end: draft.end,
+        participantIds: draft.inviteeParticipantIds,
+        location: draft.location,
+        description: draft.description,
+        allDay: draft.allDay === true,
+        missingFields: [],
+        ambiguities: []
+      });
+    }
+    return;
+  }
+  const participantOption = event.target.closest("[data-command-participant-option]");
+  if (participantOption) {
+    const result = {
+      ...commandCentreState.parseResult,
+      participantIds: [
+        ...(commandCentreState.parseResult.participantIds || []),
+        participantOption.dataset.commandParticipantOption
+      ],
+      ambiguities: (commandCentreState.parseResult.ambiguities || []).slice(1)
+    };
+    commandContinueParsedResult(result, { submitted: true });
+    return;
+  }
+  const slotButton = event.target.closest("[data-command-slot-index]");
+  if (slotButton) {
+    const slot = commandCentreState.availability?.slots?.[Number(slotButton.dataset.commandSlotIndex)];
+    if (!slot) return;
+    if (commandCentreState.parseResult.intent === "show_availability") {
+      await commandShowAvailabilityOnCalendar();
+    } else {
+      commandCreateDraftFromSlot(commandCentreState.parseResult, slot);
+    }
+    return;
+  }
+  const candidateButton = event.target.closest("[data-command-event-candidate]");
+  if (candidateButton) {
+    const candidate = commandCentreState.parseResult.eventCandidates
+      .find((entry) => entry.id === candidateButton.dataset.commandEventCandidate);
+    if (candidate) commandRenderMovePreview(commandCentreState.parseResult, candidate);
+    return;
+  }
+  const navigationButton = event.target.closest("[data-command-navigate-kind]");
+  if (navigationButton) {
+    await commandExecuteNavigation(navigationButton);
+    return;
+  }
+  const viewButton = event.target.closest("[data-command-open-view]");
+  if (viewButton) {
+    await commandExecuteView(viewButton.dataset.commandOpenView);
+    return;
+  }
+  if (event.target.closest("[data-command-connect-google]")) {
+    commandExecuteGoogleConnect();
+    return;
+  }
+  const roomCodeButton = event.target.closest("[data-command-update-room-code]");
+  if (roomCodeButton) {
+    await commandExecuteRoomCode(roomCodeButton.dataset.commandUpdateRoomCode);
+    return;
+  }
+  if (event.target.closest("[data-command-confirm-create]")) {
+    await commandConfirmCreate();
+    return;
+  }
+  if (event.target.closest("[data-command-confirm-move]")) {
+    await commandConfirmMove();
+    return;
+  }
+  if (event.target.closest("[data-command-search-availability]")) {
+    await commandLoadAvailability(commandCentreState.parseResult);
+    return;
+  }
+  if (event.target.closest("[data-command-continue-availability]")) {
+    try {
+      const result = commandAvailabilityRequestFromClarification(commandCentreState.parseResult);
+      commandCentreState.parseResult = result;
+      await commandLoadAvailability(result);
+    } catch (error) {
+      commandSetPreviewError(error.message);
+    }
+    return;
+  }
+  if (event.target.closest("[data-command-show-availability]")) {
+    await commandShowAvailabilityOnCalendar();
+    return;
+  }
+  if (event.target.closest("[data-command-undo-create]")) {
+    await undoLastEventCreation();
+    commandCentreState.conflictDraft = null;
+    commandCentreRenderMessage("Event removed", "The event and its connected-calendar copy were removed.", {
+      phase: "success",
+      actions: '<button class="command-primary-action" type="button" data-command-close>Done</button>'
+    });
+    return;
+  }
+  const refineButton = event.target.closest("[data-command-refine]");
+  if (refineButton) {
+    commandRefineAvailability(refineButton.dataset.commandRefine);
+    return;
+  }
+  const openEventButton = event.target.closest("[data-command-open-event]");
+  if (openEventButton) {
+    await commandOpenRoomEvent(openEventButton.dataset.commandOpenEvent);
+  }
+});
+
+for (const eventName of ["input", "change"]) {
+  commandCentreBody?.addEventListener(eventName, (event) => {
+    if (event.target.matches("#commandEventAllDay")) {
+      const checked = event.target.checked;
+      const start = commandCentreBody.querySelector("#commandEventStart");
+      const end = commandCentreBody.querySelector("#commandEventEnd");
+      if (!checked && (!start.value || start.value === "00:00") && (!end.value || end.value === "00:00")) {
+        start.value = "09:00";
+        end.value = "10:00";
+      }
+      start.disabled = checked;
+      end.disabled = checked;
+      start.toggleAttribute("aria-invalid", !checked && !start.value);
+      end.toggleAttribute("aria-invalid", !checked && !end.value);
+      return;
+    }
+    if (!event.target.matches("#commandMoveDate, #commandMoveStart, #commandMoveEnd")) return;
+    try {
+      const move = commandReadMoveDraft();
+      const summary = commandCentreBody.querySelector("#commandMoveNewSummary");
+      if (summary) summary.textContent = commandHumanRange(move.start, move.end);
+    } catch {
+      // The focused edit remains visible until all three fields form a valid range.
+    }
+  });
+}
+
+commandCentreDialog?.addEventListener("click", (event) => {
+  if (event.target === commandCentreDialog) closeCommandCentre();
+});
+
+commandCentreDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeCommandCentre();
+});
+
+window.addEventListener("keydown", (event) => {
+  const commandShortcut = (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "k";
+  const slashShortcut = event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey && !shouldIgnoreViewShortcut(event.target);
+  if (commandShortcut || slashShortcut) {
+    if (!currentRoom?.code || roomPage.classList.contains("hidden")) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (commandCentreDialog.open) closeCommandCentre();
+    else openCommandCentre(event.target);
+    return;
+  }
+  if (!commandCentreDialog.open) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeCommandCentre();
+    return;
+  }
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    const options = commandCentreSelectableOptions();
+    if (!options.length) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    commandCentreSelectIndex(commandCentreState.selectedIndex + (event.key === "ArrowDown" ? 1 : -1));
+    return;
+  }
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    const action = commandCentreBody.querySelector(".command-primary-action:not(:disabled)");
+    if (!action) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    action.click();
+    return;
+  }
+  if (event.key === "Enter" && event.target === commandCentreInput && commandCentreSelectableOptions().length) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    commandCentreActivateSelected();
+  }
+}, true);
+
+const commandUsesMacShortcut = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+if (commandCentreShortcutHint) commandCentreShortcutHint.textContent = commandUsesMacShortcut ? "âŒ˜ K" : "Ctrl K";
