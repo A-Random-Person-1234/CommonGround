@@ -24,7 +24,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20260724-appicon-new" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20260724-appicon-new" />
     <link rel="manifest" href="/site.webmanifest?v=20260724-appicon-new" />
-    <link rel="stylesheet" href="/styles.css?v=20260725-composer-type" />
+    <link rel="stylesheet" href="/styles.css?v=20260725-command-centre-drag" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -141,6 +141,14 @@
         </div>
 
         <div class="room-actions calendar-nav-actions">
+          <button class="command-centre-trigger" id="commandCentreButton" type="button" aria-haspopup="dialog" aria-controls="commandCentreDialog" aria-expanded="false">
+            <svg class="calendar-glyph command-centre-trigger-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path>
+            </svg>
+            <span>Ask CommonGround</span>
+            <kbd id="commandCentreShortcutHint">Ctrl K</kbd>
+          </button>
+
           <button class="calendar-google-button needs-connection button-with-icon" id="calendarGoogleButton" type="button" title="Connect Google Calendar" aria-label="Connect Google Calendar">
             <span class="ui-icon ui-icon-calendar-sync" aria-hidden="true"></span>
             <span>Connect Google</span>
@@ -501,6 +509,43 @@
 
     </section>
 
+    <dialog class="command-centre-dialog" id="commandCentreDialog" aria-labelledby="commandCentreTitle" aria-describedby="commandCentreDescription">
+      <form class="command-centre-panel" id="commandCentreForm" novalidate>
+        <h2 class="sr-only" id="commandCentreTitle">Ask CommonGround</h2>
+        <p class="sr-only" id="commandCentreDescription">Create events, find shared free time, move events, or navigate the calendar.</p>
+
+        <header class="command-centre-search-row">
+          <svg class="command-centre-search-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path>
+          </svg>
+          <label class="sr-only" for="commandCentreInput">Create an event or find a time</label>
+          <input id="commandCentreInput" type="search" maxlength="500" placeholder="Create an event or find a time…" autocomplete="off" spellcheck="false" enterkeyhint="search" />
+          <button class="icon-button command-centre-close" id="commandCentreCloseButton" type="button" aria-label="Close Command Centre">
+            <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
+          </button>
+        </header>
+
+        <p class="sr-only" id="commandCentreStatus" role="status" aria-live="polite" aria-atomic="true"></p>
+
+        <section class="command-centre-body" id="commandCentreBody" aria-live="off">
+          <div class="command-centre-intro">
+            <p>Tell CommonGround what you want to do.</p>
+            <div class="command-example-list" aria-label="Example commands">
+              <button type="button" data-command-example="Find an hour for everyone next week">Find a time for everyone</button>
+              <button type="button" data-command-example="Lunch with Sam tomorrow at 1">Create an event</button>
+              <button type="button" data-command-example="Open August">Navigate the calendar</button>
+            </div>
+          </div>
+        </section>
+
+        <footer class="command-centre-footer">
+          <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+          <span><kbd>Enter</kbd> Select</span>
+          <span><kbd>Esc</kbd> Close</span>
+        </footer>
+      </form>
+    </dialog>
+
     <dialog class="modal" id="eventModal" aria-labelledby="eventComposerTitle">
       <form class="modal-card event-composer" id="eventForm">
         <h2 class="sr-only" id="eventComposerTitle">Create a group event</h2>
@@ -637,6 +682,7 @@
       <p class="sr-only" id="emojiPickerStatus" role="status" aria-live="polite"></p>
     </div>
 
-    <script src="/app.js?v=20260724-room-card"></script>
+    <script src="/app.js?v=20260725-command-centre-drag"></script>
+    <script src="/command-centre.js?v=20260725-command-centre"></script>
   </body>
 </html>

@@ -3968,20 +3968,29 @@ function ensureDragPreview() {
   const startRows = selection.startHour - calendarStartHour;
   const durationRows = selection.endHour - selection.startHour;
   const previewHeight = Math.max(18, durationRows * rowHeight - blockGap);
-  const previewScale = previewHeight / rowHeight;
+  const { sizeClass, durationClass } = eventCardMetrics(durationRows);
+  const previewColor = currentParticipant?.color || participantPalette[0]?.value || "#b39458";
+  dragPreviewNode.className = [
+    "drag-create-preview",
+    "event-card",
+    sizeClass,
+    durationClass
+  ].join(" ");
   dragPreviewNode.style.setProperty("--day-index", dragCreateState.dayIndex);
   dragPreviewNode.style.setProperty("--preview-y", `${startRows * rowHeight + halfGap}px`);
   dragPreviewNode.style.setProperty("--preview-height", `${previewHeight}px`);
-  dragPreviewNode.style.setProperty("--preview-base-height", `${rowHeight}px`);
-  dragPreviewNode.style.setProperty("--preview-scale", String(previewScale));
-  dragPreviewNode.style.setProperty("--preview-radius-y", `${10 / previewScale}px`);
-  dragPreviewNode.style.setProperty("--preview-bottom-y", `${Math.max(0, previewHeight - 10)}px`);
+  dragPreviewNode.style.setProperty("--event-owner-color", previewColor);
+  dragPreviewNode.style.setProperty("--event-color", previewColor);
+  dragPreviewNode.dataset.previewTimeRange = formatEventRange(selection.startHour, selection.endHour);
+  const titleText = "Create group event";
+  const timeRange = formatEventRange(selection.startHour, selection.endHour);
+  const compactLine = [titleText, formatEventClock(selection.startHour)].filter(Boolean).join(", ");
+  const timeLine = durationClass === "event-15" ? compactLine : timeRange;
   dragPreviewNode.innerHTML = `
     <div class="drag-create-preview-copy">
-      <strong>${formatTime(selection.startHour)} - ${formatTime(selection.endHour)}</strong>
-      <span>Create group event</span>
+      <div class="event-line ${durationClass === "event-15" ? "event-line-compact" : "event-line-title"}">${escapeHtml(durationClass === "event-15" ? timeLine : titleText)}</div>
+      ${durationClass === "event-15" ? "" : `<div class="event-line event-line-meta" data-event-time-line="true" data-event-time-prefix="" data-event-time-suffix="">${escapeHtml(timeRange)}</div>`}
     </div>
-    <span class="drag-create-preview-cap" aria-hidden="true"></span>
   `;
   if (!dragPreviewNode.isConnected) {
     eventsLayer.appendChild(dragPreviewNode);
@@ -5040,6 +5049,8 @@ function renderPlanner(days) {
     }
   });
 
+  window.commandCentreRenderAvailabilityHighlights?.(eventsLayer, days);
+
   if (dragCreateState && dragCreateState.active) {
     ensureDragPreview();
   }
@@ -5256,6 +5267,7 @@ function replaceRoomRoute(code) {
 }
 
 function resetRoomScopedState({ clearRoom = false } = {}) {
+  window.commandCentreReset?.();
   selectedEventId = null;
   selectedBusyGroup = null;
   expandedBusyStackId = null;

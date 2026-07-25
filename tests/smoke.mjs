@@ -248,8 +248,9 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-composer-type"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260724-room-card"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-command-centre-drag"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260725-command-centre-drag"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-command-centre"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(home.text, /<meta name="theme-color" content="#101c31" \/>/);
@@ -900,8 +901,8 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.calendar-nav-actions > :not\(\.calendar-view-menu\):not\(\.calendar-utility-actions\):not\(#calendarGoogleButton\)\s*\{\s*display:\s*none;/,
-    "Mobile navigation cleanup must explicitly preserve the Google Calendar action"
+    /#roomPage \.calendar-nav-actions > :not\(\.calendar-view-menu\):not\(\.calendar-utility-actions\):not\(#calendarGoogleButton\):not\(#commandCentreButton\)\s*\{\s*display:\s*none;/,
+    "Mobile navigation cleanup must explicitly preserve the Google Calendar and Command Centre actions"
   );
   const phoneShellMediaStart = eventComposerStyles.text.lastIndexOf("@media (max-width: 480px)");
   const phoneShellMediaEnd = eventComposerStyles.text.indexOf("@media", phoneShellMediaStart + 1);
@@ -1152,8 +1153,21 @@ try {
     /@keyframes event-composer-premium-in\s*\{[\s\S]*?from\s*\{[^}]*opacity:\s*0[^}]*transform:\s*translate3d\(0, 8px, 0\) scale\(0\.95\)/,
     "The event composer entrance must start close to its final size"
   );
-  assert.match(eventComposerStyles.text, /\.drag-create-preview::before\s*\{[^}]*height:\s*var\(--preview-base-height[^}]*transform:\s*scaleY\(var\(--preview-scale/s);
-  assert.match(eventComposerStyles.text, /\.drag-create-preview-cap\s*\{[^}]*transform:\s*translate3d\(0, var\(--preview-bottom-y, 0px\), 0\)/s);
+  assert.match(
+    eventComposerStyles.text,
+    /\.drag-create-preview\.event-card\s*\{[^}]*height:\s*var\(--preview-height, 0px\)[^}]*opacity:\s*0\.66[^}]*background:\s*color-mix\(in srgb, var\(--event-owner-color\)/s,
+    "Drag previews must reuse event-card styling with only a translucent opacity"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.drag-create-preview\.event-card \.drag-create-preview-copy\s*\{[^}]*display:\s*contents/s,
+    "Drag preview content must participate in the same event-card layout"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.drag-create-preview\.event-card::before,[\s\S]*?\.drag-create-preview\.event-card \.drag-create-preview-cap\s*\{[^}]*display:\s*none/s,
+    "Drag previews must not carry the old golden-only cap treatment"
+  );
   assert.match(eventComposerStyles.text, /\.drag-create-preview\s*\{[^}]*container-type:\s*inline-size/s);
   assert.match(eventComposerStyles.text, /\.drag-create-preview strong\s*\{[^}]*font-size:\s*clamp\(9px, 7\.2cqw, 12px\)[^}]*text-overflow:\s*clip/s);
   assert.doesNotMatch(
