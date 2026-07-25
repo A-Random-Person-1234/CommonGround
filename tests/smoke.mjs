@@ -251,7 +251,7 @@ try {
   assert.match(home.text, /href="\/styles\.css\?v=20260725-intent-router"/);
   assert.match(home.text, /src="\/app\.js\?v=20260725-intent-router"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-intent-router"/);
-  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-external-title"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-predictive-commands"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(home.text, /<meta name="theme-color" content="#101c31" \/>/);
@@ -354,6 +354,16 @@ try {
   );
   assert.match(
     home.text,
+    /class="command-centre-input-shell"[\s\S]*?id="commandCentreCompletion" aria-hidden="true"[\s\S]*?id="commandCentreCompletionPrefix"[\s\S]*?id="commandCentreCompletionSuffix"[\s\S]*?id="commandCentreInput"[^>]*aria-autocomplete="inline"[^>]*aria-controls="commandCentreBody"[^>]*aria-describedby="[^"]*\bcommandCentreCompletionHelp\b[^"]*"/,
+    "Predictive text must be a screen-reader-hidden visual layer behind an inline-autocomplete input"
+  );
+  assert.match(
+    home.text,
+    /id="commandCentreCompletionHelp"[^>]*>[\s\S]*?Tab or Right Arrow[\s\S]*?Press Enter to run/,
+    "Assistive technology users must receive completion and execution instructions"
+  );
+  assert.match(
+    home.text,
     /<div class="calendar-utility-actions" role="group" aria-label="Calendar utilities">[\s\S]*?id="refreshButton"[\s\S]*?id="fullscreenButton"[\s\S]*?id="settingsButton"[\s\S]*?<\/div>/,
     "Calendar utilities must remain one accessible control group"
   );
@@ -417,6 +427,69 @@ try {
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
   const commandActionsScript = await publicSession.request("/command-centre-actions.js", { accept: "text/javascript" });
   const commandCentreScript = await publicSession.request("/command-centre.js", { accept: "text/javascript" });
+  const commandPredictorScript = await publicSession.request("/command-centre-predictor.js", {
+    accept: "text/javascript"
+  });
+  assert.match(
+    commandPredictorScript.text,
+    /export function predictCommand\([\s\S]*?acceptedCommand[\s\S]*?inlineSuffix[\s\S]*?parseTyped/,
+    "The static predictor module must expose structured completion metadata"
+  );
+  assert.match(
+    commandPredictorScript.text,
+    /keyword:\s*"settings"/,
+    "The predictor must include the settings command keyword"
+  );
+  assert.match(
+    commandPredictorScript.text,
+    /export function matchCommandViewKeyword\([\s\S]*?damerauLevenshtein\(phrase,\s*"settings"\)\s*<=\s*1/,
+    "The predictor must share a typo-tolerant settings keyword matcher"
+  );
+  assert.match(
+    commandPredictorScript.text,
+    /const inlineSuffix[\s\S]*?raw === raw\.trim\(\)/,
+    "Inline completion must not render a misleading suffix after trailing whitespace"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /import\("\/command-centre-predictor\.js\?v=20260725-predictive-commands"\)[\s\S]*?commandCentrePredictor = module/,
+    "The Command Centre must load the cache-versioned predictor module"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /commandCentreInput\?\.addEventListener\("input", commandCentreHandleInput\)[\s\S]*?addEventListener\("compositionstart"[\s\S]*?commandCentreState\.composing = true[\s\S]*?addEventListener\("compositionend"[\s\S]*?commandCentreState\.composing = false[\s\S]*?commandCentreHandleInput\(\)/,
+    "Predictive parsing must react to input while deferring work during IME composition"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /event\.target === commandCentreInput[\s\S]*?event\.key === "Tab" \|\| event\.key === "ArrowRight"[\s\S]*?selectionStart === commandCentreInput\.value\.length[\s\S]*?selectionEnd === commandCentreInput\.value\.length[\s\S]*?commandCentreAcceptPrediction\(\)/,
+    "Tab and Right Arrow may accept a completion only when the caret is at the end of the input"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /commandCentreState\.prediction\?\.inlineSuffix \|\|[\s\S]*?commandCentreState\.prediction\?\.corrected/,
+    "Exact commands without a visible or corrective completion must not trap Tab"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /event\.isComposing \|\| commandCentreState\.composing \|\| event\.keyCode === 229/,
+    "IME composition keystrokes must not activate a predicted command"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /function commandCentreHandleInput\(\)[\s\S]*?commandCentreAbortRequest\(\);[\s\S]*?commandCentreState\.generation \+= 1;[\s\S]*?commandCentreScheduleParse\(\);/,
+    "Every genuine input change must invalidate an older parse before showing a new prediction"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /closest\("\[data-command-prediction-command\]"\)[\s\S]*?commandCentreInput\.value = predictionButton\.dataset\.commandPredictionCommand[\s\S]*?requestCommandParse\(\{ submitted: true \}\)/,
+    "Clicking a predicted action must explicitly submit its canonical command"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /result\.intent === "navigate_view"[\s\S]*?submitted && result\.targetView[\s\S]*?commandExecuteView\(result\.targetView\)[\s\S]*?commandRenderViewAction\(result\)/,
+    "Submitted view predictions must execute while passive parsing remains a preview"
+  );
   assert.match(
     commandCentreScript.text,
     /const commandCentrePhases = new Set\(\[[\s\S]*?"closed"[\s\S]*?"idle"[\s\S]*?"parsing"[\s\S]*?"needs_clarification"[\s\S]*?"preview"[\s\S]*?"searching_availability"[\s\S]*?"results"[\s\S]*?"confirming"[\s\S]*?"saving"[\s\S]*?"success"[\s\S]*?"error"/,
@@ -996,6 +1069,21 @@ try {
     eventComposerStyles.text,
     /\.command-centre-panel\s*\{[^}]*width:\s*min\(640px, calc\(100vw - 32px\)\);[^}]*grid-template-rows:\s*auto minmax\(120px, 1fr\) auto;[^}]*border-radius:\s*16px;[^}]*will-change:\s*transform, opacity;/s,
     "Desktop Command Centre layout must use the premium bounded panel"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.command-centre-completion\s*\{[^}]*position:\s*absolute[^}]*pointer-events:\s*none[^}]*opacity:\s*0[^}]*color:\s*rgba\(255,\s*255,\s*255,\s*0\.34\)[^}]*will-change:\s*transform,\s*opacity/s,
+    "The grey completion layer must be visual-only and compositor-friendly"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.command-centre-completion-prefix\s*\{[^}]*visibility:\s*hidden[^}]*\}[\s\S]*?\.command-centre-completion-suffix\s*\{[^}]*color:\s*rgba\(255,\s*255,\s*255,\s*0\.34\)/s,
+    "Only the untyped completion suffix may be visible"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(forced-colors:\s*active\)\s*\{[\s\S]*?\.command-centre-completion\s*\{[^}]*display:\s*none/s,
+    "The purely visual completion layer must not interfere with forced-colors mode"
   );
   assert.match(
     eventComposerStyles.text,

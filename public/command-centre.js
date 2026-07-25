@@ -2,6 +2,9 @@ const commandCentreButton = document.querySelector("#commandCentreButton");
 const commandCentreDialog = document.querySelector("#commandCentreDialog");
 const commandCentreForm = document.querySelector("#commandCentreForm");
 const commandCentreInput = document.querySelector("#commandCentreInput");
+const commandCentreCompletion = document.querySelector("#commandCentreCompletion");
+const commandCentreCompletionPrefix = document.querySelector("#commandCentreCompletionPrefix");
+const commandCentreCompletionSuffix = document.querySelector("#commandCentreCompletionSuffix");
 const commandCentreCloseButton = document.querySelector("#commandCentreCloseButton");
 const commandCentreBody = document.querySelector("#commandCentreBody");
 const commandCentreStatus = document.querySelector("#commandCentreStatus");
@@ -33,8 +36,21 @@ const commandCentreState = {
   roomCode: null,
   moveCandidate: null,
   highlight: null,
-  conflictDraft: null
+  conflictDraft: null,
+  prediction: null,
+  composing: false,
+  announcedPrediction: null
 };
+
+let commandCentrePredictor = null;
+import("/command-centre-predictor.js?v=20260725-predictive-commands")
+  .then((module) => {
+    commandCentrePredictor = module;
+    if (commandCentreDialog?.open) commandCentreHandleInput();
+  })
+  .catch(() => {
+    commandCentrePredictor = null;
+  });
 
 function commandCentreTimezone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -113,6 +129,95 @@ function commandCentreClearDebounce() {
   }
 }
 
+function commandCentreClearPrediction() {
+  commandCentreState.prediction = null;
+  commandCentreState.announcedPrediction = null;
+  commandCentreCompletionPrefix.textContent = "";
+  commandCentreCompletionSuffix.textContent = "";
+  commandCentreCompletion.classList.remove("is-visible");
+  commandCentreCompletion.style.removeProperty("--completion-scroll-x");
+}
+
+function commandCentreSyncCompletionScroll() {
+  const offset = Math.max(0, Number(commandCentreInput.scrollLeft) || 0);
+  commandCentreCompletion.style.setProperty("--completion-scroll-x", `${-offset}px`);
+}
+
+function commandCentreUpdatePrediction() {
+  if (
+    commandCentreState.composing ||
+    !commandCentrePredictor ||
+    commandCentreInput.selectionStart !== commandCentreInput.value.length ||
+    commandCentreInput.selectionEnd !== commandCentreInput.value.length
+  ) {
+    commandCentreClearPrediction();
+    return null;
+  }
+
+  const prediction = commandCentrePredictor.predictCommand(commandCentreInput.value);
+  commandCentreState.prediction = prediction;
+  commandCentreCompletionPrefix.textContent = prediction?.inlineSuffix ? commandCentreInput.value : "";
+  commandCentreCompletionSuffix.textContent = prediction?.inlineSuffix || "";
+  commandCentreCompletion.classList.toggle("is-visible", Boolean(prediction?.inlineSuffix));
+  commandCentreSyncCompletionScroll();
+  return prediction;
+}
+
+function commandCentreRenderPrediction(prediction) {
+  commandCentreState.selectedIndex = 0;
+  const detail = prediction.corrected
+    ? `Correct to “${prediction.acceptedCommand}”`
+    : prediction.kind === "prefix"
+      ? `Complete “${prediction.acceptedCommand}”`
+      : "Predicted action";
+  const announcementKey = `${prediction.label}:${prediction.acceptedCommand}`;
+  commandCentreSetPhase("results");
+  if (commandCentreState.announcedPrediction !== announcementKey) {
+    commandCentreState.announcedPrediction = announcementKey;
+    const completionHint = prediction.inlineSuffix || prediction.corrected
+      ? "Press Tab to complete or Enter to run it."
+      : "Press Enter to run it.";
+    commandCentreStatus.textContent = `Suggestion: ${prediction.label}. ${completionHint}`;
+  }
+  commandCentreSetBody(`
+    <div class="command-results-heading">
+      <h3>Suggested command</h3>
+      <span>Nothing runs until you confirm</span>
+    </div>
+    <div class="command-event-candidate-list" role="listbox" aria-label="Predicted command">
+      <button class="command-option is-selected" type="button" role="option" aria-selected="true" data-command-option data-command-prediction-command="${commandAttribute(prediction.acceptedCommand)}">
+        <span class="command-candidate-copy">
+          <strong>${commandEscape(prediction.label)}</strong>
+          <span>${commandEscape(detail)}</span>
+        </span>
+        <span>Run</span>
+      </button>
+    </div>
+  `);
+}
+
+function commandCentreAcceptPrediction({ submit = false } = {}) {
+  const prediction = commandCentreState.prediction;
+  if (!prediction?.acceptedCommand) return false;
+  commandCentreInput.value = prediction.acceptedCommand;
+  commandCentreInput.setSelectionRange(
+    prediction.acceptedCommand.length,
+    prediction.acceptedCommand.length
+  );
+  commandCentreClearPrediction();
+  if (submit) requestCommandParse({ submitted: true });
+  else commandCentreHandleInput();
+  return true;
+}
+
+function commandCentreHandleInput() {
+  if (commandCentreState.composing) return;
+  commandCentreClearDebounce();
+  commandCentreAbortRequest();
+  commandCentreState.generation += 1;
+  commandCentreScheduleParse();
+}
+
 function commandCentreHasOtherModal() {
   return Boolean(document.querySelector("dialog[open]:not(#commandCentreDialog)"));
 }
@@ -130,7 +235,10 @@ function openCommandCentre(opener = commandCentreButton) {
   commandCentreState.moveCandidate = null;
   commandCentreState.conflictDraft = null;
   commandCentreState.selectedIndex = 0;
+  commandCentreState.composing = false;
+  commandCentreState.announcedPrediction = null;
   commandCentreInput.value = "";
+  commandCentreClearPrediction();
   commandCentreRenderIntro();
   prepareDialogForOpen(commandCentreDialog);
   commandCentreDialog.showModal();
@@ -141,6 +249,7 @@ function openCommandCentre(opener = commandCentreButton) {
 function closeCommandCentre({ restoreFocus = true, immediate = false } = {}) {
   commandCentreClearDebounce();
   commandCentreAbortRequest();
+  commandCentreClearPrediction();
   commandCentreState.generation += 1;
   const restoreTarget = commandCentreState.opener;
   const finish = () => {
@@ -159,10 +268,17 @@ function closeCommandCentre({ restoreFocus = true, immediate = false } = {}) {
 
 function commandCentreScheduleParse() {
   commandCentreClearDebounce();
+  if (commandCentreState.composing) return;
   const command = commandCentreInput.value.trim();
+  const prediction = commandCentreUpdatePrediction();
+  if (prediction) commandCentreRenderPrediction(prediction);
   if (command.length < 3) {
     commandCentreAbortRequest();
-    commandCentreRenderIntro();
+    if (!prediction) commandCentreRenderIntro();
+    return;
+  }
+  if (prediction && (prediction.kind === "prefix" || !prediction.parseTyped)) {
+    commandCentreAbortRequest();
     return;
   }
   commandCentreState.debounceTimer = window.setTimeout(() => {
@@ -1104,7 +1220,11 @@ function commandContinueParsedResult(result, { submitted = false } = {}) {
     return;
   }
   if (result.intent === "navigate_view") {
-    commandRenderViewAction(result);
+    if (submitted && result.targetView) {
+      void commandExecuteView(result.targetView);
+    } else {
+      commandRenderViewAction(result);
+    }
     return;
   }
   if (result.intent === "connect_google") {
@@ -1308,8 +1428,11 @@ window.commandCentreReset = () => {
   commandCentreState.availability = null;
   commandCentreState.moveCandidate = null;
   commandCentreState.conflictDraft = null;
+  commandCentreState.composing = false;
+  commandCentreState.announcedPrediction = null;
   commandCentreClearDebounce();
   commandCentreAbortRequest();
+  commandCentreClearPrediction();
   if (commandCentreDialog.open) closeCommandCentre({ restoreFocus: false, immediate: true });
 };
 
@@ -1320,10 +1443,27 @@ commandCentreButton?.addEventListener("click", () => {
 
 commandCentreCloseButton?.addEventListener("click", () => closeCommandCentre());
 
-commandCentreInput?.addEventListener("input", commandCentreScheduleParse);
+commandCentreInput?.addEventListener("input", commandCentreHandleInput);
+commandCentreInput?.addEventListener("compositionstart", () => {
+  commandCentreState.composing = true;
+  commandCentreClearDebounce();
+  commandCentreAbortRequest();
+  commandCentreClearPrediction();
+  commandCentreRenderIntro();
+});
+commandCentreInput?.addEventListener("compositionend", () => {
+  commandCentreState.composing = false;
+  commandCentreHandleInput();
+});
+commandCentreInput?.addEventListener("scroll", commandCentreSyncCompletionScroll);
+commandCentreInput?.addEventListener("click", commandCentreUpdatePrediction);
+commandCentreInput?.addEventListener("keyup", (event) => {
+  if (!["Tab", "ArrowRight"].includes(event.key)) commandCentreUpdatePrediction();
+});
 
 commandCentreForm?.addEventListener("submit", (event) => {
   event.preventDefault();
+  if (commandCentreState.composing) return;
   if (commandCentreState.phase === "results" && commandCentreSelectableOptions().length) {
     commandCentreActivateSelected();
     return;
@@ -1332,9 +1472,17 @@ commandCentreForm?.addEventListener("submit", (event) => {
 });
 
 commandCentreBody?.addEventListener("click", async (event) => {
+  const predictionButton = event.target.closest("[data-command-prediction-command]");
+  if (predictionButton) {
+    commandCentreInput.value = predictionButton.dataset.commandPredictionCommand;
+    commandCentreClearPrediction();
+    await requestCommandParse({ submitted: true });
+    return;
+  }
   const example = event.target.closest("[data-command-example]");
   if (example) {
     commandCentreInput.value = example.dataset.commandExample;
+    commandCentreClearPrediction();
     await requestCommandParse({ submitted: true });
     return;
   }
@@ -1499,6 +1647,7 @@ commandCentreDialog?.addEventListener("cancel", (event) => {
 });
 
 window.addEventListener("keydown", (event) => {
+  if (event.isComposing || commandCentreState.composing || event.keyCode === 229) return;
   const commandShortcut = (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "k";
   const slashShortcut = event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey && !shouldIgnoreViewShortcut(event.target);
   if (commandShortcut || slashShortcut) {
@@ -1514,6 +1663,22 @@ window.addEventListener("keydown", (event) => {
     event.preventDefault();
     event.stopImmediatePropagation();
     closeCommandCentre();
+    return;
+  }
+  const completionKey = (
+    event.target === commandCentreInput &&
+    (event.key === "Tab" || event.key === "ArrowRight") &&
+    (
+      commandCentreState.prediction?.inlineSuffix ||
+      commandCentreState.prediction?.corrected
+    ) &&
+    commandCentreInput.selectionStart === commandCentreInput.value.length &&
+    commandCentreInput.selectionEnd === commandCentreInput.value.length
+  );
+  if (completionKey) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    commandCentreAcceptPrediction();
     return;
   }
   if (event.key === "ArrowDown" || event.key === "ArrowUp") {

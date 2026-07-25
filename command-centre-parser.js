@@ -10,6 +10,7 @@ import {
   weekdayNames,
   zonedParts
 } from "./command-centre-date-time.js";
+import { matchCommandViewKeyword } from "./public/command-centre-predictor.js";
 
 const intentHelp = "CommonGround can currently create events, find shared free time, show availability, move events and navigate the calendar. It can also open settings, connect Google Calendar and update a valid room code.";
 
@@ -263,7 +264,8 @@ function explicitMonthDate(text, referenceDateKey) {
 }
 
 function requestedView(text) {
-  if (/\bsettings?\b/.test(text)) return "settings";
+  const keywordMatch = matchCommandViewKeyword(text);
+  if (keywordMatch) return keywordMatch.view;
   return text.match(/\b(day|week|month|year)(?:\s+view)?\b/)?.[1] || null;
 }
 
@@ -311,7 +313,7 @@ function isRoomCodeCommand(text) {
 }
 
 function isViewCommand(text) {
-  if (/^(?:open|show)\s+settings?\b/.test(text)) return true;
+  if (matchCommandViewKeyword(text)) return true;
   return /^(?:switch|change|open|show|go)\b/.test(text) &&
     /\b(?:day|week|month|year)\s+view\b/.test(text);
 }

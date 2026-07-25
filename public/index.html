@@ -514,12 +514,18 @@
             <path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3L12 3Z"></path>
           </svg>
           <label class="sr-only" for="commandCentreInput">Create an event or find a time</label>
-          <input id="commandCentreInput" type="search" maxlength="500" placeholder="Create an event or find a time…" autocomplete="off" spellcheck="false" enterkeyhint="search" />
+          <div class="command-centre-input-shell">
+            <span class="command-centre-completion" id="commandCentreCompletion" aria-hidden="true">
+              <span class="command-centre-completion-prefix" id="commandCentreCompletionPrefix"></span><span class="command-centre-completion-suffix" id="commandCentreCompletionSuffix"></span>
+            </span>
+            <input id="commandCentreInput" type="search" maxlength="500" placeholder="Create an event or find a time…" autocomplete="off" spellcheck="false" enterkeyhint="search" aria-autocomplete="inline" aria-controls="commandCentreBody" aria-describedby="commandCentreDescription commandCentreCompletionHelp" />
+          </div>
           <button class="icon-button command-centre-close" id="commandCentreCloseButton" type="button" aria-label="Close Command Centre">
             <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
           </button>
         </header>
 
+        <p class="sr-only" id="commandCentreCompletionHelp">When a grey completion appears, press Tab or Right Arrow to accept it. Press Enter to run the selected command.</p>
         <p class="sr-only" id="commandCentreStatus" role="status" aria-live="polite" aria-atomic="true"></p>
 
         <section class="command-centre-body" id="commandCentreBody" aria-live="off">
@@ -679,6 +685,6 @@
 
     <script src="/app.js?v=20260725-intent-router"></script>
     <script src="/command-centre-actions.js?v=20260725-intent-router"></script>
-    <script src="/command-centre.js?v=20260725-external-title"></script>
+    <script src="/command-centre.js?v=20260725-predictive-commands"></script>
   </body>
 </html>

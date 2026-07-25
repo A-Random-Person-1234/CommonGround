@@ -5506,6 +5506,10 @@ button.free-block:not(:disabled):active {
   border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 
+.command-centre-search-row:focus-within {
+  box-shadow: inset 0 -1px rgba(216, 183, 122, 0.46);
+}
+
 .command-centre-search-icon {
   width: 20px;
   height: 20px;
@@ -5516,7 +5520,45 @@ button.free-block:not(:disabled):active {
   stroke-linejoin: round;
 }
 
+.command-centre-input-shell {
+  position: relative;
+  min-width: 0;
+  height: 62px;
+  overflow: hidden;
+  font: 600 18px/1.3 var(--font-sans);
+}
+
+.command-centre-completion {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+  white-space: pre;
+  pointer-events: none;
+  opacity: 0;
+  color: rgba(255, 255, 255, 0.34);
+  font: inherit;
+  transform: translateX(var(--completion-scroll-x, 0));
+  will-change: transform, opacity;
+}
+
+.command-centre-completion.is-visible {
+  opacity: 1;
+}
+
+.command-centre-completion-prefix {
+  visibility: hidden;
+}
+
+.command-centre-completion-suffix {
+  color: rgba(255, 255, 255, 0.34);
+}
+
 #commandCentreInput {
+  position: relative;
+  z-index: 1;
   width: 100%;
   min-width: 0;
   height: 62px;
@@ -5526,7 +5568,7 @@ button.free-block:not(:disabled):active {
   background: transparent;
   color: #fff;
   box-shadow: none;
-  font: 600 18px/1.3 var(--font-sans);
+  font: inherit;
 }
 
 #commandCentreInput::placeholder {
@@ -6181,6 +6223,11 @@ button.free-block:not(:disabled):active {
     font-size: 16px;
   }
 
+  .command-centre-input-shell {
+    height: 58px;
+    font-size: 16px;
+  }
+
   .command-centre-body {
     padding: 10px;
   }
@@ -6199,6 +6246,12 @@ button.free-block:not(:disabled):active {
   }
 
   .command-centre-footer span:first-child {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .command-centre-completion {
     display: none;
   }
 }

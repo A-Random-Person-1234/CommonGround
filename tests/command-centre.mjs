@@ -15,6 +15,10 @@ import {
   dateAtMinute,
   dateKeyInZone
 } from "../command-centre-date-time.js";
+import {
+  matchCommandViewKeyword,
+  predictCommand
+} from "../public/command-centre-predictor.js";
 
 const now = new Date("2026-07-20T10:00:00.000Z");
 const timezone = "Europe/London";
@@ -131,6 +135,54 @@ const openSettings = parseCommand("Open settings", options);
 assert.equal(openSettings.intent, "navigate_view");
 assert.equal(openSettings.targetView, "settings");
 
+for (const command of ["settings", "setings", "settigns", "open setings"]) {
+  const settingsCommand = parseCommand(command, options);
+  assert.equal(settingsCommand.intent, "navigate_view", `${command} should open settings`);
+  assert.equal(settingsCommand.targetView, "settings", `${command} should target settings`);
+}
+
+for (const command of ["set", "sett", "settings review", "asset", "upsetting"]) {
+  assert.equal(
+    parseCommand(command, options).intent,
+    "unsupported",
+    `${command} should not be treated as a settings command`
+  );
+}
+
+assert.equal(matchCommandViewKeyword("settings")?.view, "settings");
+assert.equal(matchCommandViewKeyword("setings")?.match, "typo");
+assert.equal(matchCommandViewKeyword("settigns")?.corrected, "settings");
+assert.equal(matchCommandViewKeyword("open setings")?.view, "settings");
+assert.equal(matchCommandViewKeyword("set"), null);
+assert.equal(matchCommandViewKeyword("settings review"), null);
+
+const setPrediction = predictCommand("set");
+assert.equal(setPrediction?.kind, "prefix");
+assert.equal(setPrediction?.acceptedCommand, "settings");
+assert.equal(setPrediction?.inlineSuffix, "tings");
+assert.equal(setPrediction?.corrected, false);
+assert.equal(predictCommand("set ")?.inlineSuffix, "");
+
+const settPrediction = predictCommand("sett");
+assert.equal(settPrediction?.acceptedCommand, "settings");
+assert.equal(settPrediction?.inlineSuffix, "ings");
+
+const openSetPrediction = predictCommand("open set");
+assert.equal(openSetPrediction?.acceptedCommand, "open settings");
+assert.equal(openSetPrediction?.inlineSuffix, "tings");
+
+const typoPrediction = predictCommand("setings");
+assert.equal(typoPrediction?.kind, "typo");
+assert.equal(typoPrediction?.acceptedCommand, "settings");
+assert.equal(typoPrediction?.inlineSuffix, "");
+assert.equal(typoPrediction?.corrected, true);
+
+const exactSettingsPrediction = predictCommand("settings");
+assert.equal(exactSettingsPrediction?.kind, "exact");
+assert.equal(exactSettingsPrediction?.label, "Open settings");
+assert.equal(predictCommand("set room code"), null);
+assert.equal(predictCommand("create set"), null);
+
 const connectGoogle = parseCommand("Connect my Google Calendar", options);
 assert.equal(connectGoogle.intent, "connect_google");
 assert.equal(connectGoogle.provider, "google");
@@ -142,6 +194,10 @@ const updateRoomCode = parseCommand("Change room code to ABC234", options);
 assert.equal(updateRoomCode.intent, "update_room_code");
 assert.equal(updateRoomCode.newRoomCode, "ABC234");
 assert.equal(updateRoomCode.requiresConfirmation, true);
+
+const setRoomCode = parseCommand("Set room code to ABC234", options);
+assert.equal(setRoomCode.intent, "update_room_code");
+assert.equal(setRoomCode.newRoomCode, "ABC234");
 
 const missingRoomCode = parseCommand("Set custom room code", options);
 assert.equal(missingRoomCode.intent, "update_room_code");
