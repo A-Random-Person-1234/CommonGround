@@ -290,12 +290,16 @@ function commandRenderCreatePreview(result, {
   const dateValue = commandLocalDateValue(start) || result.dateKey || "";
   const startValue = commandLocalTimeValue(start);
   const endValue = commandLocalTimeValue(end);
+  const unmatchedParticipantNote = result.unmatchedParticipants?.length
+    ? `<div class="command-clarification">No matching room member was added. The name remains in the event title, and you can still create the event for yourself.</div>`
+    : "";
   commandCentreSetPhase(question ? "needs_clarification" : "preview", question || "Event preview ready.");
   commandCentreSetBody(`
     ${question ? `<div class="command-clarification">${commandEscape(question)}</div>` : ""}
     <div class="command-preview-card">
       <h3>Event preview</h3>
       <p>Review every detail before anything is created.</p>
+      ${unmatchedParticipantNote}
       <div class="command-preview-grid">
         <label class="command-field command-field-wide">
           <span>Title</span>

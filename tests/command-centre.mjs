@@ -34,6 +34,22 @@ assert.equal(lunch.durationMinutes, 60);
 assert.equal(dateKeyInZone(lunch.start, timezone), "2026-07-21");
 assert.equal(new Date(lunch.start).toISOString(), "2026-07-21T12:00:00.000Z");
 
+const soloOptions = {
+  ...options,
+  members: [{ id: "me", displayName: "Aryan Dhawan" }]
+};
+const lunchWithExternalSam = parseCommand("Lunch with Sam tomorrow at 1", soloOptions);
+assert.equal(lunchWithExternalSam.intent, "create_event");
+assert.equal(lunchWithExternalSam.title, "Lunch with Sam");
+assert.deepEqual(lunchWithExternalSam.participantIds, []);
+assert.deepEqual(lunchWithExternalSam.unmatchedParticipants, ["sam"]);
+assert.deepEqual(lunchWithExternalSam.ambiguities, []);
+assert.equal(new Date(lunchWithExternalSam.start).toISOString(), "2026-07-21T12:00:00.000Z");
+
+const unavailableExternalSam = parseCommand("Find time with Sam tomorrow", soloOptions);
+assert.equal(unavailableExternalSam.intent, "find_time");
+assert.equal(unavailableExternalSam.ambiguities[0].type, "participant_not_found");
+
 const dinner = parseCommand("Dinner with Matthew next Saturday from 7 to 9pm", options);
 assert.equal(dinner.intent, "create_event");
 assert.equal(dinner.title, "Dinner");

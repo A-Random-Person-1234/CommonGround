@@ -487,6 +487,11 @@ try {
   );
   assert.match(
     commandCentreScript.text,
+    /result\.unmatchedParticipants\?\.length[\s\S]*?No matching room member was added\.[\s\S]*?still create the event for yourself/,
+    "Unknown names in event titles must not block the personal-event preview"
+  );
+  assert.match(
+    commandCentreScript.text,
     /id="commandEventAllDay" type="checkbox"[\s\S]*?function commandReadCreateDraft\(\)[\s\S]*?const allDay = commandCentreBody\.querySelector\("#commandEventAllDay"\)\?\.checked === true;[\s\S]*?allDay,/,
     "All-day commands must remain editable and produce authoritative all-day event payloads"
   );

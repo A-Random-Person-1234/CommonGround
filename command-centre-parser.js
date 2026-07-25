@@ -476,11 +476,17 @@ export function parseDateRange(command, {
   };
 }
 
-function stripTitleNoise(command) {
-  return normaliseCommand(command)
+function stripTitleNoise(command, { stripParticipantPhrase = true } = {}) {
+  let title = normaliseCommand(command)
     .replace(/^(?:create|add|schedule)(?:\s+(?:an?\s+)?event)?\s+/i, "")
-    .replace(/^meet\s+/i, "")
-    .replace(/\bwith\s+.+?(?=\s+(?:today|tomorrow|on|this|next|at|from|for|after|before|morning|afternoon|evening|weekend|week)\b|$)/i, "")
+    .replace(/^meet\s+/i, "");
+  if (stripParticipantPhrase) {
+    title = title.replace(
+      /\bwith\s+.+?(?=\s+(?:today|tomorrow|on|this|next|at|from|for|after|before|morning|afternoon|evening|weekend|week)\b|$)/i,
+      ""
+    );
+  }
+  return title
     .replace(/\b(?:today|tomorrow|this weekend|next week)\b/gi, "")
     .replace(new RegExp(`\\b(?:next\\s+)?(?:${weekdayNames.join("|")})\\b`, "gi"), "")
     .replace(new RegExp(`\\b(?:on\\s+)?\\d{1,2}(?:st|nd|rd|th)?\\s+(?:${monthNames.join("|")})(?:\\s+\\d{4})?\\b`, "gi"), "")
@@ -563,15 +569,6 @@ export function parseCommand(command, {
     return { intent, confidence: base.confidence, reason: intentHelp };
   }
 
-  if (participants.unmatched.length) {
-    base.ambiguities.push({
-      type: "participant_not_found",
-      token: participants.unmatched[0],
-      message: `I could not find “${participants.unmatched[0]}” in this room.`,
-      options: []
-    });
-  }
-
   applyDateAmbiguity(base, date);
 
   if (intent === "navigate_view") return parseViewIntent(base, text);
@@ -580,7 +577,9 @@ export function parseCommand(command, {
 
   if (intent === "create_event") {
     const allDay = /\ball day\b/.test(text);
-    const title = stripTitleNoise(original);
+    const title = stripTitleNoise(original, {
+      stripParticipantPhrase: participants.unmatched.length === 0
+    });
     if (!title) base.missingFields.push("title");
     if (!date.dateKey) base.missingFields.push("date");
     if (!allDay && time.startMinute === null) base.missingFields.push("start_time");
@@ -612,6 +611,14 @@ export function parseCommand(command, {
   }
 
   if (intent === "find_time" || intent === "show_availability") {
+    if (participants.unmatched.length) {
+      base.ambiguities.push({
+        type: "participant_not_found",
+        token: participants.unmatched[0],
+        message: `I could not find “${participants.unmatched[0]}” in this room.`,
+        options: []
+      });
+    }
     const resolvedDuration = durationMinutes || (intent === "find_time" ? 60 : 30);
     if (!date.rangeStart || !date.rangeEnd) base.missingFields.push("date_range");
     if (!participants.participantIds.length && !participants.allRequested) base.missingFields.push("participants");
