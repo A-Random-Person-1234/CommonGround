@@ -5406,6 +5406,8 @@ button.free-block:not(:disabled):active {
   padding: 6px 7px;
 }
 
+}
+
 /* CommonGround Command Centre */
 #roomPage .command-centre-trigger {
   display: inline-flex;
@@ -5779,6 +5781,45 @@ button.free-block:not(:disabled):active {
 
 .command-field input[aria-invalid="true"] {
   border-color: rgba(220, 104, 104, 0.64);
+}
+
+.command-field input:disabled {
+  opacity: 0.42;
+}
+
+.command-all-day {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 9px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+}
+
+.command-all-day input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: #b39458;
+}
+
+.command-all-day span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.command-all-day strong {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 12px;
+}
+
+.command-all-day small {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 10px;
 }
 
 .command-participant-editor {
@@ -6172,6 +6213,8 @@ button.free-block:not(:disabled):active {
     animation-iteration-count: 1 !important;
   }
 }
+
+@media (max-width: 760px) {
 
 .busy-card strong,
 .busy-stack-item strong,
