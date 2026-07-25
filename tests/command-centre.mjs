@@ -35,6 +35,24 @@ assert.equal(genericCreate.intent, "create_event");
 assert.equal(genericCreate.title, "");
 assert.ok(genericCreate.missingFields.includes("title"));
 
+const navigatedCreate = parseCommand("event at 4pm this sunday", options);
+assert.equal(navigatedCreate.intent, "create_event");
+assert.equal(navigatedCreate.title, "New event");
+assert.ok(navigatedCreate.missingFields.includes("title"));
+assert.equal(dateKeyInZone(navigatedCreate.start, timezone), "2026-07-26");
+assert.equal(new Date(navigatedCreate.start).toISOString(), "2026-07-26T15:00:00.000Z");
+
+const titledEventCreate = parseCommand("event planning at 4pm this sunday", options);
+assert.equal(titledEventCreate.title, "event planning");
+
+const onSundayCreate = parseCommand("event on Sunday at 4pm", options);
+assert.equal(onSundayCreate.title, "New event");
+assert.ok(onSundayCreate.missingFields.includes("title"));
+
+const timeOnlyCreate = parseCommand("event at 4pm", options);
+assert.equal(timeOnlyCreate.start, null);
+assert.equal(timeOnlyCreate.startMinute, 16 * 60);
+
 const lunch = parseCommand("Lunch with Sam tomorrow at 1", options);
 assert.equal(lunch.intent, "create_event");
 assert.equal(lunch.title, "Lunch");
