@@ -250,8 +250,8 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-invite-members"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260725-invite-members"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-time-picker-r2"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260725-time-picker-r2"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260725-compact-event-preview"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
