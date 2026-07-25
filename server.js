@@ -42,6 +42,8 @@ const configuredOutboundRequestTimeoutMs = Number(process.env.OUTBOUND_REQUEST_T
 const outboundRequestTimeoutMs = Number.isFinite(configuredOutboundRequestTimeoutMs) && configuredOutboundRequestTimeoutMs >= 1_000
   ? configuredOutboundRequestTimeoutMs
   : 15_000;
+const googleMapsApiKey = String(process.env.GOOGLE_MAPS_API_KEY || "").trim();
+const googlePlacesAutocompleteUrl = "https://places.googleapis.com/v1/places:autocomplete";
 const isProduction = process.env.NODE_ENV === "production" || publicBaseUrl.startsWith("https://");
 const textLimits = Object.freeze({
   roomName: 80,
@@ -262,6 +264,74 @@ async function fetchWithTimeout(resource, options = {}) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function providerText(value, max = textLimits.eventLocation) {
+  return String(value || "")
+    .normalize("NFKC")
+    .replace(/[\u0000-\u001F\u007F]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, max);
+}
+
+function sanitizeGooglePlaceSuggestions(payload) {
+  const suggestions = Array.isArray(payload?.suggestions) ? payload.suggestions : [];
+  return suggestions
+    .map((suggestion) => {
+      const prediction = suggestion?.placePrediction;
+      if (!prediction) return null;
+      const label = providerText(prediction.text?.text);
+      if (!label) return null;
+      return {
+        placeId: providerText(prediction.placeId, 200),
+        label,
+        primary: providerText(prediction.structuredFormat?.mainText?.text) || label,
+        secondary: providerText(prediction.structuredFormat?.secondaryText?.text)
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 6);
+}
+
+async function fetchGooglePlaceSuggestions(input, sessionToken = "") {
+  if (!googleMapsApiKey) {
+    throw httpError(503, "Address suggestions are not configured.");
+  }
+
+  const body = { input };
+  if (sessionToken) body.sessionToken = sessionToken;
+  let response;
+  try {
+    response = await fetchWithTimeout(googlePlacesAutocompleteUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": googleMapsApiKey,
+        "X-Goog-FieldMask": [
+          "suggestions.placePrediction.placeId",
+          "suggestions.placePrediction.text.text",
+          "suggestions.placePrediction.structuredFormat.mainText.text",
+          "suggestions.placePrediction.structuredFormat.secondaryText.text"
+        ].join(",")
+      },
+      body: JSON.stringify(body)
+    });
+  } catch {
+    throw httpError(503, "Address suggestions are temporarily unavailable.");
+  }
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    // Provider error bodies are intentionally not relayed to clients.
+  }
+  if (!response.ok) {
+    console.error(`Google Places autocomplete failed with status ${response.status}.`);
+    throw httpError(response.status === 429 ? 503 : 502, "Address suggestions are temporarily unavailable.");
+  }
+  return sanitizeGooglePlaceSuggestions(payload);
 }
 
 const googleCalendarEventsScope = "https://www.googleapis.com/auth/calendar.events";
@@ -848,14 +918,16 @@ function sendEmojiKeywordDictionary(req, res) {
   res.end(emojiKeywordDictionary);
 }
 
-function readJsonBody(req) {
+function readJsonBody(req, { maxBytes = 1_000_000 } = {}) {
   return new Promise((resolve, reject) => {
     let body = "";
+    let bodyBytes = 0;
     let failed = false;
     req.on("data", (chunk) => {
       if (failed) return;
+      bodyBytes += chunk.length;
       body += chunk;
-      if (body.length > 1_000_000) {
+      if (bodyBytes > maxBytes) {
         failed = true;
         reject(httpError(413, "Request body too large."));
       }
@@ -2123,7 +2195,7 @@ function requireExistingRoomParticipant(req, res, roomCode) {
   }
   const participant = findParticipant(room, session, user);
   if (!participant) {
-    sendJson(res, 403, { error: "Join this room before using the Command Centre." });
+    sendJson(res, 403, { error: "Join this room before using this feature." });
     return null;
   }
   if (isRoomLocked(room) && !canJoinLockedRoom(room, session, user)) {
@@ -3868,6 +3940,7 @@ const server = http.createServer(async (req, res) => {
   const roomParticipantPatchMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/participants\/([^/]+)$/);
   const roomParticipantDeleteMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/participants\/([^/]+)$/);
   const roomFreeBusyMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/freebusy$/);
+  const roomPlacesAutocompleteMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/places\/autocomplete$/);
   const roomCommandParseMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/parse$/);
   const roomCommandAvailabilityMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/availability$/);
   const roomCommandCreateMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/create-event$/);
@@ -3944,6 +4017,7 @@ const server = http.createServer(async (req, res) => {
       }
       sendJson(res, 200, {
         googleReady: Boolean(loadGoogleCredentials()),
+        placesReady: Boolean(googleMapsApiKey),
         outlookReady: Boolean(loadMicrosoftCredentials()),
         redirectUri,
         microsoftRedirectUri
@@ -3965,6 +4039,39 @@ const server = http.createServer(async (req, res) => {
         displayName: session.pendingDisplayName || userDisplayName(user) || "",
         roomCode: session.lastRoomCode || null
       });
+      return;
+    }
+
+    if (roomPlacesAutocompleteMatch) {
+      if (req.method !== "POST") {
+        sendMethodNotAllowed(res, ["POST"]);
+        return;
+      }
+      if (!enforceRateLimit(req, res, "places-autocomplete", 120, 10 * 60 * 1000)) return;
+      if (!/^application\/json(?:\s*;|$)/i.test(String(req.headers["content-type"] || ""))) {
+        sendJson(res, 415, { error: "Use application/json for address searches." });
+        return;
+      }
+      const auth = requireExistingRoomParticipant(req, res, roomPlacesAutocompleteMatch[1]);
+      if (!auth) return;
+      const body = await readJsonBody(req, { maxBytes: 8_192 });
+      const input = boundedText(body.input, {
+        field: "Address search",
+        max: textLimits.eventLocation,
+        required: true
+      });
+      if ([...input].length < 3) {
+        sendJson(res, 200, { suggestions: [] });
+        return;
+      }
+      const rawSessionToken = String(body.sessionToken || "").trim();
+      if (rawSessionToken && !/^[A-Za-z0-9_-]{1,36}$/.test(rawSessionToken)) {
+        sendJson(res, 400, { error: "Use a valid address-search session token." });
+        return;
+      }
+      const sessionToken = rawSessionToken;
+      const suggestions = await fetchGooglePlaceSuggestions(input, sessionToken);
+      sendJson(res, 200, { suggestions });
       return;
     }
 
