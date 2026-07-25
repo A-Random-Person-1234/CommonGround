@@ -4701,35 +4701,9 @@ button.free-block:not(:disabled):active {
 .event-composer-top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   min-height: 26px;
   margin-bottom: 2px;
-}
-
-.composer-handle {
-  position: relative;
-  width: 18px;
-  height: 12px;
-  opacity: 0.56;
-}
-
-.composer-handle::before,
-.composer-handle::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  width: 18px;
-  height: 2px;
-  border-radius: 999px;
-  background: var(--text-muted);
-}
-
-.composer-handle::before {
-  top: 2px;
-}
-
-.composer-handle::after {
-  bottom: 2px;
 }
 
 .composer-close {
@@ -8094,10 +8068,6 @@ button.identity-name-button:not(:disabled):active,
     min-height: 22px;
   }
 
-  .composer-handle {
-    visibility: hidden;
-  }
-
   .composer-close {
     width: 26px;
     min-width: 26px;
@@ -8272,19 +8242,6 @@ button.identity-name-button:not(:disabled):active,
 #eventModal .event-composer-top {
   min-height: 28px;
   margin: 0;
-}
-
-#eventModal .composer-handle {
-  width: 20px;
-  height: 16px;
-  opacity: 0.45;
-}
-
-#eventModal .composer-handle::before,
-#eventModal .composer-handle::after {
-  width: 20px;
-  height: 1.5px;
-  background: var(--composer-muted);
 }
 
 #eventModal .composer-close {
@@ -9247,10 +9204,6 @@ button.identity-name-button:not(:disabled):active,
     padding: 10px 12px;
     border-radius: 12px;
     overflow: visible;
-  }
-
-  #eventModal .composer-handle {
-    visibility: visible;
   }
 
   #eventModal .event-composer-top,
