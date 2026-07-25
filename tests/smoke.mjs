@@ -1274,6 +1274,16 @@ try {
   assert.match(eventComposerStyles.text, /\.drag-create-preview\s*\{[^}]*container-type:\s*inline-size/s);
   assert.match(eventComposerStyles.text, /\.drag-create-preview strong\s*\{[^}]*font-size:\s*clamp\(9px, 7\.2cqw, 12px\)[^}]*text-overflow:\s*clip/s);
   assert.match(eventComposerScript.text, /const titleText = "\(No title\)";/);
+  assert.match(
+    eventComposerScript.text,
+    /function dismissOutsideFloatingSurfaces\(target\)[\s\S]*?function handleOutsideFloatingSurfacePointer\(event\)[\s\S]*?event\.stopImmediatePropagation\(\)/,
+    "Outside clicks must dismiss an open surface before they can activate an underlying control"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /document\.addEventListener\("pointerdown", handleOutsideFloatingSurfacePointer, true\);[\s\S]*?document\.addEventListener\("click", handleOutsideFloatingSurfaceClick, true\);/,
+    "Outside surface dismissal must consume the follow-up click as well as the initial pointer press"
+  );
   assert.doesNotMatch(
     eventComposerStyles.text,
     /scale\(0\.9\)/,
