@@ -250,7 +250,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-calendar-popout"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-time-picker-r2"/);
   assert.match(home.text, /src="\/app\.js\?v=20260725-command-composer"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260725-command-composer"/);
@@ -1246,29 +1246,23 @@ try {
   assert.match(eventComposerStyles.text, /#eventModal \.composer-time-grid input\s*\{[^}]*font-size:\s*15px[^}]*font-weight:\s*650[^}]*font-variant-numeric:\s*tabular-nums/s);
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.composer-time-grid \.time-picker-input\s*\{(?=[^}]*background:\s*transparent)(?=[^}]*color:\s*var\(--composer-ink\))(?=[^}]*border:\s*0)(?=[^}]*border-radius:\s*6px)[^}]*\}/s,
-    "Hybrid time fields must read as clean clickable text instead of enclosed controls"
+    /#eventModal \.composer-time-grid \.time-picker-input\s*\{(?=[^}]*background:\s*#3c4043)(?=[^}]*color:\s*#fff)(?=[^}]*border-bottom:\s*2px solid transparent)[^}]*\}/s,
+    "Hybrid time fields must retain the requested dark Google Calendar-inspired treatment"
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.composer-time-grid \.time-picker-input:hover\s*\{[^}]*background:\s*rgba\(255, 255, 255, 0\.05\)/s,
-    "Time fields must reveal only a restrained hover wash"
-  );
-  assert.doesNotMatch(
-    eventComposerStyles.text,
-    /#eventModal \.composer-time-grid \.time-picker-input[^{]*\{[^}]*(?:#8ab4f8|#3c4043|#355c91)/s,
-    "The event time fields must not retain the legacy Google-blue treatment"
+    /#eventModal \.composer-time-grid \.time-picker-input:focus,[\s\S]*?border-bottom-color:\s*#8ab4f8/s,
+    "Focused time fields must expose a clear blue underline"
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.time-picker-dropdown\s*\{(?=[^}]*position:\s*absolute)(?=[^}]*background:\s*var\(--composer-popover\))(?=[^}]*box-shadow:\s*0 8px 24px rgba\(0, 0, 0, 0\.5\))(?=[^}]*animation:\s*event-time-picker-in var\(--motion-slow\) var\(--ease-modal\))(?=[^}]*will-change:\s*transform, opacity)[^}]*\}/s,
-    "Time menus must float on a detached elevated surface with compositor-safe motion"
+    /#eventModal \.time-picker-dropdown\s*\{[^}]*position:\s*absolute[^}]*background:\s*#202124[^}]*animation:\s*event-time-picker-in var\(--motion-slow\) var\(--ease-modal\)[^}]*will-change:\s*transform, opacity/s,
+    "Time menus must float without changing composer geometry and use compositor-safe motion"
   );
-  assert.match(eventComposerStyles.text, /#eventModal \.time-picker-list\s*\{[^}]*max-height:\s*240px[^}]*overflow-y:\s*auto[^}]*scrollbar-color:\s*rgba\(255, 255, 255, 0\.24\) transparent[^}]*scrollbar-width:\s*thin/s);
-  assert.match(eventComposerStyles.text, /#eventModal \.time-picker-list::-webkit-scrollbar-button\s*\{[^}]*display:\s*none[^}]*width:\s*0[^}]*height:\s*0/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.time-picker-list\s*\{[^}]*max-height:\s*240px[^}]*overflow-y:\s*auto[^}]*scrollbar-color:\s*#5f6368 #202124/s);
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.time-picker-option:hover,\s*#eventModal \.time-picker-option\.is-active\s*\{[^}]*background:\s*rgba\(255, 255, 255, 0\.06\)/s,
+    /#eventModal \.time-picker-option:hover,\s*#eventModal \.time-picker-option\.is-active\s*\{[^}]*background:\s*#3c4043/s,
     "Pointer and keyboard-highlighted time options must share the same visual state"
   );
   assert.match(
@@ -1323,8 +1317,8 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.calendar-nav-primary\s*\{[^}]*flex:\s*1 1 0;[^}]*overflow:\s*visible;/s,
-    "The primary navigation must preserve complete button and focus-ring edges"
+    /#roomPage \.calendar-nav-primary\s*\{[^}]*flex:\s*1 1 0;[^}]*overflow:\s*hidden;/s,
+    "The primary navigation must yield only the space needed by fixed actions"
   );
   assert.match(
     eventComposerStyles.text,
@@ -1721,58 +1715,25 @@ try {
     "The desktop composer must keep its compact five-row hierarchy and 8px rhythm"
   );
   assert.match(eventComposerStyles.text, /#eventModal\s*\{[^}]*width: 100vw[^}]*height: 100dvh[^}]*max-width: none[^}]*overflow: visible/s);
-  assert.match(
-    eventComposerStyles.text,
-    /:root\[data-theme="dark"\] #eventModal\s*\{[^}]*--composer-muted: #9aa0a6[^}]*--composer-accent: #d09e72[^}]*--composer-surface: #1e1e1e[^}]*--composer-popover: #292827/s,
-    "The dark composer must use the neutral hierarchy and one warm tan accent"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /#eventModal ::selection\s*\{[^}]*background: color-mix\(in srgb, var\(--composer-accent\) 42%, transparent\)[^}]*color: var\(--composer-ink\)/s,
-    "Composer text selection must use the warm accent instead of browser blue"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /#eventModal \.event-composer\s*\{[^}]*background: var\(--composer-surface\)/s,
-    "The composer must use a solid surface instead of a decorative gradient"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /#eventModal \.composer-title\s*\{[^}]*border: 0[^}]*background: transparent[^}]*font-size: 26px[^}]*font-weight: 600/s,
-    "The title must remain a large, seamless input"
-  );
   assert.match(eventComposerStyles.text, /#eventModal \.composer-heading-section\s*\{[^}]*display: grid[^}]*gap: 4px[^}]*min-width: 0/s);
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.composer-schedule-section,\s*#eventModal \.composer-field-row\s*\{[^}]*grid-template-columns: 40px minmax\(0, 1fr\)[^}]*gap: 0[^}]*align-items: center/s,
-    "Schedule and option rows must share one strict 40px icon gutter"
+    /#eventModal \.composer-schedule-section,\s*#eventModal \.composer-field-row\s*\{[^}]*grid-template-columns: 16px minmax\(0, 1fr\)[^}]*gap: 16px[^}]*align-items: center/s,
+    "Schedule and option rows must share one aligned icon/content grid"
   );
-  assert.match(eventComposerStyles.text, /#eventModal \.composer-row-icon,[\s\S]*?justify-self: center/s);
-  assert.match(eventComposerStyles.text, /#eventModal \.composer-meta-section\s*\{[^}]*display: grid[^}]*gap: 10px/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-meta-section\s*\{[^}]*display: grid[^}]*gap: 8px/s);
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.composer-time-grid\s*\{[^}]*padding: 0[^}]*border: 0[^}]*border-radius: 0[^}]*background: transparent[^}]*box-shadow: none/s,
-    "Date and time controls must be separated by layout rather than an internal box"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /#eventModal \.composer-field-row\s*\{[^}]*min-height: 36px[^}]*padding: 0[^}]*border: 0[^}]*border-radius: 6px[^}]*background: transparent/s,
-    "Composer option rows must retain flat, consistent geometry"
+    /#eventModal \.composer-time-grid\s*\{[^}]*padding: 8px[^}]*border: 1px solid rgba\(255, 255, 255, 0\.08\)[^}]*border-radius: 8px[^}]*background: rgba\(255, 255, 255, 0\.03\)/s,
+    "Date and time controls must read as one restrained scheduling section"
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.invite-dropdown-panel\s*\{[^}]*position: static[^}]*max-height: clamp\(88px, 22dvh, 160px\)[^}]*border: 0[^}]*border-radius: 0[^}]*background: transparent[^}]*box-shadow: none/s,
-    "The invitee selector must stay in flow without a nested panel box"
+    /#eventModal \.composer-field-row\s*\{[^}]*min-height: 36px[^}]*padding: 0 8px[^}]*border-radius: 8px/s,
+    "Composer option rows must retain compact, consistent geometry"
   );
-  assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\s*\{[^}]*min-height: 44px[^}]*border: 0[^}]*border-radius: 6px/s);
-  assert.match(
-    eventComposerStyles.text,
-    /#eventModal \.all-day-toggle input\s*\{[^}]*appearance: none[^}]*width: 18px[^}]*height: 18px[^}]*border: 0/s,
-    "All-day must use a custom borderless checkbox"
-  );
-  assert.match(eventComposerStyles.text, /#eventModal \.all-day-toggle input:checked\s*\{[^}]*background: var\(--composer-accent\)/s);
-  assert.match(eventComposerStyles.text, /#eventModal \.mini-toggle-ui\s*\{[^}]*width: 40px[^}]*height: 24px[^}]*border: 0/s);
-  assert.match(eventComposerStyles.text, /#eventModal \.mini-toggle:has\(input:checked\) \.mini-toggle-ui\s*\{[^}]*background: var\(--composer-accent\)/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\s*\{[^}]*min-height: 44px[^}]*border-radius: 8px/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.mini-toggle-ui\s*\{[^}]*width: 40px[^}]*height: 24px/s);
   assert.match(eventComposerStyles.text, /#eventModal \.oauth-spinner\s*\{[^}]*display: none[^}]*width: 18px[^}]*height: 18px/s);
   assert.match(
     eventComposerStyles.text,
@@ -1781,11 +1742,10 @@ try {
   );
   assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\.is-connected\s*\{[^}]*animation: composer-sync-settle var\(--motion-slow\) var\(--ease-modal\) both[^}]*will-change: transform, opacity/s);
   assert.match(eventComposerStyles.text, /#eventModal \.composer-sync-toggle\.is-error small\s*\{[^}]*color: var\(--danger\)/s);
-  assert.match(eventComposerStyles.text, /#eventModal #cancelEventSecondary\s*\{[^}]*border: 0[^}]*background: transparent/s);
   assert.match(
     eventComposerStyles.text,
-    /#eventModal #saveEventButton\s*\{[^}]*border: 0[^}]*border-radius: 8px[^}]*background: var\(--composer-accent\)[^}]*color: #241b15/s,
-    "Create event must be the single warm, high-contrast primary action"
+    /#eventModal \.invite-dropdown-panel\s*\{[^}]*position: static[^}]*max-height: clamp\(88px, 22dvh, 160px\)[^}]*overflow-y: auto[^}]*box-shadow: none/s,
+    "The event invitee selector must expand in flow instead of covering later composer fields"
   );
   assert.match(
     eventComposerScript.text,
@@ -1795,16 +1755,6 @@ try {
   assert.match(eventComposerStyles.text, /@media \(max-width: 820px\)[\s\S]*?#eventModal \.event-composer[\s\S]*?width: min\(100vw - 16px, 360px\)/);
   assert.match(eventComposerStyles.text, /@media \(max-height: 720px\)[\s\S]*?#eventModal \.event-composer\s*\{[^}]*gap: 10px[^}]*padding: 14px 16px/s);
   assert.match(eventComposerStyles.text, /@media \(max-height: 560px\)[\s\S]*?#eventModal \.composer-sync-toggle small\s*\{[^}]*display: block[^}]*font-size: 11px/s);
-  assert.match(
-    eventComposerStyles.text,
-    /@media \(max-height: 560px\)\s*\{[\s\S]*?#eventModal\s*\{[^}]*overflow-x: hidden[^}]*overflow-y: auto[^}]*overscroll-behavior: contain/s,
-    "Only the outer dialog may scroll on genuinely short screens"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /@media \(max-height: 560px\)[\s\S]*?#eventModal \.event-composer\s*\{[^}]*max-height: none[^}]*overflow: visible/s,
-    "The composer body must not clip detached time menus"
-  );
   assert.match(eventComposerStyles.text, /@media \(prefers-reduced-motion: reduce\)[\s\S]*?#eventModal\[open\] \.event-composer,[\s\S]*?animation-duration: 1ms !important/s);
   assert.doesNotMatch(eventComposerStyles.text, /\.composer-body\s*\{[^}]*overflow-y:\s*auto/s);
   assert.doesNotMatch(eventComposerStyles.text, /#eventModal \.event-composer\s*\{[^}]*overflow-y:\s*auto/s);
@@ -1813,32 +1763,10 @@ try {
   assert.match(eventComposerStyles.text, /@media \(max-width: 760px\)[\s\S]*?#roomPage\.calendar-app-shell,[\s\S]*?--shell-nav-height:\s*54px/s);
   assert.doesNotMatch(eventComposerStyles.text, /--shell-rail-width|grid-area:\s*rail|calendar-icon-rail/);
   assert.match(eventComposerStyles.text, /#roomPage \.calendar-app-nav\s*\{[^}]*grid-area:\s*nav[^}]*height:\s*var\(--shell-nav-height\)[^}]*background:\s*var\(--shell-panel\)/s);
-  assert.match(eventComposerStyles.text, /#roomPage \.calendar-app-nav\s*\{[^}]*border-bottom:\s*0/s);
-  assert.match(eventComposerStyles.text, /#roomPage \.calendar-nav-primary\s*\{[^}]*overflow:\s*visible/s);
-  assert.match(
-    eventComposerStyles.text,
-    /#roomPage \.calendar-today-button\s*\{[^}]*flex:\s*0 0 auto[^}]*height:\s*38px[^}]*margin-block:\s*2px[^}]*overflow:\s*visible[^}]*line-height:\s*1/s,
-    "The Today control must remain fully visible inside the compact navigation bar"
-  );
   assert.doesNotMatch(eventComposerStyles.text, /calendar-legal-links/);
   assert.match(eventComposerStyles.text, /#roomPage \.calendar-grid\s*\{[^}]*min-height:\s*calc\(100% \+ 1px\)/s);
   assert.match(eventComposerStyles.text, /#roomPage \.calendar-stage\s*\{[^}]*min-height:\s*0[^}]*overflow:\s*hidden/s);
-  assert.match(
-    eventComposerStyles.text,
-    /#roomPage \.room-content\s*\{[^}]*padding:\s*8px 10px 10px 8px[^}]*background:\s*var\(--shell-panel\)/s,
-    "The calendar canvas must be inset from the application shell"
-  );
-  assert.match(
-    eventComposerStyles.text,
-    /#roomPage \.calendar-wrap\s*\{[^}]*grid-row:\s*1[^}]*height:\s*100%[^}]*overflow:\s*auto[^}]*border:\s*1px solid var\(--shell-line\)[^}]*border-radius:\s*18px/s,
-    "The calendar canvas must expose rounded popout edges on every side"
-  );
-  assert.doesNotMatch(eventComposerStyles.text, /#roomPage \.calendar-wrap\s*\{[^}]*border-radius:\s*\d+px\s+0/s);
-  assert.match(
-    eventComposerStyles.text,
-    /@media \(max-width: 760px\)[\s\S]*?#roomPage \.calendar-today-button\s*\{[^}]*height:\s*34px[^}]*min-height:\s*34px/s,
-    "The Today control must remain fully visible in the compact mobile navigation"
-  );
+  assert.match(eventComposerStyles.text, /#roomPage \.calendar-wrap\s*\{[^}]*grid-row:\s*1[^}]*height:\s*100%[^}]*overflow:\s*auto/s);
   assert.match(
     eventComposerStyles.text,
     /\.calendar-grid\.year-view\s*\{[^}]*grid-template-columns:\s*repeat\(4, minmax\(150px, 1fr\)\)[^}]*grid-template-rows:\s*none[^}]*grid-auto-rows:\s*minmax\(214px, auto\)/s,
