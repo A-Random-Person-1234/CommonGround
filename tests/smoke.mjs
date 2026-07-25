@@ -250,7 +250,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-composer-clean-header"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-composer-title-top"/);
   assert.match(home.text, /src="\/app\.js\?v=20260725-command-composer"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260725-command-composer"/);
@@ -304,6 +304,12 @@ try {
   assert.doesNotMatch(eventModalMarkup, /<form[^>]*id="eventForm"[^>]*method="dialog"/);
   assert.match(eventModalMarkup, /<h2 class="sr-only" id="eventComposerTitle">Create a group event<\/h2>/);
   assert.doesNotMatch(eventModalMarkup, /composer-handle/, "The event composer must not show the decorative menu lines");
+  assert.doesNotMatch(eventModalMarkup, /event-composer-top/, "The title must not be pushed down by an empty top row");
+  assert.match(
+    eventModalMarkup,
+    /<header class="composer-heading-section">\s*<button class="icon-button composer-close" id="cancelEventButton"[\s\S]*?<\/button>\s*<input class="composer-title" id="eventTitleInput"/,
+    "The close button must overlay the heading instead of occupying a separate row"
+  );
   assert.match(eventModalMarkup, /<section class="composer-section composer-schedule-section" aria-label="Date and time">/);
   assert.match(eventModalMarkup, /<section class="composer-section composer-meta-section" aria-label="Event options">/);
   assert.match(eventModalMarkup, /id="eventStartInput" type="hidden"/);
@@ -1742,7 +1748,16 @@ try {
     /#eventModal \.composer-title\s*\{[^}]*border: 0[^}]*background: transparent[^}]*font-size: 26px[^}]*font-weight: 600/s,
     "The title must remain a large, seamless input"
   );
-  assert.match(eventComposerStyles.text, /#eventModal \.composer-heading-section\s*\{[^}]*display: grid[^}]*gap: 4px[^}]*min-width: 0/s);
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-heading-section\s*\{[^}]*position: relative[^}]*display: grid[^}]*min-height: 36px[^}]*gap: 0[^}]*min-width: 0/s,
+    "The title row must begin at the top of the composer"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-close\s*\{[^}]*position: absolute[^}]*top: 0[^}]*right: 0[^}]*z-index: 2/s,
+    "The close button must not reserve vertical space above the title"
+  );
   assert.match(
     eventComposerStyles.text,
     /#eventModal \.composer-schedule-section,\s*#eventModal \.composer-field-row\s*\{[^}]*grid-template-columns: 40px minmax\(0, 1fr\)[^}]*gap: 0[^}]*align-items: center/s,

@@ -8234,17 +8234,18 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #eventModal .composer-heading-section {
+  position: relative;
   display: grid;
-  gap: 4px;
+  min-height: 36px;
+  gap: 0;
   min-width: 0;
 }
 
-#eventModal .event-composer-top {
-  min-height: 28px;
-  margin: 0;
-}
-
 #eventModal .composer-close {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 2;
   width: 28px;
   min-width: 28px;
   height: 28px;
@@ -8261,7 +8262,7 @@ button.identity-name-button:not(:disabled):active,
 #eventModal .composer-title {
   width: 100%;
   min-height: 36px;
-  padding: 0;
+  padding: 0 40px 0 0;
   border: 0;
   border-radius: 0;
   outline: 0;
@@ -9131,11 +9132,7 @@ button.identity-name-button:not(:disabled):active,
   }
 
   #eventModal .composer-heading-section {
-    gap: 4px;
-  }
-
-  #eventModal .event-composer-top {
-    min-height: 28px;
+    gap: 0;
   }
 
   #eventModal .composer-title {
@@ -9206,7 +9203,6 @@ button.identity-name-button:not(:disabled):active,
     overflow: visible;
   }
 
-  #eventModal .event-composer-top,
   #eventModal .composer-title {
     min-height: 24px;
   }
