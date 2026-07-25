@@ -248,7 +248,7 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-slot-time"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260725-composer-type"/);
   assert.match(home.text, /src="\/app\.js\?v=20260724-room-card"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
@@ -856,6 +856,8 @@ try {
   );
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
   assert.match(eventComposerStyles.text, /#syncSettingsCard\s*\{[^}]*display:\s*none/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.event-composer\s*\{[^}]*font-family:\s*"Avenir Next", "Segoe UI Variable", Inter/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.composer-time-grid input\s*\{[^}]*font-size:\s*15px[^}]*font-weight:\s*650[^}]*font-variant-numeric:\s*tabular-nums/s);
   assert.match(
     eventComposerScript.text,
     /function formatRange\(\{ includeYear = false \} = \{\}\)[\s\S]*?typeof rangeFormatter\.formatRange === "function"[\s\S]*?rangeFormatter\.formatRange\(start, end\)[\s\S]*?sameMonth[\s\S]*?sameYear/,
