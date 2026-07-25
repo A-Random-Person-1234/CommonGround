@@ -355,6 +355,42 @@ function commandHumanRange(start, end) {
   return `${commandHumanDate(start)} · ${commandHumanTime(start)}–${commandHumanTime(end)}`;
 }
 
+function commandMinuteLabel(minuteValue) {
+  const minute = Math.max(0, Math.min(24 * 60, Number(minuteValue || 0)));
+  if (minute === 24 * 60) return "24:00";
+  return `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+}
+
+function commandAvailabilityScopeLabel(result) {
+  const rangeLabels = {
+    default_current_week: "Current week",
+    current_week: "Current week",
+    next_week: "Next week",
+    current_month: "This month",
+    next_month: "Next month",
+    named_month: "Selected month",
+    weekend: "Weekend"
+  };
+  const parts = [];
+  const rangeLabel = rangeLabels[result.rangeKind];
+  if (rangeLabel) {
+    parts.push(rangeLabel);
+  } else if (result.rangeStart && result.rangeEnd) {
+    const finalMoment = new Date(new Date(result.rangeEnd).getTime() - 1);
+    const startLabel = commandHumanDate(result.rangeStart);
+    const endLabel = commandHumanDate(finalMoment);
+    parts.push(startLabel === endLabel ? startLabel : `${startLabel} – ${endLabel}`);
+  }
+  const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  if (result.allowedWeekdays?.length) {
+    parts.push(result.allowedWeekdays.map((weekday) => weekdayLabels[weekday]).filter(Boolean).join(" & "));
+  }
+  if (result.earliestMinute !== 8 * 60 || result.latestMinute !== 21 * 60) {
+    parts.push(`${commandMinuteLabel(result.earliestMinute)}–${commandMinuteLabel(result.latestMinute)}`);
+  }
+  return parts.join(" · ");
+}
+
 function commandMissingQuestion(result) {
   const missing = result?.missingFields || [];
   if (result?.ambiguities?.length) return result.ambiguities[0].message;
@@ -708,11 +744,13 @@ function commandAvailabilityRequestFromClarification(result) {
 
 function commandRenderAvailabilityReady(result) {
   const people = commandParticipantNames(result.participantIds).join(", ");
+  const scope = commandAvailabilityScopeLabel(result);
   commandCentreSetPhase("preview", "Availability request ready.");
   commandCentreSetBody(`
     <div class="command-preview-card">
       <h3>Search shared availability</h3>
       <p>${commandEscape(people || "Selected room members")} · ${commandEscape(result.durationMinutes)} minutes</p>
+      ${scope ? `<p>${commandEscape(scope)}</p>` : ""}
       <div class="command-actions">
         <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
         <button class="command-primary-action" type="button" data-command-search-availability>Find times</button>
@@ -742,6 +780,7 @@ async function commandLoadAvailability(result) {
         earliestMinute: result.earliestMinute,
         latestMinute: result.latestMinute,
         timeOfDay: result.timeOfDay,
+        allowedWeekdays: result.allowedWeekdays,
         timezone: commandCentreTimezone(),
         signal: controller.signal
       }
@@ -821,7 +860,7 @@ function commandRenderAvailabilityResults(result, availability) {
         <button class="command-slot ${index === 0 ? "is-selected" : ""}" type="button" role="option" aria-selected="${index === 0}" data-command-option data-command-slot-index="${index}">
           <span class="command-slot-copy">
             <strong>${commandEscape(commandHumanDate(slot.start))}</strong>
-            <span>${commandEscape(commandHumanTime(slot.start))}–${commandEscape(commandHumanTime(slot.end))} · Everyone selected is free</span>
+            <span>${commandEscape(commandHumanTime(slot.start))}–${commandEscape(commandHumanTime(slot.end))} · Shared calendars show this time as free</span>
           </span>
           <span>${showMode ? "Show" : "Select"}</span>
         </button>

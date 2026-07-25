@@ -190,6 +190,9 @@ async function findOverlapAvailability(
         earliestMinute: Number(options.earliestMinute ?? 8 * 60),
         latestMinute: Number(options.latestMinute ?? 21 * 60),
         timeOfDay: options.timeOfDay || null,
+        ...(Array.isArray(options.allowedWeekdays) && options.allowedWeekdays.length
+          ? { allowedWeekdays: options.allowedWeekdays }
+          : {}),
         timezone: options.timezone || commandCentreTimezone()
       }),
       signal: options.signal

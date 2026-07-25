@@ -13,6 +13,10 @@ import {
   calculateAvailableSlots,
   findConflicts
 } from "./command-centre-scheduling.js";
+import {
+  addDateKeyDays,
+  dateKeyInZone
+} from "./command-centre-date-time.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -3637,10 +3641,20 @@ async function collectCommandBusyIntervals(room, participantIds, rangeStart, ran
   };
 }
 
+function commandAvailabilityCalendarDayCount(start, end, timezone) {
+  let dateKey = dateKeyInZone(start, timezone);
+  const finalDateKey = dateKeyInZone(new Date(end.getTime() - 1), timezone);
+  for (let count = 1; count <= 32; count += 1) {
+    if (dateKey === finalDateKey) return count;
+    dateKey = addDateKeyDays(dateKey, 1);
+  }
+  return 33;
+}
+
 function validateCommandAvailabilityInput(room, participant, body = {}) {
   const timezone = normalizeTimezone(body.timezone || "UTC");
   const { start, end } = validateFreeBusyRange(body.rangeStart, body.rangeEnd);
-  if (end.getTime() - start.getTime() > 31 * 24 * 60 * 60 * 1000) {
+  if (commandAvailabilityCalendarDayCount(start, end, timezone) > 31) {
     throw httpError(400, "Command Centre availability ranges cannot exceed 31 days.");
   }
   const durationMinutes = Number(body.durationMinutes || 60);
@@ -3666,6 +3680,18 @@ function validateCommandAvailabilityInput(room, participant, body = {}) {
   const timeOfDay = ["morning", "afternoon", "evening"].includes(body.timeOfDay)
     ? body.timeOfDay
     : null;
+  let allowedWeekdays = [];
+  if (Object.prototype.hasOwnProperty.call(body, "allowedWeekdays")) {
+    if (
+      !Array.isArray(body.allowedWeekdays) ||
+      !body.allowedWeekdays.length ||
+      body.allowedWeekdays.length > 7 ||
+      body.allowedWeekdays.some((weekday) => !Number.isInteger(weekday) || weekday < 0 || weekday > 6)
+    ) {
+      throw httpError(400, "Choose one or more valid weekdays.");
+    }
+    allowedWeekdays = [...new Set(body.allowedWeekdays)].sort((left, right) => left - right);
+  }
   const participantIds = strictCommandParticipantIds(room, body.participantIds, {
     currentParticipantId: participant.id,
     includeCurrent: false
@@ -3678,6 +3704,7 @@ function validateCommandAvailabilityInput(room, participant, body = {}) {
     earliestMinute,
     latestMinute,
     timeOfDay,
+    allowedWeekdays,
     timezone
   };
 }

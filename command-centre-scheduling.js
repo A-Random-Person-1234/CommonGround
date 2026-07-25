@@ -3,7 +3,8 @@ import {
   commandTimeWindows,
   dateAtMinute,
   dateKeyInZone,
-  parseDateKey
+  parseDateKey,
+  weekdayForDateKey
 } from "./command-centre-date-time.js";
 
 const fifteenMinutesMs = 15 * 60 * 1000;
@@ -111,6 +112,7 @@ export function calculateAvailableSlots({
   earliestMinute = 8 * 60,
   latestMinute = 21 * 60,
   timeOfDay = null,
+  allowedWeekdays = [],
   busyIntervals = [],
   limit = 5,
   includeEveryCandidate = false
@@ -132,6 +134,13 @@ export function calculateAvailableSlots({
   if (allowedEndMinute <= allowedStartMinute) {
     throw new Error("The latest time must be after the earliest time.");
   }
+  const normalizedAllowedWeekdays = [...new Set(
+    (Array.isArray(allowedWeekdays) ? allowedWeekdays : []).map(Number)
+  )].sort((left, right) => left - right);
+  if (normalizedAllowedWeekdays.some((weekday) => !Number.isInteger(weekday) || weekday < 0 || weekday > 6)) {
+    throw new Error("Choose valid weekdays for the availability search.");
+  }
+  const allowedWeekdaySet = new Set(normalizedAllowedWeekdays);
 
   const mergedBusy = mergeBusyIntervals(busyIntervals, {
     rangeStart: rangeStartDate,
@@ -144,30 +153,32 @@ export function calculateAvailableSlots({
 
   for (let guard = 0; guard < 400; guard += 1) {
     if (!parseDateKey(dateKey) || dateKey > finalDateKey) break;
-    const window = dailyWindow(dateKey, timezone, allowedStartMinute, allowedEndMinute);
-    const windowStartMs = Math.max(window.start.getTime(), rangeStartDate.getTime());
-    const windowEndMs = Math.min(window.end.getTime(), rangeEndDate.getTime());
-    if (windowEndMs > windowStartMs) {
-      const dayFree = subtractBusyIntervals(
-        new Date(windowStartMs),
-        new Date(windowEndMs),
-        mergedBusy
-      );
-      for (const interval of dayFree) {
-        const freeStartMs = new Date(interval.start).getTime();
-        const freeEndMs = new Date(interval.end).getTime();
-        if (freeEndMs - freeStartMs < duration * 60 * 1000) continue;
-        freeIntervals.push(interval);
-        let candidateStartMs = ceilToSnap(freeStartMs);
-        while (candidateStartMs + duration * 60 * 1000 <= freeEndMs) {
-          slots.push({
-            start: new Date(candidateStartMs).toISOString(),
-            end: new Date(candidateStartMs + duration * 60 * 1000).toISOString(),
-            durationMinutes: duration,
-            dateKey
-          });
-          if (!includeEveryCandidate) break;
-          candidateStartMs += 30 * 60 * 1000;
+    if (!allowedWeekdaySet.size || allowedWeekdaySet.has(weekdayForDateKey(dateKey))) {
+      const window = dailyWindow(dateKey, timezone, allowedStartMinute, allowedEndMinute);
+      const windowStartMs = Math.max(window.start.getTime(), rangeStartDate.getTime());
+      const windowEndMs = Math.min(window.end.getTime(), rangeEndDate.getTime());
+      if (windowEndMs > windowStartMs) {
+        const dayFree = subtractBusyIntervals(
+          new Date(windowStartMs),
+          new Date(windowEndMs),
+          mergedBusy
+        );
+        for (const interval of dayFree) {
+          const freeStartMs = new Date(interval.start).getTime();
+          const freeEndMs = new Date(interval.end).getTime();
+          if (freeEndMs - freeStartMs < duration * 60 * 1000) continue;
+          freeIntervals.push(interval);
+          let candidateStartMs = ceilToSnap(freeStartMs);
+          while (candidateStartMs + duration * 60 * 1000 <= freeEndMs) {
+            slots.push({
+              start: new Date(candidateStartMs).toISOString(),
+              end: new Date(candidateStartMs + duration * 60 * 1000).toISOString(),
+              durationMinutes: duration,
+              dateKey
+            });
+            if (!includeEveryCandidate) break;
+            candidateStartMs += 30 * 60 * 1000;
+          }
         }
       }
     }
@@ -180,6 +191,7 @@ export function calculateAvailableSlots({
     freeIntervals,
     durationMinutes: duration,
     timeOfDay,
+    allowedWeekdays: normalizedAllowedWeekdays,
     rangeStart: rangeStartDate.toISOString(),
     rangeEnd: rangeEndDate.toISOString()
   };

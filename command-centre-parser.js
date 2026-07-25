@@ -14,6 +14,16 @@ import { matchCommandViewKeyword } from "./public/command-centre-predictor.js";
 
 const intentHelp = "CommonGround can currently create events, find shared free time, show availability, move events and navigate the calendar. It can also open settings, connect Google Calendar and update a valid room code.";
 
+const weekdayAliasGroups = Object.freeze([
+  Object.freeze({ weekday: 0, aliases: Object.freeze(["sun", "sunday", "sundays"]) }),
+  Object.freeze({ weekday: 1, aliases: Object.freeze(["mon", "monday", "mondays"]) }),
+  Object.freeze({ weekday: 2, aliases: Object.freeze(["tue", "tues", "tuesday", "tuesdays"]) }),
+  Object.freeze({ weekday: 3, aliases: Object.freeze(["wed", "weds", "wednesday", "wednesdays"]) }),
+  Object.freeze({ weekday: 4, aliases: Object.freeze(["thu", "thur", "thurs", "thursday", "thursdays"]) }),
+  Object.freeze({ weekday: 5, aliases: Object.freeze(["fri", "friday", "fridays"]) }),
+  Object.freeze({ weekday: 6, aliases: Object.freeze(["sat", "saturday", "saturdays"]) })
+]);
+
 export function normaliseCommand(value) {
   return String(value || "")
     .normalize("NFKC")
@@ -64,9 +74,37 @@ function participantAliases(member) {
   return [...aliases].filter(Boolean);
 }
 
+function weekdayAliasPattern(group) {
+  return group.aliases.map(escapeRegExp).join("|");
+}
+
+function requestedAvailabilityWeekdays(command) {
+  const text = normaliseMatch(command);
+  const requested = new Set();
+  if (/\bweekdays\b/.test(text)) [1, 2, 3, 4, 5].forEach((weekday) => requested.add(weekday));
+  if (/\bweekends\b/.test(text)) [0, 6].forEach((weekday) => requested.add(weekday));
+  for (const group of weekdayAliasGroups) {
+    if (new RegExp(`\\b(?:${weekdayAliasPattern(group)})\\b`).test(text)) {
+      requested.add(group.weekday);
+    }
+  }
+  return [...requested].sort((left, right) => left - right);
+}
+
+function recurringAvailabilityWeekdaysRequested(text, allowedWeekdays) {
+  if (allowedWeekdays.length > 1) return true;
+  if (/\b(?:weekdays|weekends)\b/.test(text)) return true;
+  if (!allowedWeekdays.length) return false;
+  return /\b(?:any|every)\b/.test(text) ||
+    weekdayAliasGroups.some((group) => (
+      allowedWeekdays.includes(group.weekday) &&
+      group.aliases.some((alias) => alias.endsWith("s") && new RegExp(`\\b${escapeRegExp(alias)}\\b`).test(text))
+    ));
+}
+
 export function resolveParticipants(command, members = [], currentParticipantId = null) {
   const text = normaliseMatch(command);
-  const allRequested = /\b(everyone|whole room|everybody)\b/.test(text);
+  const allRequested = /\b(?:everyone(?:\s+in\s+(?:the\s+)?room)?|everybody|whole room|all(?:\s+room)?\s+members)\b/.test(text);
   const meRequested = /\b(me|myself)\b/.test(text);
   const resolvedIds = new Set();
   const ambiguities = [];
@@ -104,10 +142,26 @@ export function resolveParticipants(command, members = [], currentParticipantId 
     });
   }
 
+  if (allRequested && /\b(?:except|excluding|but not)\b/.test(text)) {
+    ambiguities.push({
+      type: "participant_exclusion",
+      token: "except",
+      message: "Choose individual room members when excluding someone from an availability search.",
+      options: []
+    });
+  }
+
+  const weekdayBoundary = weekdayAliasGroups
+    .flatMap((group) => group.aliases)
+    .map(escapeRegExp)
+    .join("|");
   const possibleNameMatches = [
-    ...text.matchAll(/\b(?:with|for)\s+([a-z][a-z0-9 ]{1,80}?)(?=\s+(?:today|tomorrow|on|this|next|at|from|for|after|before|morning|afternoon|evening|weekend|week)\b|$)/g)
+    ...text.matchAll(new RegExp(
+      `\\b(?:with|for)\\s+([a-z][a-z0-9 ]{1,80}?)(?=\\s+(?:today|tomorrow|on|this|next|at|from|for|after|before|any|every|morning|afternoon|evening|weekend|week|month|${weekdayBoundary})\\b|$)`,
+      "g"
+    ))
   ];
-  for (const match of possibleNameMatches) {
+  for (const match of allRequested ? [] : possibleNameMatches) {
     const possibleNames = match[1]
       .split(/\s+and\s+|,\s*/)
       .map((entry) => entry.replace(/\b(me|myself)\b/g, "").trim())
@@ -204,13 +258,13 @@ export function parseTime(command) {
 }
 
 function explicitDayDate(text, referenceDateKey) {
-  for (let weekday = 0; weekday < weekdayNames.length; weekday += 1) {
-    const name = weekdayNames[weekday];
-    if (new RegExp(`\\bnext\\s+${name}\\b`).test(text)) {
-      return nextWeekdayDateKey(referenceDateKey, weekday, { includeToday: false });
+  for (const group of weekdayAliasGroups) {
+    const pattern = weekdayAliasPattern(group);
+    if (new RegExp(`\\bnext\\s+(?:${pattern})\\b`).test(text)) {
+      return nextWeekdayDateKey(referenceDateKey, group.weekday, { includeToday: false });
     }
-    if (new RegExp(`\\b(?:on\\s+)?${name}\\b`).test(text)) {
-      return nextWeekdayDateKey(referenceDateKey, weekday, { includeToday: true });
+    if (new RegExp(`\\b(?:on\\s+)?(?:${pattern})\\b`).test(text)) {
+      return nextWeekdayDateKey(referenceDateKey, group.weekday, { includeToday: true });
     }
   }
   return null;
@@ -412,44 +466,112 @@ function monthDateParts(text, referenceDateKey) {
   return explicitMonthDate(text, referenceDateKey);
 }
 
-function dateRangeKeys(command, referenceDateKey) {
+function firstOfRelativeMonthDateKey(referenceDateKey, monthOffset = 0) {
+  const year = Number(referenceDateKey.slice(0, 4));
+  const month = Number(referenceDateKey.slice(5, 7));
+  const date = new Date(Date.UTC(year, month - 1 + Number(monthOffset || 0), 1));
+  return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, "0")}-01`;
+}
+
+function endOfMonthRangeDateKey(monthStartKey) {
+  return firstOfRelativeMonthDateKey(monthStartKey, 1);
+}
+
+function currentWeekAvailabilityKeys(referenceDateKey) {
+  return {
+    rangeStartKey: referenceDateKey,
+    rangeEndKey: addDateKeyDays(startOfIsoWeekDateKey(referenceDateKey), 7)
+  };
+}
+
+function dateRangeKeys(command, referenceDateKey, { availability = false } = {}) {
   const text = normaliseMatch(command);
+  const allowedWeekdays = availability ? requestedAvailabilityWeekdays(text) : [];
+  const recurringWeekdays = availability &&
+    recurringAvailabilityWeekdaysRequested(text, allowedWeekdays);
+  const parsedMonthDate = monthDateParts(text, referenceDateKey);
   let dateKey = null;
   let rangeStartKey = null;
   let rangeEndKey = null;
   let precision = null;
   let invalidDate = null;
+  let rangeKind = null;
 
   if (/\btomorrow\b/.test(text)) {
     dateKey = addDateKeyDays(referenceDateKey, 1);
     precision = "day";
+    rangeKind = "explicit_day";
   } else if (/\btoday\b/.test(text)) {
     dateKey = referenceDateKey;
     precision = "day";
+    rangeKind = "explicit_day";
   } else if (/\bthis weekend\b/.test(text)) {
     const monday = startOfIsoWeekDateKey(referenceDateKey);
     rangeStartKey = addDateKeyDays(monday, 5);
     if (rangeStartKey < referenceDateKey) rangeStartKey = addDateKeyDays(rangeStartKey, 7);
     rangeEndKey = addDateKeyDays(rangeStartKey, 2);
     precision = "range";
+    rangeKind = "weekend";
+  } else if (/\b(?:this|current) week\b/.test(text)) {
+    ({ rangeStartKey, rangeEndKey } = currentWeekAvailabilityKeys(referenceDateKey));
+    precision = "range";
+    rangeKind = "current_week";
   } else if (/\bnext week\b/.test(text)) {
     rangeStartKey = addDateKeyDays(startOfIsoWeekDateKey(referenceDateKey), 7);
     rangeEndKey = addDateKeyDays(rangeStartKey, 7);
     precision = "range";
+    rangeKind = "next_week";
+  } else if (availability && /\b(?:this|current) month\b/.test(text)) {
+    rangeStartKey = referenceDateKey;
+    rangeEndKey = firstOfRelativeMonthDateKey(referenceDateKey, 1);
+    precision = "range";
+    rangeKind = "current_month";
+  } else if (availability && /\bnext month\b/.test(text)) {
+    rangeStartKey = firstOfRelativeMonthDateKey(referenceDateKey, 1);
+    rangeEndKey = firstOfRelativeMonthDateKey(referenceDateKey, 2);
+    precision = "range";
+    rangeKind = "next_month";
+  } else if (
+    availability &&
+    !parsedMonthDate.matched &&
+    monthNames.some((name) => new RegExp(`\\b${name}\\b`).test(text))
+  ) {
+    rangeStartKey = explicitMonthNavigationDate(text, referenceDateKey);
+    rangeEndKey = rangeStartKey ? endOfMonthRangeDateKey(rangeStartKey) : null;
+    if (
+      rangeStartKey &&
+      rangeStartKey.slice(0, 7) === referenceDateKey.slice(0, 7) &&
+      rangeStartKey < referenceDateKey
+    ) {
+      rangeStartKey = referenceDateKey;
+    }
+    precision = rangeStartKey ? "range" : null;
+    rangeKind = rangeStartKey ? "named_month" : null;
+  } else if (recurringWeekdays) {
+    ({ rangeStartKey, rangeEndKey } = currentWeekAvailabilityKeys(referenceDateKey));
+    precision = "range";
+    rangeKind = "default_current_week";
   } else {
-    const monthDate = monthDateParts(text, referenceDateKey);
-    if (monthDate.matched) {
-      dateKey = monthDate.dateKey;
-      invalidDate = monthDate.invalidDate;
+    if (parsedMonthDate.matched) {
+      dateKey = parsedMonthDate.dateKey;
+      invalidDate = parsedMonthDate.invalidDate;
+      precision = dateKey ? "day" : null;
+      rangeKind = dateKey ? "explicit_day" : null;
     } else {
       dateKey = explicitDayDate(text, referenceDateKey);
+      precision = dateKey ? "day" : null;
+      rangeKind = dateKey ? "explicit_day" : null;
     }
-    precision = dateKey ? "day" : null;
   }
 
   if (dateKey) {
     rangeStartKey = dateKey;
     rangeEndKey = addDateKeyDays(dateKey, 1);
+  }
+  if (availability && !dateKey && !rangeStartKey && !invalidDate) {
+    ({ rangeStartKey, rangeEndKey } = currentWeekAvailabilityKeys(referenceDateKey));
+    precision = "range";
+    rangeKind = "default_current_week";
   }
 
   return {
@@ -457,24 +579,39 @@ function dateRangeKeys(command, referenceDateKey) {
     rangeStartKey,
     rangeEndKey,
     precision,
-    invalidDate
+    invalidDate,
+    rangeKind,
+    allowedWeekdays
   };
 }
 
 export function parseDateRange(command, {
   now = new Date(),
-  timezone = "UTC"
+  timezone = "UTC",
+  availability = false
 } = {}) {
   const referenceDateKey = dateKeyInZone(now, timezone);
-  const keys = dateRangeKeys(command, referenceDateKey);
+  const keys = dateRangeKeys(command, referenceDateKey, { availability });
   const safeRange = parseInvalidDateSafe(keys, timezone);
+  let rangeStart = safeRange.rangeStart;
+  if (
+    availability &&
+    rangeStart &&
+    safeRange.rangeEnd &&
+    new Date(rangeStart) < now &&
+    now < new Date(safeRange.rangeEnd)
+  ) {
+    rangeStart = now.toISOString();
+  }
   return {
     dateKey: keys.dateKey,
-    rangeStart: safeRange.rangeStart,
+    rangeStart,
     rangeEnd: safeRange.rangeEnd,
     precision: keys.precision,
     invalidDate: keys.invalidDate,
-    referenceDateKey
+    referenceDateKey,
+    rangeKind: keys.rangeKind,
+    allowedWeekdays: keys.allowedWeekdays
   };
 }
 
@@ -536,6 +673,11 @@ function afterTimeMinute(text) {
   return match ? clockMatchToMinute(match[1], match[2], match[3]) : null;
 }
 
+function beforeTimeMinute(text) {
+  const match = text.match(/\bbefore\s+(\d{1,2})(?::([0-5]\d))?\s*(am|pm)?\b/);
+  return match ? clockMatchToMinute(match[1], match[2], match[3], { preferAfternoon: false }) : null;
+}
+
 export function parseCommand(command, {
   now = new Date(),
   timezone = "UTC",
@@ -550,7 +692,12 @@ export function parseCommand(command, {
 
   const intent = detectIntent(text);
   const participants = resolveParticipants(original, members, currentParticipantId);
-  const date = parseDateRange(original, { now, timezone });
+  const availabilityIntent = intent === "find_time" || intent === "show_availability";
+  const date = parseDateRange(original, {
+    now,
+    timezone,
+    availability: availabilityIntent
+  });
   const time = parseTime(original);
   const parsedDuration = parseDuration(original);
   const durationMinutes = parsedDuration || (
@@ -625,14 +772,34 @@ export function parseCommand(command, {
     if (!date.rangeStart || !date.rangeEnd) base.missingFields.push("date_range");
     if (!participants.participantIds.length && !participants.allRequested) base.missingFields.push("participants");
     const window = commandTimeWindows[time.timeOfDay] || null;
+    const afterMinute = afterTimeMinute(text);
+    const beforeMinute = beforeTimeMinute(text);
+    const earliestMinute = Math.max(
+      window?.startMinute ?? 8 * 60,
+      afterMinute ?? 0
+    );
+    const latestMinute = Math.min(
+      window?.endMinute ?? 21 * 60,
+      beforeMinute ?? 24 * 60
+    );
+    if (latestMinute <= earliestMinute) {
+      base.ambiguities.push({
+        type: "invalid_time_window",
+        token: "time window",
+        message: "Choose a daily time window with an end after its start.",
+        options: []
+      });
+    }
     return {
       ...base,
       rangeStart: date.rangeStart,
       rangeEnd: date.rangeEnd,
       durationMinutes: resolvedDuration,
       timeOfDay: time.timeOfDay,
-      earliestMinute: window?.startMinute ?? afterTimeMinute(text) ?? 8 * 60,
-      latestMinute: window?.endMinute ?? 21 * 60
+      earliestMinute,
+      latestMinute,
+      allowedWeekdays: date.allowedWeekdays,
+      rangeKind: date.rangeKind
     };
   }
 

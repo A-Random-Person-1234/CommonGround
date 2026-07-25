@@ -156,6 +156,47 @@ try {
     }
   }
 
+  const everyoneNextWeek = await host.request(
+    `/api/rooms/${roomCode}/command-centre/parse`,
+    {
+      method: "POST",
+      body: {
+        command: "Find an hour for everyone next week",
+        timezone: "Europe/London"
+      }
+    }
+  );
+  assert.equal(everyoneNextWeek.payload.result.intent, "find_time");
+  assert.equal(everyoneNextWeek.payload.result.durationMinutes, 60);
+  assert.equal(everyoneNextWeek.payload.result.rangeKind, "next_week");
+  assert.deepEqual(
+    [...everyoneNextWeek.payload.result.participantIds].sort(),
+    expectedInviteeIds
+  );
+  assert.deepEqual(everyoneNextWeek.payload.result.ambiguities, []);
+  assert.deepEqual(everyoneNextWeek.payload.result.unmatchedParticipants, []);
+
+  const everyoneDefaultRange = await host.request(
+    `/api/rooms/${roomCode}/command-centre/parse`,
+    {
+      method: "POST",
+      body: {
+        command: "Find an hour for everyone",
+        timezone: "Europe/London"
+      }
+    }
+  );
+  assert.equal(everyoneDefaultRange.payload.result.intent, "find_time");
+  assert.equal(everyoneDefaultRange.payload.result.rangeKind, "default_current_week");
+  assert.ok(everyoneDefaultRange.payload.result.rangeStart);
+  assert.ok(everyoneDefaultRange.payload.result.rangeEnd);
+  assert.deepEqual(
+    [...everyoneDefaultRange.payload.result.participantIds].sort(),
+    expectedInviteeIds
+  );
+  assert.deepEqual(everyoneDefaultRange.payload.result.ambiguities, []);
+  assert.deepEqual(everyoneDefaultRange.payload.result.unmatchedParticipants, []);
+
   const invalidDateParse = await host.request(`/api/rooms/${roomCode}/command-centre/parse`, {
     method: "POST",
     body: { command: "Go to 31 February 2030", timezone: "Europe/London" }
@@ -264,6 +305,60 @@ try {
   assert.ok(!availabilityText.includes("Existing commitment"));
   assert.ok(!availabilityText.includes("Private"));
   assert.ok(!availabilityText.includes("Must not leak"));
+
+  const weekdayAvailability = await host.request(
+    `/api/rooms/${roomCode}/command-centre/availability`,
+    {
+      method: "POST",
+      body: {
+        intent: "find_time",
+        participantIds: [hostId, guestId],
+        rangeStart: "2030-07-14T23:00:00.000Z",
+        rangeEnd: "2030-07-19T23:00:00.000Z",
+        durationMinutes: 30,
+        earliestMinute: 8 * 60,
+        latestMinute: 10 * 60,
+        allowedWeekdays: [2, 4],
+        timezone: "Europe/London"
+      }
+    }
+  );
+  assert.equal(weekdayAvailability.payload.availability.complete, true);
+  assert.deepEqual(weekdayAvailability.payload.availability.allowedWeekdays, [2, 4]);
+  assert.deepEqual(
+    weekdayAvailability.payload.availability.slots.map((slot) => slot.dateKey),
+    ["2030-07-16", "2030-07-18"],
+    "Weekday filtering must run before the three-result cap so Thursday is retained"
+  );
+  assert.deepEqual(
+    weekdayAvailability.payload.availability.slots.map((slot) => (
+      new Intl.DateTimeFormat("en-US", {
+        timeZone: "Europe/London",
+        weekday: "short"
+      }).format(new Date(slot.start))
+    )),
+    ["Tue", "Thu"]
+  );
+
+  for (const allowedWeekdays of [[], [7], [2.5]]) {
+    const invalidWeekdayAvailability = await host.request(
+      `/api/rooms/${roomCode}/command-centre/availability`,
+      {
+        method: "POST",
+        expected: 400,
+        body: {
+          intent: "find_time",
+          participantIds: [hostId, guestId],
+          rangeStart: "2030-07-14T23:00:00.000Z",
+          rangeEnd: "2030-07-19T23:00:00.000Z",
+          durationMinutes: 30,
+          allowedWeekdays,
+          timezone: "Europe/London"
+        }
+      }
+    );
+    assert.match(invalidWeekdayAvailability.payload.error, /valid weekdays/i);
+  }
 
   const invalidAvailabilityParticipant = await host.request(
     `/api/rooms/${roomCode}/command-centre/availability`,

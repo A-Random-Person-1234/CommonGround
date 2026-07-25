@@ -11,6 +11,8 @@ const databasePath = path.join(runtimeDir, "commonground.db");
 const port = 44000 + Math.floor(Math.random() * 1000);
 const baseUrl = `http://127.0.0.1:${port}`;
 const serverSource = readFileSync(path.join(rootDir, "server.js"), "utf8");
+const commandParserSource = readFileSync(path.join(rootDir, "command-centre-parser.js"), "utf8");
+const commandSchedulingSource = readFileSync(path.join(rootDir, "command-centre-scheduling.js"), "utf8");
 const expectedParticipantPalette = [
   { name: "Bordeaux", value: "#743F45" },
   { name: "Merlot", value: "#6C4652" },
@@ -250,8 +252,8 @@ try {
   assert.match(home.text, /CommonGround/);
   assert.match(home.text, /href="\/styles\.css\?v=20260725-intent-router"/);
   assert.match(home.text, /src="\/app\.js\?v=20260725-intent-router"/);
-  assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-intent-router"/);
-  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-predictive-commands"/);
+  assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260725-flexible-availability"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(home.text, /<meta name="theme-color" content="#101c31" \/>/);
@@ -537,6 +539,56 @@ try {
     commandActionsScript.text,
     /slots: intent === "find_time"[\s\S]*?\.slice\(0, 3\)/,
     "Find-time results must be capped to the top three options"
+  );
+  assert.match(
+    commandParserSource,
+    /export function resolveParticipants\([\s\S]*?const allRequested =[\s\S]*?everyone[\s\S]*?everybody[\s\S]*?whole room[\s\S]*?all(?:\\s\+room)?[\s\S]*?members[\s\S]*?if \(allRequested\) members\.forEach/,
+    "Collective availability language must resolve to every member in the active room"
+  );
+  assert.match(
+    commandParserSource,
+    /function currentWeekAvailabilityKeys\([\s\S]*?rangeStartKey: referenceDateKey,[\s\S]*?rangeEndKey: addDateKeyDays\(startOfIsoWeekDateKey\(referenceDateKey\), 7\)[\s\S]*?if \(availability && !dateKey && !rangeStartKey && !invalidDate\)[\s\S]*?currentWeekAvailabilityKeys\(referenceDateKey\)[\s\S]*?rangeKind = "default_current_week"/,
+    "Availability requests without a date scope must default to the remainder of the current week"
+  );
+  assert.match(
+    commandParserSource,
+    /else if \(\s*availability &&[\s\S]{0,180}this\|current[\s\S]{0,100}month[\s\S]{0,500}?rangeStartKey = referenceDateKey;[\s\S]{0,240}?rangeEndKey = firstOfRelativeMonthDateKey\(referenceDateKey, 1\);[\s\S]{0,240}?rangeKind = "current_month"/,
+    "Current-month availability requests must span from now through the end of the calendar month"
+  );
+  assert.match(
+    commandParserSource,
+    /function requestedAvailabilityWeekdays\([\s\S]*?weekdayAliasGroups[\s\S]*?return \[\.\.\.requested\]\.sort\([\s\S]*?if \(intent === "find_time" \|\| intent === "show_availability"\)[\s\S]*?allowedWeekdays: date\.allowedWeekdays/,
+    "Availability parsing must expose normalized weekday filters for find-time and show-availability commands"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /async function commandLoadAvailability\(result\)[\s\S]*?findOverlapAvailability\([\s\S]*?allowedWeekdays: result\.allowedWeekdays/,
+    "The Command Centre must forward parsed weekday filters to the availability action"
+  );
+  assert.match(
+    commandActionsScript.text,
+    /\.\.\.\(Array\.isArray\(options\.allowedWeekdays\) && options\.allowedWeekdays\.length[\s\S]*?\? \{ allowedWeekdays: options\.allowedWeekdays \}[\s\S]*?: \{\}\)/,
+    "The availability action must serialize weekday filters only when at least one is selected"
+  );
+  assert.match(
+    serverSource,
+    /function validateCommandAvailabilityInput\([\s\S]*?let allowedWeekdays = \[\];[\s\S]*?Object\.prototype\.hasOwnProperty\.call\(body, "allowedWeekdays"\)[\s\S]*?!Array\.isArray\(body\.allowedWeekdays\)[\s\S]*?!body\.allowedWeekdays\.length[\s\S]*?body\.allowedWeekdays\.some\(\(weekday\) => !Number\.isInteger\(weekday\) \|\| weekday < 0 \|\| weekday > 6\)[\s\S]*?allowedWeekdays = \[\.\.\.new Set\(body\.allowedWeekdays\)\]\.sort/,
+    "The server must treat weekday filters as optional, but reject present filters unless they are nonempty integers from 0 through 6"
+  );
+  assert.match(
+    serverSource,
+    /function commandAvailabilityCalendarDayCount\([\s\S]*?dateKeyInZone\(start, timezone\)[\s\S]*?dateKeyInZone\(new Date\(end\.getTime\(\) - 1\), timezone\)[\s\S]*?addDateKeyDays\(dateKey, 1\)[\s\S]*?validateCommandAvailabilityInput\([\s\S]*?commandAvailabilityCalendarDayCount\(start, end, timezone\) > 31/,
+    "The server must enforce its availability limit by calendar days in the requested timezone"
+  );
+  assert.match(
+    commandSchedulingSource,
+    /export function calculateAvailableSlots\([\s\S]*?const allowedWeekdaySet = new Set\(normalizedAllowedWeekdays\)[\s\S]*?if \(!allowedWeekdaySet\.size \|\| allowedWeekdaySet\.has\(weekdayForDateKey\(dateKey\)\)\) \{[\s\S]*?slots\.push\(\{[\s\S]*?slots: slots\.slice\(0, Math\.max\(1, Math\.min\(20, Number\(limit \|\| 5\)\)\)\)/,
+    "The scheduler must filter calendar days with weekdayForDateKey before limiting the candidate slots"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /function commandAvailabilityScopeLabel\(result\)[\s\S]*?default_current_week: "Current week"[\s\S]*?current_month: "This month"[\s\S]*?result\.allowedWeekdays\?\.length[\s\S]*?result\.earliestMinute[\s\S]*?return parts\.join\([\s\S]*?function commandRenderAvailabilityReady\(result\)[\s\S]*?const scope = commandAvailabilityScopeLabel\(result\)[\s\S]*?commandEscape\(scope\)/,
+    "The availability preview must display its date, weekday, and daily-time scope"
   );
   assert.match(
     commandCentreScript.text,

@@ -88,6 +88,99 @@ assert.equal(findMatthew.timeOfDay, "afternoon");
 assert.equal(findMatthew.earliestMinute, 12 * 60);
 assert.equal(findMatthew.latestMinute, 17 * 60);
 
+const allRoomParticipantIds = new Set(members.map((member) => member.id));
+for (const alias of [
+  "everyone",
+  "everyone in the room",
+  "everybody",
+  "the whole room",
+  "all room members",
+  "all members"
+]) {
+  const wholeRoom = parseCommand(`Find a time for ${alias}`, options);
+  assert.equal(wholeRoom.intent, "find_time", `${alias} should request shared time`);
+  assert.deepEqual(
+    new Set(wholeRoom.participantIds),
+    allRoomParticipantIds,
+    `${alias} should resolve every room member`
+  );
+  assert.deepEqual(
+    wholeRoom.unmatchedParticipants,
+    [],
+    `${alias} should not be treated as an unmatched participant`
+  );
+  assert.equal(
+    wholeRoom.ambiguities.some((ambiguity) => ambiguity.type === "participant_not_found"),
+    false,
+    `${alias} should not create a participant-not-found ambiguity`
+  );
+}
+
+const everyoneThisWeek = parseCommand("Find a time for everyone", options);
+assert.equal(everyoneThisWeek.rangeKind, "default_current_week");
+assert.equal(everyoneThisWeek.rangeStart, now.toISOString());
+assert.equal(everyoneThisWeek.rangeEnd, "2026-07-26T23:00:00.000Z");
+assert.ok(new Date(everyoneThisWeek.rangeStart) >= now);
+
+const everyoneNextWeek = parseCommand("Find a time for everyone next week", options);
+assert.equal(everyoneNextWeek.rangeKind, "next_week");
+assert.equal(everyoneNextWeek.rangeStart, "2026-07-26T23:00:00.000Z");
+assert.equal(everyoneNextWeek.rangeEnd, "2026-08-02T23:00:00.000Z");
+
+const everyoneThisMonth = parseCommand("Find a time for everyone this month", options);
+assert.equal(everyoneThisMonth.rangeKind, "current_month");
+assert.equal(everyoneThisMonth.rangeStart, now.toISOString());
+assert.equal(everyoneThisMonth.rangeEnd, "2026-07-31T23:00:00.000Z");
+
+const everyoneAfterFive = parseCommand("Find a time for everyone any day after 5pm", options);
+assert.equal(everyoneAfterFive.rangeKind, "default_current_week");
+assert.equal(everyoneAfterFive.earliestMinute, 17 * 60);
+assert.equal(everyoneAfterFive.latestMinute, 21 * 60);
+assert.deepEqual(everyoneAfterFive.allowedWeekdays, []);
+
+for (const command of [
+  "Find a time for everyone Tue/Thu this month",
+  "Find a time for everyone on Tuesdays and Thursdays this month",
+  "Find a time for everyone Tuesdays, Thursdays this month",
+  "Find a time for everyone Tuesdays & Thursdays this month"
+]) {
+  const tuesdayThursday = parseCommand(command, options);
+  assert.equal(tuesdayThursday.intent, "find_time", `${command} should request shared time`);
+  assert.equal(tuesdayThursday.rangeKind, "current_month");
+  assert.deepEqual(
+    tuesdayThursday.allowedWeekdays,
+    [2, 4],
+    `${command} should retain both weekday filters`
+  );
+}
+
+const constrainedEveryone = parseCommand(
+  "Find 30 minutes for everyone next week on weekdays after 5pm",
+  options
+);
+assert.equal(constrainedEveryone.durationMinutes, 30);
+assert.equal(constrainedEveryone.rangeKind, "next_week");
+assert.equal(constrainedEveryone.rangeStart, "2026-07-26T23:00:00.000Z");
+assert.equal(constrainedEveryone.rangeEnd, "2026-08-02T23:00:00.000Z");
+assert.equal(constrainedEveryone.earliestMinute, 17 * 60);
+assert.equal(constrainedEveryone.latestMinute, 21 * 60);
+assert.deepEqual(constrainedEveryone.allowedWeekdays, [1, 2, 3, 4, 5]);
+assert.deepEqual(new Set(constrainedEveryone.participantIds), allRoomParticipantIds);
+
+const alexAnyDay = parseCommand("Find a time for Alex any day", options);
+assert.deepEqual(alexAnyDay.participantIds, ["alex"]);
+assert.deepEqual(alexAnyDay.unmatchedParticipants, []);
+assert.deepEqual(alexAnyDay.ambiguities, []);
+
+const excludedRoomMember = parseCommand(
+  "Find a time for everyone except Sam this week",
+  options
+);
+assert.deepEqual(new Set(excludedRoomMember.participantIds), allRoomParticipantIds);
+assert.deepEqual(excludedRoomMember.unmatchedParticipants, []);
+assert.equal(excludedRoomMember.ambiguities.length, 1);
+assert.equal(excludedRoomMember.ambiguities[0].type, "participant_exclusion");
+
 const weekend = parseCommand("Find 90 minutes for Alex and Sam this weekend", options);
 assert.equal(weekend.intent, "find_time");
 assert.deepEqual(new Set(weekend.participantIds), new Set(["alex", "sam"]));
@@ -363,6 +456,40 @@ const noAvailability = calculateAvailableSlots({
   ]
 });
 assert.deepEqual(noAvailability.slots, []);
+
+const weekdayFilteredBeforeLimit = calculateAvailableSlots({
+  rangeStart: "2026-07-20T07:00:00.000Z",
+  rangeEnd: "2026-07-24T20:00:00.000Z",
+  timezone,
+  durationMinutes: 30,
+  earliestMinute: 8 * 60,
+  latestMinute: 21 * 60,
+  allowedWeekdays: [4],
+  limit: 1
+});
+assert.equal(weekdayFilteredBeforeLimit.slots.length, 1);
+assert.equal(weekdayFilteredBeforeLimit.slots[0].dateKey, "2026-07-23");
+assert.deepEqual(weekdayFilteredBeforeLimit.allowedWeekdays, [4]);
+
+const futureOnlyAvailability = calculateAvailableSlots({
+  rangeStart: "2026-07-20T10:07:00.000Z",
+  rangeEnd: "2026-07-20T20:00:00.000Z",
+  timezone,
+  durationMinutes: 30,
+  earliestMinute: 8 * 60,
+  latestMinute: 21 * 60,
+  allowedWeekdays: [1],
+  limit: 20,
+  includeEveryCandidate: true
+});
+assert.ok(futureOnlyAvailability.slots.length > 0);
+assert.equal(futureOnlyAvailability.slots[0].start, "2026-07-20T10:15:00.000Z");
+assert.equal(
+  futureOnlyAvailability.slots.every(
+    (slot) => new Date(slot.start) >= new Date("2026-07-20T10:07:00.000Z")
+  ),
+  true
+);
 
 assert.equal(findConflicts({
   start: "2026-07-21T09:30:00.000Z",
