@@ -4497,6 +4497,102 @@ function dragSelectionRect() {
   return { left, top, width, height };
 }
 
+function calendarComposerSelectionRect(targetDate, startHour, endHour) {
+  const eventsLayer = calendarGrid.querySelector(".events-layer");
+  if (!eventsLayer || currentView !== "week") return null;
+  const days = currentWeekDays();
+  const dayIndex = days.findIndex((day) => sameDate(day.date, targetDate));
+  if (dayIndex < 0) return null;
+  const rect = eventsLayer.getBoundingClientRect();
+  const dayWidth = rect.width / Math.max(1, days.length);
+  const rowHeight = resolvedCalendarRowHeight();
+  const visibleStart = clampVisibleHour(startHour);
+  const visibleEnd = Math.max(visibleStart + 0.25, clampVisibleHour(endHour));
+  return {
+    left: rect.left + dayWidth * dayIndex + 8,
+    top: rect.top + (visibleStart - calendarStartHour) * rowHeight + 8,
+    width: Math.max(dayWidth - 16, 24),
+    height: Math.max((visibleEnd - visibleStart) * rowHeight - 12, 24)
+  };
+}
+
+function revealCalendarComposerSelection(targetDate, startHour, endHour) {
+  let anchorRect = calendarComposerSelectionRect(targetDate, startHour, endHour);
+  const scrollport = calendarGrid.closest(".calendar-wrap");
+  if (!anchorRect || !scrollport) return anchorRect;
+  const scrollportRect = scrollport.getBoundingClientRect();
+  const safeTop = scrollportRect.top + 88;
+  const safeBottom = scrollportRect.bottom - 32;
+  const anchorBottom = anchorRect.top + anchorRect.height;
+  if (anchorRect.top < safeTop || anchorBottom > safeBottom) {
+    const targetTop = scrollport.scrollTop + anchorRect.top - safeTop;
+    scrollport.scrollTop = Math.max(0, targetTop);
+    anchorRect = calendarComposerSelectionRect(targetDate, startHour, endHour);
+  }
+  return anchorRect;
+}
+
+async function openCalendarEventComposerAt(draft = {}) {
+  if (!currentRoom?.code || eventModal.open) return false;
+  const parsedStart = draft.start ? new Date(draft.start) : null;
+  const parsedEnd = draft.end ? new Date(draft.end) : null;
+  const hasStart = parsedStart && !Number.isNaN(parsedStart.getTime());
+  const hasEnd = parsedEnd && !Number.isNaN(parsedEnd.getTime()) && (!hasStart || parsedEnd > parsedStart);
+  const startMinute = Number(draft.startMinute);
+  const hasStartMinute = Number.isFinite(startMinute) && startMinute >= 0 && startMinute < 24 * 60;
+  const defaultStart = new Date();
+  defaultStart.setMinutes(0, 0, 0);
+  defaultStart.setHours(Math.max(calendarStartHour + 2, defaultStart.getHours() + 1));
+  const targetDate = hasStart
+    ? startOfDay(parsedStart)
+    : (draft.date
+      ? dayStartFromDateKey(draft.date)
+      : (hasStartMinute ? startOfDay(currentFocusDate) : startOfDay(defaultStart)));
+  const defaultStartHour = defaultStart.getHours() + defaultStart.getMinutes() / 60;
+  const startHour = hasStart
+    ? parsedStart.getHours() + parsedStart.getMinutes() / 60
+    : (hasStartMinute ? startMinute / 60 : defaultStartHour);
+  const durationMinutes = Math.max(15, Number(draft.durationMinutes) || 60);
+  const endTimeHour = hasEnd
+    ? parsedEnd.getHours() + parsedEnd.getMinutes() / 60
+    : startHour + durationMinutes / 60;
+  const anchorEndHour = hasEnd && sameDate(parsedEnd, targetDate)
+    ? endTimeHour
+    : Math.min(24, startHour + 1);
+  const allDay = draft.allDay === true;
+  const selectedInvitees = [...new Set([
+    ...defaultInviteeIds(),
+    ...(Array.isArray(draft.inviteeParticipantIds) ? draft.inviteeParticipantIds : [])
+  ].filter(Boolean))];
+
+  const navigationPromise = goToDateInWeek(targetDate);
+  await new Promise((resolve) => window.requestAnimationFrame(resolve));
+  const endDate = hasEnd
+    ? dateKey(allDay ? addDays(parsedEnd, -1) : parsedEnd)
+    : dateKey(addDays(targetDate, allDay ? 0 : Math.floor(endTimeHour / 24)));
+  pendingEventPrefill = {
+    date: dateKey(targetDate),
+    endDate,
+    startTime: formatInputTime(startHour),
+    endTime: formatInputTime(endTimeHour),
+    inviteeParticipantIds: selectedInvitees,
+    title: String(draft.title || "").trim(),
+    location: String(draft.location || "").trim(),
+    description: String(draft.description || "").trim(),
+    allDay
+  };
+  const anchorRect = allDay
+    ? null
+    : revealCalendarComposerSelection(targetDate, startHour, anchorEndHour);
+  openEventModal("create", { anchorRect });
+  void navigationPromise.catch((error) => {
+    calendarStatus.textContent = error.message || "The calendar could not refresh.";
+  });
+  return true;
+}
+
+window.openCalendarEventComposerAt = openCalendarEventComposerAt;
+
 function ensureDragPreview() {
   const eventsLayer = calendarGrid.querySelector(".events-layer");
   if (!eventsLayer || !dragCreateState) return;
@@ -6925,9 +7021,10 @@ function openEventModal(mode = "create", options = {}) {
     if (pendingEventPrefill) {
       eventTitleInput.value = pendingEventPrefill.title || "";
       eventDateInput.value = pendingEventPrefill.date;
-      eventEndDateInput.value = pendingEventPrefill.date;
+      eventEndDateInput.value = pendingEventPrefill.endDate || pendingEventPrefill.date;
       eventStartInput.value = pendingEventPrefill.startTime;
       eventEndInput.value = pendingEventPrefill.endTime;
+      setAllDayMode(pendingEventPrefill.allDay === true);
       eventLocationInput.value = pendingEventPrefill.location || "";
       eventDescriptionInput.value = pendingEventPrefill.description || "";
       renderInviteePicker(pendingEventPrefill.inviteeParticipantIds || defaultInviteeIds(), {
@@ -6988,8 +7085,8 @@ async function saveEvent(event) {
   const date = eventDateInput.value;
   const allDay = Boolean(eventAllDayInput?.checked);
   const start = allDay ? new Date(`${date}T00:00`) : new Date(`${date}T${eventStartInput.value}`);
-  const endDate = allDay ? (eventEndDateInput?.value || date) : date;
-  const end = allDay ? new Date(`${endDate}T00:00`) : new Date(`${date}T${eventEndInput.value}`);
+  const endDate = eventEndDateInput?.value || date;
+  const end = allDay ? new Date(`${endDate}T00:00`) : new Date(`${endDate}T${eventEndInput.value}`);
   if (allDay && !Number.isNaN(end.getTime())) {
     end.setDate(end.getDate() + 1);
   }
