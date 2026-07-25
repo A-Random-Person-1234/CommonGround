@@ -565,6 +565,47 @@ function commandRenderCreatePreview(result, {
   `);
 }
 
+function commandCreateSummary(result) {
+  if (result.start && result.end) return commandHumanRange(result.start, result.end);
+  if (result.dateKey) return commandHumanDate(`${result.dateKey}T12:00`);
+  return "Choose the date and time in the event composer.";
+}
+
+function commandRenderCreateLauncher(result) {
+  commandCentreSetPhase("preview", "Event composer ready.");
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>Create event</h3>
+      <p>${commandEscape(commandCreateSummary(result))}</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-open-create>Open event composer</button>
+      </div>
+    </div>
+  `);
+}
+
+async function commandOpenCreateComposer(result = commandCentreState.parseResult) {
+  if (!result) return;
+  const title = result.missingFields?.includes("title") ? "" : String(result.title || "").trim();
+  closeCommandCentre({ restoreFocus: false, immediate: true });
+  const opened = await window.openCalendarEventComposerAt?.({
+    title,
+    start: result.start,
+    end: result.end,
+    date: result.dateKey,
+    startMinute: result.startMinute,
+    durationMinutes: result.durationMinutes,
+    allDay: result.allDay === true,
+    location: result.location || "",
+    description: result.description || "",
+    inviteeParticipantIds: result.participantIds || []
+  });
+  if (!opened) {
+    calendarStatus.textContent = "The event composer could not be opened. Close any other popup and try again.";
+  }
+}
+
 function commandRenderAvailabilityClarification(result) {
   const question = commandMissingQuestion(result);
   const startDate = commandLocalDateValue(result.rangeStart);
@@ -951,8 +992,7 @@ function commandRenderAvailabilityResults(result, availability) {
 function commandCreateDraftFromSlot(result, slot) {
   const conflictDraft = commandCentreState.conflictDraft;
   if (conflictDraft) {
-    commandCentreState.createTitleSuggestion = "";
-    commandRenderCreatePreview({
+    void commandOpenCreateComposer({
       ...result,
       intent: "create_event",
       title: conflictDraft.title,
@@ -967,14 +1007,13 @@ function commandCreateDraftFromSlot(result, slot) {
     });
     return;
   }
-  commandCentreState.createTitleSuggestion = commandEventTitleSuggestion(result.participantIds);
-  commandRenderCreatePreview({
+  void commandOpenCreateComposer({
     ...result,
     intent: "create_event",
     title: "",
     start: slot.start,
     end: slot.end,
-    missingFields: [],
+    missingFields: ["title"],
     ambiguities: []
   });
 }
@@ -1351,7 +1390,11 @@ function commandContinueParsedResult(result, { submitted = false } = {}) {
   if (result.intent === "create_event") {
     commandCentreState.conflictDraft = null;
     commandPrepareEventTitleSuggestion(result);
-    commandRenderCreatePreview(result);
+    if (submitted) {
+      void commandOpenCreateComposer(result);
+    } else {
+      commandRenderCreateLauncher(result);
+    }
     return;
   }
   if (result.intent === "find_time" || result.intent === "show_availability") {
@@ -1676,6 +1719,10 @@ commandCentreBody?.addEventListener("click", async (event) => {
   }
   if (event.target.closest("[data-command-confirm-create]")) {
     await commandConfirmCreate();
+    return;
+  }
+  if (event.target.closest("[data-command-open-create]")) {
+    await commandOpenCreateComposer();
     return;
   }
   if (event.target.closest("[data-command-confirm-move]")) {
