@@ -9,8 +9,12 @@
   },
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check public/app.js && node --check tests/smoke.mjs",
-    "test": "node tests/smoke.mjs"
+    "check": "node --check server.js && node --check command-centre-date-time.js && node --check command-centre-parser.js && node --check command-centre-scheduling.js && node --check public/app.js && node --check public/command-centre.js && node --check tests/command-centre.mjs && node --check tests/command-centre-integration.mjs && node --check tests/smoke.mjs",
+    "build": "npm run check",
+    "test:command-centre": "node tests/command-centre.mjs",
+    "test:integration": "node tests/command-centre-integration.mjs",
+    "test:smoke": "node tests/smoke.mjs",
+    "test": "npm run test:command-centre && npm run test:integration && npm run test:smoke"
   },
   "license": "UNLICENSED",
   "dependencies": {
