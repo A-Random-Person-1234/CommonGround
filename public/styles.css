@@ -10032,11 +10032,6 @@ button.identity-name-button:not(:disabled):active,
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.34);
 }
 
-#roomPage .sidebar-create-button .sidebar-create-chevron {
-  margin-left: auto;
-  color: var(--shell-muted);
-}
-
 #roomPage .sidebar-room-card {
   display: grid;
   gap: 10px;
