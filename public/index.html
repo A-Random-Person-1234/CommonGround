@@ -24,7 +24,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20260724-appicon-new" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20260724-appicon-new" />
     <link rel="manifest" href="/site.webmanifest?v=20260724-appicon-new" />
-    <link rel="stylesheet" href="/styles.css?v=20260725-no-passive-caret" />
+    <link rel="stylesheet" href="/styles.css?v=20260726-compact-rsvp" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -481,15 +481,17 @@
               </div>
             </form>
 
-            <div class="vote-row">
-              <button class="vote-button" data-response="yes" type="button">Yes</button>
-              <button class="vote-button" data-response="maybe" type="button">Maybe</button>
-              <button class="vote-button" data-response="no" type="button">No</button>
-            </div>
+            <section class="rsvp-control" aria-labelledby="rsvpPrompt">
+              <span class="rsvp-prompt" id="rsvpPrompt">Going?</span>
+              <div class="vote-row" role="group" aria-labelledby="rsvpPrompt">
+                <button class="vote-button" data-response="yes" type="button" aria-pressed="false">Yes</button>
+                <button class="vote-button" data-response="no" type="button" aria-pressed="false">No</button>
+                <button class="vote-button" data-response="maybe" type="button" aria-pressed="false">Maybe</button>
+              </div>
+              <div class="sr-only" id="responseSummary" role="status" aria-live="polite" aria-atomic="true"></div>
+            </section>
 
-            <div class="response-summary" id="responseSummary"></div>
             <div class="invitee-summary" id="inviteeSummary"></div>
-            <div class="response-groups" id="responseGroups"></div>
 
             <div class="comment-section">
               <div class="comment-list" id="commentList"></div>
@@ -743,7 +745,7 @@
       <p class="sr-only" id="emojiPickerStatus" role="status" aria-live="polite"></p>
     </div>
 
-    <script src="/app.js?v=20260725-places-autocomplete"></script>
+    <script src="/app.js?v=20260726-compact-rsvp"></script>
     <script src="/command-centre-actions.js?v=20260725-flexible-availability"></script>
     <script src="/command-centre.js?v=20260725-no-passive-caret"></script>
   </body>
