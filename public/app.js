@@ -85,7 +85,6 @@ const detailGoogleSyncStatus = document.querySelector("#detailGoogleSyncStatus")
 const saveEventChangesButton = document.querySelector("#saveEventChangesButton");
 const responseSummary = document.querySelector("#responseSummary");
 const inviteeSummary = document.querySelector("#inviteeSummary");
-const responseGroups = document.querySelector("#responseGroups");
 const commentList = document.querySelector("#commentList");
 const commentForm = document.querySelector("#commentForm");
 const commentInput = document.querySelector("#commentInput");
@@ -3535,37 +3534,6 @@ function openBusyDetail(group) {
   }
 }
 
-function renderResponseGroups(event) {
-  responseGroups.innerHTML = "";
-  const labels = [
-    ["yes", "Yes"],
-    ["maybe", "Maybe"],
-    ["no", "No"]
-  ];
-
-  for (const [key, label] of labels) {
-    const wrap = document.createElement("div");
-    wrap.className = "response-group";
-    const voters = event.voters?.[key] || [];
-    wrap.innerHTML = `<h4>${label}</h4>`;
-    if (!voters.length) {
-      const text = document.createElement("p");
-      text.className = "muted";
-      text.textContent = "No responses yet.";
-      wrap.appendChild(text);
-    } else {
-      const list = document.createElement("ul");
-      for (const voter of voters) {
-        const item = document.createElement("li");
-        item.textContent = voter.displayName;
-        list.appendChild(item);
-      }
-      wrap.appendChild(list);
-    }
-    responseGroups.appendChild(wrap);
-  }
-}
-
 function renderDetailInviteeList(event, canManage) {
   if (!detailInviteeList) return;
   const participants = currentRoom?.participants || [];
@@ -3682,7 +3650,9 @@ function renderComments(event) {
 
 function setVoteButtons(responseValue) {
   for (const button of document.querySelectorAll(".vote-button")) {
-    button.classList.toggle("active", button.dataset.response === responseValue);
+    const active = button.dataset.response === responseValue;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
   }
 }
 
@@ -3704,8 +3674,7 @@ function openEventDetail(eventId) {
   detailLabel.textContent = "Group event";
   detailTitle.textContent = event.title || "Busy";
   detailTime.textContent = formatDateTimeRange(event.start, event.end);
-  responseSummary.textContent = `${event.responseSummary?.yes || 0} yes · ${event.responseSummary?.maybe || 0} maybe · ${event.responseSummary?.no || 0} no`;
-  renderResponseGroups(event);
+  responseSummary.textContent = `${event.responseSummary?.yes || 0} yes, ${event.responseSummary?.maybe || 0} maybe, ${event.responseSummary?.no || 0} no.`;
   renderComments(event);
   const currentResponse = event.responses?.[currentParticipant?.id] || "";
   setVoteButtons(currentResponse);

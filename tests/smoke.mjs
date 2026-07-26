@@ -254,8 +254,8 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260725-no-passive-caret"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260725-no-passive-autofocus"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260726-compact-rsvp"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260726-compact-rsvp"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260725-no-passive-caret"/);
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
@@ -335,6 +335,42 @@ try {
   assert.match(eventModalMarkup, /<span class="oauth-spinner" aria-hidden="true"><\/span>/);
   assert.match(eventModalMarkup, /id="eventFormFeedback" role="status" aria-live="polite"/);
   assert.match(eventModalMarkup, /<div class="composer-field-row composer-input-row location-autocomplete-host">/);
+  const eventDetailStart = home.text.indexOf('<div class="detail-body hidden" id="eventDetail">');
+  const eventDetailEnd = home.text.indexOf('<div class="detail-body hidden" id="busyDetail">', eventDetailStart);
+  assert.ok(eventDetailStart >= 0 && eventDetailEnd > eventDetailStart, "Group-event detail markup is incomplete");
+  const eventDetailMarkup = home.text.slice(eventDetailStart, eventDetailEnd);
+  assert.match(
+    eventDetailMarkup,
+    /<section class="rsvp-control" aria-labelledby="rsvpPrompt">[\s\S]*?<span class="rsvp-prompt" id="rsvpPrompt">Going\?<\/span>/,
+    "Group events must use the compact Going control"
+  );
+  const yesResponseIndex = eventDetailMarkup.indexOf('data-response="yes"');
+  const noResponseIndex = eventDetailMarkup.indexOf('data-response="no"');
+  const maybeResponseIndex = eventDetailMarkup.indexOf('data-response="maybe"');
+  assert.equal(
+    (eventDetailMarkup.match(/class="vote-button"/g) || []).length,
+    3,
+    "Group events must expose exactly three RSVP choices"
+  );
+  assert.equal(
+    (eventDetailMarkup.match(/class="vote-button"[^>]*aria-pressed="false"/g) || []).length,
+    3,
+    "Every RSVP choice must expose its pressed state"
+  );
+  assert.ok(
+    yesResponseIndex >= 0 && yesResponseIndex < noResponseIndex && noResponseIndex < maybeResponseIndex,
+    "RSVP choices must be ordered Yes, No, Maybe"
+  );
+  assert.match(
+    eventDetailMarkup,
+    /id="responseSummary" role="status" aria-live="polite" aria-atomic="true"/,
+    "RSVP totals must remain available to assistive technology"
+  );
+  assert.doesNotMatch(
+    eventDetailMarkup,
+    /id="responseGroups"|class="response-group"/,
+    "The old stacked response cards must be removed"
+  );
   assert.match(
     eventModalMarkup,
     /id="eventLocationInput"[\s\S]*?maxlength="200"[\s\S]*?role="combobox"[\s\S]*?aria-autocomplete="list"[\s\S]*?aria-expanded="false"[\s\S]*?aria-controls="eventLocationListbox"[\s\S]*?aria-describedby="eventLocationStatus"/,
@@ -1252,6 +1288,41 @@ try {
     "Resize cancellation must be able to restore the original start and duration"
   );
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerStyles.text,
+    /\.rsvp-control\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*center;[^}]*justify-content:\s*space-between;[^}]*min-height:\s*46px;[^}]*border-radius:\s*12px;/s,
+    "The group-event RSVP control must be one compact horizontal surface"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.vote-button\s*\{[^}]*min-width:\s*62px;[^}]*min-height:\s*30px;[^}]*border-radius:\s*999px;[^}]*will-change:\s*transform, opacity;/s,
+    "RSVP choices must use compact, compositor-ready pill buttons"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.vote-button:not\(:disabled\):active\s*\{[^}]*transition-duration:\s*var\(--motion-press\);[^}]*scale\(0\.96\);/s,
+    "RSVP choices must retain the app's tactile press response"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.vote-button\.active\s*\{[^}]*background:\s*var\(--brand\);[^}]*border-color:\s*var\(--brand\);[^}]*color:\s*#fff;/s,
+    "The selected RSVP choice must use CommonGround gold"
+  );
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /\.response-groups?\s*\{|\.response-group\s*\{/,
+    "The legacy stacked response-card styling must be removed"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function setVoteButtons\(responseValue\)[\s\S]*?const active = button\.dataset\.response === responseValue;[\s\S]*?button\.setAttribute\("aria-pressed", String\(active\)\);/,
+    "RSVP selection must keep visual and pressed states synchronized"
+  );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /renderResponseGroups|responseGroups/,
+    "The client must not rebuild the removed response cards"
+  );
   assert.match(
     eventComposerStyles.text,
     /\.location-autocomplete-menu\s*\{[^}]*position:\s*absolute;[^}]*opacity:\s*0;[^}]*transform:\s*translate3d\(0, -5px, 0\) scale\(0\.98\);[^}]*transition:[^}]*opacity var\(--motion-standard\) var\(--ease-standard\),[^}]*transform var\(--motion-standard\) var\(--ease-standard\);[^}]*will-change:\s*transform, opacity;/s,
