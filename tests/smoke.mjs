@@ -254,16 +254,16 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260726-shared-date-picker"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260726-discard-event-draft"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260726-home-recovery"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260726-discard-event-draft"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260726-home-recovery"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260726-home-recovery"'
+      'src="/app.js?v=20260726-discard-event-draft"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
@@ -361,6 +361,24 @@ try {
   assert.match(eventModalMarkup, /<span class="oauth-spinner" aria-hidden="true"><\/span>/);
   assert.match(eventModalMarkup, /id="eventFormFeedback" role="status" aria-live="polite"/);
   assert.match(eventModalMarkup, /<div class="composer-field-row composer-input-row location-autocomplete-host">/);
+  const discardEventDraftStart = home.text.indexOf('<dialog\n      class="modal discard-event-draft-dialog"');
+  const discardEventDraftEnd = home.text.indexOf("</dialog>", discardEventDraftStart);
+  assert.ok(
+    discardEventDraftStart > eventModalEnd && discardEventDraftEnd > discardEventDraftStart,
+    "The discard confirmation must be a sibling dialog after the event composer"
+  );
+  const discardEventDraftMarkup = home.text.slice(discardEventDraftStart, discardEventDraftEnd);
+  assert.match(
+    discardEventDraftMarkup,
+    /id="discardEventDraftDialog"[\s\S]*?role="alertdialog"[\s\S]*?aria-labelledby="discardEventDraftTitle"[\s\S]*?aria-describedby="discardEventDraftDescription"/,
+    "The discard confirmation must expose alert-dialog semantics"
+  );
+  assert.match(discardEventDraftMarkup, /<h2 id="discardEventDraftTitle">Discard unsaved changes\?<\/h2>/);
+  assert.match(
+    discardEventDraftMarkup,
+    /id="cancelDiscardEventDraftButton" type="button">Cancel<\/button>[\s\S]*?id="confirmDiscardEventDraftButton" type="button">Discard<\/button>/,
+    "The safe action must precede the explicit discard action"
+  );
   const eventDetailStart = home.text.indexOf('<div class="detail-body hidden" id="eventDetail">');
   const eventDetailEnd = home.text.indexOf('<div class="detail-body hidden" id="busyDetail">', eventDetailStart);
   assert.ok(eventDetailStart >= 0 && eventDetailEnd > eventDetailStart, "Group-event detail markup is incomplete");
@@ -1097,6 +1115,49 @@ try {
     eventComposerScript.text,
     /function closeEventModal\(\)[\s\S]*?delete eventModal\.dataset\.anchorSide;[\s\S]*?removeProperty\("--composer-left"\)[\s\S]*?removeProperty\("--composer-top"\)[\s\S]*?removeProperty\("--composer-transform-origin"\)/,
     "Closing the composer must remove its transient anchor geometry"
+  );
+  const eventFormSnapshotStart = eventComposerScript.text.indexOf("function eventFormStateSnapshot()");
+  const eventFormSnapshotEnd = eventComposerScript.text.indexOf(
+    "function eventFormHasUnsavedChanges()",
+    eventFormSnapshotStart
+  );
+  assert.ok(
+    eventFormSnapshotStart >= 0 && eventFormSnapshotEnd > eventFormSnapshotStart,
+    "The event draft snapshot function is incomplete"
+  );
+  const eventFormSnapshotSource = eventComposerScript.text.slice(
+    eventFormSnapshotStart,
+    eventFormSnapshotEnd
+  );
+  assert.match(
+    eventFormSnapshotSource,
+    /title: eventTitleInput\.value\.trim\(\)[\s\S]*?startDisplay: eventStartTimeInput\?\.value\.trim\(\)[\s\S]*?endDisplay: eventEndTimeInput\?\.value\.trim\(\)[\s\S]*?location: eventLocationInput\.value\.trim\(\)[\s\S]*?description: eventDescriptionInput\.value\.trim\(\)[\s\S]*?querySelectorAll\("input\[type='checkbox'\]:checked"\)[\s\S]*?\.map\(\(input\) => input\.value\)[\s\S]*?\.sort\(\)/,
+    "Dirty-state comparison must cover meaningful text, visible time entry, and stable selected invitees"
+  );
+  assert.doesNotMatch(
+    eventFormSnapshotSource,
+    /disabled/,
+    "Transient disabled controls must not make an untouched draft appear dirty"
+  );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /window\.confirm\("Discard this event draft\?"\)/,
+    "Event drafts must use the accessible in-app confirmation instead of a blocking browser prompt"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function openDiscardEventDraftDialog\(source\)[\s\S]*?discardEventDraftDialog\.showModal\(\);[\s\S]*?cancelDiscardEventDraftButton\?\.focus\(\{ preventScroll: true \}\)/,
+    "Opening the discard confirmation must focus the safe action"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function attemptCloseEventModal\(source\)[\s\S]*?eventForm\.dataset\.saving === "true"[\s\S]*?eventFormHasUnsavedChanges\(\)[\s\S]*?openDiscardEventDraftDialog\(source\)[\s\S]*?closeEventModal\(\)/,
+    "Only dirty, idle event drafts should open the discard confirmation"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /confirmDiscardEventDraftButton\?\.addEventListener\("click",[\s\S]*?closeDiscardEventDraftDialog\(\{ restoreFocus: false, discardDraft: true \}\)[\s\S]*?enableDialogBackdropClose\(discardEventDraftDialog, closeDiscardEventDraftDialog\)[\s\S]*?discardEventDraftDialog\?\.addEventListener\("cancel",[\s\S]*?event\.preventDefault\(\);[\s\S]*?closeDiscardEventDraftDialog\(\)/,
+    "Discard, backdrop, and Escape must resolve through the custom confirmation lifecycle"
   );
   assert.match(
     eventComposerScript.text,
@@ -2189,6 +2250,26 @@ try {
     eventComposerStyles.text,
     /#eventModal #saveEventButton\s*\{[^}]*border: 0[^}]*border-radius: 8px[^}]*background: var\(--composer-accent\)[^}]*color: #241b15/s,
     "Create event must be the single warm, high-contrast primary action"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#discardEventDraftDialog\s*\{[^}]*width: min\(360px, calc\(100vw - 24px\)\)[^}]*overflow: visible/s,
+    "The discard confirmation must stay compact on every viewport"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#discardEventDraftDialog \.discard-event-draft-cancel\s*\{[^}]*border: 0[^}]*background: transparent/s,
+    "Cancel must remain the quiet, non-destructive action"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#discardEventDraftDialog \.discard-event-draft-confirm\s*\{[^}]*border: 0[^}]*background: #d09e72[^}]*color: #241b15/s,
+    "Discard must use the CommonGround gold primary treatment"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#discardEventDraftDialog \.discard-event-draft-actions button\s*\{[^}]*will-change: transform, opacity;[^}]*transition:[^}]*transform 150ms cubic-bezier\(0\.32, 0\.72, 0, 1\),[^}]*opacity 150ms cubic-bezier\(0\.32, 0\.72, 0, 1\)/s,
+    "Discard actions must use compositor-only CommonGround motion"
   );
   assert.match(
     eventComposerScript.text,

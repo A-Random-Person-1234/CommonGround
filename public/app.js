@@ -126,6 +126,9 @@ const inviteeCountText = document.querySelector("#inviteeCountText");
 const saveEventButton = document.querySelector("#saveEventButton");
 const cancelEventButton = document.querySelector("#cancelEventButton");
 const cancelEventSecondary = document.querySelector("#cancelEventSecondary");
+const discardEventDraftDialog = document.querySelector("#discardEventDraftDialog");
+const cancelDiscardEventDraftButton = document.querySelector("#cancelDiscardEventDraftButton");
+const confirmDiscardEventDraftButton = document.querySelector("#confirmDiscardEventDraftButton");
 const createRoomModal = document.querySelector("#createRoomModal");
 const createRoomModalForm = document.querySelector("#createRoomModalForm");
 const quickRoomNameInput = document.querySelector("#quickRoomNameInput");
@@ -194,6 +197,7 @@ let undoStack = [];
 let editingEventId = null;
 let pendingEventPrefill = null;
 let eventModalInitialState = "";
+let discardEventDraftReturnFocus = null;
 let eventPanelInitialState = "";
 let eventModalAnchorRect = null;
 let googleAuthPopup = null;
@@ -1710,21 +1714,20 @@ function selectionDurationHours(selection) {
 
 function eventFormStateSnapshot() {
   return JSON.stringify({
-    title: eventTitleInput.value,
+    title: eventTitleInput.value.trim(),
     date: eventDateInput.value,
     endDate: eventEndDateInput?.value,
     start: eventStartInput.value,
     end: eventEndInput.value,
+    startDisplay: eventStartTimeInput?.value.trim() || "",
+    endDisplay: eventEndTimeInput?.value.trim() || "",
     allDay: Boolean(eventAllDayInput?.checked),
-    location: eventLocationInput.value,
-    description: eventDescriptionInput.value,
+    location: eventLocationInput.value.trim(),
+    description: eventDescriptionInput.value.trim(),
     syncToGoogle: Boolean(eventGoogleSyncInput?.checked),
-    invitees: [...inviteePicker.querySelectorAll("input[type='checkbox']")]
-      .map((input) => ({
-        value: input.value,
-        checked: input.checked,
-        disabled: input.disabled
-      }))
+    invitees: [...inviteePicker.querySelectorAll("input[type='checkbox']:checked")]
+      .map((input) => input.value)
+      .sort()
   });
 }
 
@@ -7455,10 +7458,44 @@ function activateEventGoogleSyncRow(event) {
   openGoogleAuthPopup();
 }
 
-function attemptCloseEventModal() {
+function openDiscardEventDraftDialog(source) {
+  if (!discardEventDraftDialog || discardEventDraftDialog.open) return;
+  const sourceElement = source?.currentTarget instanceof HTMLElement
+    ? source.currentTarget
+    : document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : cancelEventSecondary;
+  discardEventDraftReturnFocus = sourceElement;
+  prepareDialogForOpen(discardEventDraftDialog);
+  discardEventDraftDialog.showModal();
+  requestAnimationFrame(() => {
+    cancelDiscardEventDraftButton?.focus({ preventScroll: true });
+  });
+}
+
+function closeDiscardEventDraftDialog({ restoreFocus = true, discardDraft = false } = {}) {
+  if (!discardEventDraftDialog?.open) {
+    if (discardDraft) closeEventModal();
+    return;
+  }
+  const returnFocus = discardEventDraftReturnFocus;
+  closeDialogWithMotion(discardEventDraftDialog, () => {
+    discardEventDraftReturnFocus = null;
+    if (discardDraft) {
+      closeEventModal();
+      return;
+    }
+    if (!restoreFocus || !eventModal?.open) return;
+    const focusTarget = returnFocus?.isConnected ? returnFocus : cancelEventSecondary;
+    focusTarget?.focus({ preventScroll: true });
+  });
+}
+
+function attemptCloseEventModal(source) {
+  if (eventForm.dataset.saving === "true") return false;
   if (eventFormHasUnsavedChanges()) {
-    const discard = window.confirm("Discard this event draft?");
-    if (!discard) return false;
+    openDiscardEventDraftDialog(source);
+    return false;
   }
   closeEventModal();
   return true;
@@ -7539,6 +7576,11 @@ function openEventModal(mode = "create", options = {}) {
 }
 
 function closeEventModal() {
+  if (discardEventDraftDialog?.open) {
+    prepareDialogForOpen(discardEventDraftDialog);
+    discardEventDraftDialog.close();
+    discardEventDraftReturnFocus = null;
+  }
   stopDragCreate();
   closeEventTimePicker();
   closeAllLocationAutocompletes({ immediate: true, resetSession: true });
@@ -8158,6 +8200,12 @@ eventDateInput?.addEventListener("change", () => {
 });
 cancelEventButton.addEventListener("click", attemptCloseEventModal);
 cancelEventSecondary.addEventListener("click", attemptCloseEventModal);
+cancelDiscardEventDraftButton?.addEventListener("click", () => {
+  closeDiscardEventDraftDialog();
+});
+confirmDiscardEventDraftButton?.addEventListener("click", () => {
+  closeDiscardEventDraftDialog({ restoreFocus: false, discardDraft: true });
+});
 createRoomModalForm?.addEventListener("submit", createRoomFromSwitcher);
 cancelCreateRoomModalButton?.addEventListener("click", closeCreateRoomModal);
 cancelCreateRoomModalSecondary?.addEventListener("click", closeCreateRoomModal);
@@ -8215,6 +8263,7 @@ document.addEventListener("fullscreenchange", () => {
 });
 
 enableDialogBackdropClose(eventModal, attemptCloseEventModal);
+enableDialogBackdropClose(discardEventDraftDialog, closeDiscardEventDraftDialog);
 enableDialogBackdropClose(createRoomModal, closeCreateRoomModal);
 
 createRoomModal?.addEventListener("close", () => {
@@ -8230,6 +8279,11 @@ eventModal.addEventListener("cancel", (event) => {
     return;
   }
   attemptCloseEventModal();
+});
+
+discardEventDraftDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeDiscardEventDraftDialog();
 });
 
 updateFullscreenControl();

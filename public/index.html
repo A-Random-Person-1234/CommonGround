@@ -24,7 +24,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20260724-appicon-new" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20260724-appicon-new" />
     <link rel="manifest" href="/site.webmanifest?v=20260724-appicon-new" />
-    <link rel="stylesheet" href="/styles.css?v=20260726-shared-date-picker" />
+    <link rel="stylesheet" href="/styles.css?v=20260726-discard-event-draft" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -734,6 +734,25 @@
       </form>
     </dialog>
 
+    <dialog
+      class="modal discard-event-draft-dialog"
+      id="discardEventDraftDialog"
+      role="alertdialog"
+      aria-labelledby="discardEventDraftTitle"
+      aria-describedby="discardEventDraftDescription"
+    >
+      <section class="modal-card discard-event-draft-card">
+        <h2 id="discardEventDraftTitle">Discard unsaved changes?</h2>
+        <p class="sr-only" id="discardEventDraftDescription">
+          Discarding will permanently remove the information entered for this event.
+        </p>
+        <div class="discard-event-draft-actions">
+          <button class="discard-event-draft-cancel" id="cancelDiscardEventDraftButton" type="button">Cancel</button>
+          <button class="discard-event-draft-confirm" id="confirmDiscardEventDraftButton" type="button">Discard</button>
+        </div>
+      </section>
+    </dialog>
+
     <dialog class="modal" id="createRoomModal" aria-labelledby="createRoomModalTitle">
       <form class="modal-card compact-room-modal" id="createRoomModalForm" method="dialog">
         <div class="panel-head">
@@ -781,7 +800,7 @@
     </div>
 
     <script src="/date-picker.js?v=20260726-shared-date-picker"></script>
-    <script src="/app.js?v=20260726-home-recovery"></script>
+    <script src="/app.js?v=20260726-discard-event-draft"></script>
     <script src="/command-centre-actions.js?v=20260725-flexible-availability"></script>
     <script src="/command-centre.js?v=20260726-home-recovery"></script>
   </body>
