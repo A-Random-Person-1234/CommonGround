@@ -254,11 +254,11 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260726-discard-event-draft"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
   assert.match(home.text, /src="\/app\.js\?v=20260726-discard-event-draft"/);
-  assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
-  assert.match(home.text, /src="\/command-centre\.js\?v=20260726-home-recovery"/);
+  assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-upgrade"/);
   assertInOrder(
     home.text,
     [
@@ -774,8 +774,23 @@ try {
     "Inline completion must not render a misleading suffix after trailing whitespace"
   );
   assert.match(
+    commandPredictorScript.text,
+    /predictionWordCorrections[\s\S]*?setings:\s*"settings"[\s\S]*?tommorow:\s*"tomorrow"[\s\S]*?wth:\s*"with"/,
+    "Predictive completion must normalize common settings, date, and preposition typos"
+  );
+  assert.match(
+    commandPredictorScript.text,
+    /predictionContractions[\s\S]*?don\[[^\n]*t[\s\S]*?"do not"[\s\S]*?won\[[^\n]*t[\s\S]*?"will not"/,
+    "Predictive matching must understand common contractions without dropping negation"
+  );
+  assert.match(
+    commandPredictorScript.text,
+    /candidate\.rank === match\.rank[\s\S]*?normalizeCommandPrediction\(candidate\.command\)[\s\S]*?return null/,
+    "Ambiguous member or event prefixes must not guess one equal-ranked completion"
+  );
+  assert.match(
     commandCentreScript.text,
-    /import\("\/command-centre-predictor\.js\?v=20260725-predictive-commands"\)[\s\S]*?commandCentrePredictor = module/,
+    /import\("\/command-centre-predictor\.js\?v=20260726-assistant-upgrade"\)[\s\S]*?commandCentrePredictor = module/,
     "The Command Centre must load the cache-versioned predictor module"
   );
   assert.match(
@@ -830,7 +845,7 @@ try {
       `The Command Centre must use the room-scoped ${endpoint} endpoint`
     );
   }
-  for (const endpoint of ["availability", "create-event"]) {
+  for (const endpoint of ["availability", "create-event", "update-event", "delete-event"]) {
     assert.match(
       commandActionsScript.text,
       new RegExp(`fetchJson\\(\\x60/api/rooms/\\$\\{roomCodeSnapshot\\}/command-centre/${endpoint}\\x60`),
@@ -842,6 +857,9 @@ try {
     "navigateToView",
     "findOverlapAvailability",
     "createCalendarEvent",
+    "updateCalendarEvent",
+    "deleteCalendarEvent",
+    "duplicateCalendarEvent",
     "connectGoogleCalendar",
     "updateCustomRoomCode"
   ]) {
@@ -855,6 +873,41 @@ try {
     commandCentreScript.text,
     /async function processUserIntent\(inputText,[\s\S]*?commandContinueParsedResult\(data\.result,[\s\S]*?window\.CommonGroundCommandRouter = Object\.freeze/,
     "One structured processUserIntent router must parse and dispatch Command Centre submissions"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /predictCommand\(value,\s*\{[\s\S]*?members:\s*currentRoom\?\.participants[\s\S]*?events:\s*currentRoom\?\.events/,
+    "Live predictions must use current-room members and CommonGround event titles"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /contextEventId:\s*commandSafeContextEventId\(\)/,
+    "Contextual follow-ups may send only a validated CommonGround event ID to parsing"
+  );
+  assert.doesNotMatch(
+    commandCentreScript.text,
+    /contextEvent(?:Title|Description|Location|Provider)|googleCalendarSync\s*:/,
+    "Command parse requests must not forward event details or provider metadata as context"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /function commandContinueEventAction\(result, candidate\)[\s\S]*?commandRenderDeletePreview\(result, candidate\)[\s\S]*?commandRenderDuplicatePreview\(result, candidate\)[\s\S]*?commandRenderUpdatePreview\(result, candidate\)/,
+    "Rename, delete, duplicate, and participant changes must route to explicit previews"
+  );
+  assert.doesNotMatch(
+    commandCentreScript.text,
+    /function commandContinueEventAction\(result, candidate\)[\s\S]{0,900}?commandContinueEventAction\(result, candidate\)/,
+    "Event-action dispatch must not recursively call itself"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /function commandRenderDeletePreview[\s\S]*?deleteRequestId[\s\S]*?data-command-confirm-delete>Delete event[\s\S]*?function commandConfirmEventDelete[\s\S]*?requestId:\s*commandCentreState\.deleteRequestId/,
+    "Destructive requests must require a preview and reuse one stable delete request ID"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /function commandParticipantEditorMarkup\(selectedIds = \[\],[\s\S]*?creatorParticipantId[\s\S]*?required \? "disabled"[\s\S]*?commandSelectedParticipantIds\(\{ includeCurrent: false \}\)/,
+    "Existing-event participant edits must lock the creator without silently adding a host"
   );
   assert.match(
     commandActionsScript.text,
@@ -1035,6 +1088,26 @@ try {
     serverSource,
     /async function withCommandMutation\(roomCode, task\)[\s\S]*?commandMutationQueues\.get\(key\)[\s\S]*?previous\.catch\(\(\) => \{\}\)\.then\(task\)/,
     "Confirmed Command Centre mutations must serialize per room"
+  );
+  assert.match(
+    serverSource,
+    /function requireLiveCommandParticipant\(auth\)[\s\S]*?findParticipantById\(auth\.room, auth\.participant\?\.id\)[\s\S]*?requireLiveCommandParticipant\(auth\);[\s\S]*?normalizedCommandRequestId\(body\.requestId, \{ required: true \}\)/,
+    "Queued mutations must re-check live membership and require idempotency keys"
+  );
+  assert.match(
+    serverSource,
+    /commandRequestFingerprint[\s\S]*?const recoveredEvent = auth\.room\.events\.find[\s\S]*?item\.commandRequestId === requestId[\s\S]*?verifyCommandReceipt\(\{ fingerprint: recoveredFingerprint \}, fingerprint\)/,
+    "Create retries must recover a persisted event even if its receipt save was interrupted"
+  );
+  assert.match(
+    serverSource,
+    /function nextVersionIso\(previousValue\)[\s\S]*?previous \+ 1[\s\S]*?event\.updatedAt = nextVersionIso/,
+    "Every event update must advance its stale-write token even within one millisecond"
+  );
+  assert.match(
+    serverSource,
+    /const allowedFields = new Set\(\[[\s\S]*?"inviteeParticipantIds"[\s\S]*?Unsupported event update field[\s\S]*?\["allDay", "syncToGoogle", "syncToOutlook"\]/,
+    "Command updates must reject unknown fields and non-boolean switches"
   );
   assert.doesNotMatch(eventComposerScript.text, /\broomStatus\b/);
   assert.match(eventComposerScript.text, /const emojiKeywordDictionaryUrl = "https:\/\/unpkg\.com\/emojilib@3\.0\.11\/dist\/emoji-en-US\.json";/);
@@ -2076,7 +2149,12 @@ try {
   assert.match(
     eventComposerScript.text,
     /function dismissOutsideFloatingSurfaces\(target\)[\s\S]*?function handleOutsideFloatingSurfacePointer\(event\)[\s\S]*?event\.stopImmediatePropagation\(\)/,
-    "Outside clicks must dismiss an open surface before they can activate an underlying control"
+    "Outside clicks must dismiss an open surface before they can activate an underlying non-editable control"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function targetAcceptsTextEntry\(target\)[\s\S]*?textarea:not\(:disabled\), input:not\(:disabled\), \[contenteditable="true"\][\s\S]*?\["text", "search", "email", "url", "tel", "password", "number"\]\.includes\(editable\.type\)[\s\S]*?function handleOutsideFloatingSurfacePointer\(event\)[\s\S]*?if \(targetAcceptsTextEntry\(event\.target\)\) return;/,
+    "Dismissing a floating surface must preserve the first click and focus on writing fields"
   );
   assert.match(
     eventComposerScript.text,
@@ -2203,8 +2281,23 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /input:placeholder-shown,\s*textarea:placeholder-shown\s*\{[^}]*caret-color: transparent/s,
-    "Empty placeholder fields must not show a passive insertion caret"
+    /input:placeholder-shown:not\(:focus\),\s*textarea:placeholder-shown:not\(:focus\)\s*\{[^}]*caret-color: transparent/s,
+    "Only unfocused empty placeholder fields may hide their passive insertion caret"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:is\([\s\S]*?input\[type="text"\][\s\S]*?textarea[\s\S]*?\):not\(:disabled\):focus\s*\{[^}]*caret-color: var\(--brand-strong\)/,
+    "Focused writing fields must restore the CommonGround caret"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-title\s*\{[^}]*caret-color: var\(--composer-accent\)[^}]*cursor: text/s,
+    "The event title must expose a visible caret and text cursor when clicked"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-field-row > input,\s*#eventModal \.composer-field-row > textarea\s*\{[^}]*caret-color: var\(--composer-accent\)[^}]*cursor: text/s,
+    "Location and description fields must expose a visible caret and text cursor when clicked"
   );
   assert.match(
     eventComposerStyles.text,

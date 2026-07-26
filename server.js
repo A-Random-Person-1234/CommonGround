@@ -756,6 +756,11 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function nextVersionIso(previousValue) {
+  const previous = new Date(previousValue || 0).getTime();
+  return new Date(Math.max(Date.now(), Number.isFinite(previous) ? previous + 1 : 0)).toISOString();
+}
+
 function normalizeEmail(value) {
   return typeof value === "string" ? value.trim().toLowerCase() : null;
 }
@@ -1685,6 +1690,21 @@ function replaceParticipantReferences(room, fromParticipantId, toParticipantId) 
     seenNotificationKeys.add(notification.dedupeKey);
     return true;
   });
+
+  const migratedReceipts = {};
+  for (const [key, receipt] of Object.entries(room.commandReceipts || {})) {
+    const nextKey = key.startsWith(`${fromParticipantId}:`)
+      ? `${toParticipantId}:${key.slice(fromParticipantId.length + 1)}`
+      : key;
+    const existing = migratedReceipts[nextKey];
+    if (
+      !existing ||
+      String(receipt?.createdAt || "").localeCompare(String(existing?.createdAt || "")) > 0
+    ) {
+      migratedReceipts[nextKey] = receipt;
+    }
+  }
+  room.commandReceipts = migratedReceipts;
 }
 
 function mergeParticipantIntoRoom(room, target, source) {
@@ -2912,8 +2932,13 @@ async function syncGoogleCalendarForEvent(room, event) {
 
   for (const [userId, entry] of Object.entries(event.googleCalendarSync)) {
     if (!targetUserIds.has(userId) || event.syncToGoogle === false) {
-      await deleteGoogleCalendarEntry(userId, entry, "all");
-      delete event.googleCalendarSync[userId];
+      try {
+        await deleteGoogleCalendarEntry(userId, entry, "all");
+        delete event.googleCalendarSync[userId];
+      } catch {
+        // Keep the failed entry so the public sync summary can surface
+        // needs_attention while the authoritative CommonGround update succeeds.
+      }
     }
   }
 
@@ -2939,8 +2964,13 @@ async function syncOutlookCalendarForEvent(room, event) {
 
   for (const [userId, entry] of Object.entries(event.outlookCalendarSync)) {
     if (!targetUserIds.has(userId) || event.syncToOutlook === false) {
-      await deleteOutlookCalendarEntry(userId, entry, null);
-      delete event.outlookCalendarSync[userId];
+      try {
+        await deleteOutlookCalendarEntry(userId, entry, null);
+        delete event.outlookCalendarSync[userId];
+      } catch {
+        // Preserve delete_error metadata instead of returning an error after the
+        // in-memory event has already advanced to a new version.
+      }
     }
   }
 
@@ -3608,16 +3638,16 @@ function strictCommandParticipantIds(room, requestedIds, {
   if (requestedIds.length > 50) {
     throw httpError(400, "A command can include at most 50 room members.");
   }
-  const values = uniqueStrings(requestedIds);
+  const values = uniqueStrings([
+    ...requestedIds,
+    ...(includeCurrent && currentParticipantId ? [currentParticipantId] : [])
+  ]);
   const validIds = new Set((room.participants || []).map((participant) => participant.id));
   const unknownIds = values.filter((participantId) => !validIds.has(participantId));
   if (unknownIds.length) {
     const error = httpError(403, "One or more selected people are no longer in this room.");
     error.code = "participant_access_denied";
     throw error;
-  }
-  if (includeCurrent && currentParticipantId && !values.includes(currentParticipantId)) {
-    values.unshift(currentParticipantId);
   }
   if (!values.length) throw httpError(400, "Choose at least one room member.");
   return values;
@@ -3863,6 +3893,10 @@ async function createRoomEvent(auth, body) {
     createdByParticipantId: auth.participant.id,
     syncToGoogle: body.syncToGoogle === true,
     syncToOutlook: body.syncToOutlook === true,
+    ...(body.commandRequestId ? { commandRequestId: body.commandRequestId } : {}),
+    ...(body.commandRequestFingerprint
+      ? { commandRequestFingerprint: body.commandRequestFingerprint }
+      : {}),
     googleCalendarSync: {},
     outlookCalendarSync: {},
     createdAt: nowIso(),
@@ -3899,7 +3933,7 @@ async function updateRoomEvent(auth, event, body) {
     event.createdByParticipantId
   );
   removeResponsesForUninvitedParticipants(event);
-  event.updatedAt = nowIso();
+  event.updatedAt = nextVersionIso(event.updatedAt || event.createdAt);
   if (typeof body.syncToGoogle === "boolean") event.syncToGoogle = body.syncToGoogle;
   if (typeof body.syncToOutlook === "boolean") event.syncToOutlook = body.syncToOutlook;
   const newInviteeIds = (event.inviteeParticipantIds || []).filter((participantId) => !previousInviteeIds.has(participantId));
@@ -3915,6 +3949,77 @@ async function updateRoomEvent(auth, event, body) {
   await syncRoomCalendarsForEvent(auth.room, event);
   saveStore();
   return event;
+}
+
+function normalizedCommandRequestId(value, { required = false } = {}) {
+  const requestId = String(value || "").trim();
+  if (!requestId && !required) return "";
+  if (!/^[A-Za-z0-9_-]{8,100}$/.test(requestId)) {
+    throw httpError(400, "Use a valid Command Centre request ID.");
+  }
+  return requestId;
+}
+
+function commandMutationFingerprint(value) {
+  return crypto
+    .createHash("sha256")
+    .update(JSON.stringify(value))
+    .digest("base64url");
+}
+
+function commandReceiptKey(participantId, action, requestId) {
+  return `${participantId}:${action}:${requestId}`;
+}
+
+function commandReceiptFor(room, participantId, action, requestId) {
+  if (!requestId) return null;
+  return room.commandReceipts?.[commandReceiptKey(participantId, action, requestId)] || null;
+}
+
+function rememberCommandReceipt(room, participantId, action, requestId, receipt) {
+  if (!requestId) return;
+  const entries = Object.entries(room.commandReceipts || {})
+    .sort((left, right) => String(right[1]?.createdAt || "").localeCompare(String(left[1]?.createdAt || "")))
+    .slice(0, 999);
+  room.commandReceipts = Object.fromEntries(entries);
+  room.commandReceipts[commandReceiptKey(participantId, action, requestId)] = {
+    ...receipt,
+    createdAt: nowIso()
+  };
+}
+
+function verifyCommandReceipt(receipt, fingerprint) {
+  if (!receipt) return;
+  if (receipt.fingerprint !== fingerprint) {
+    const error = httpError(409, "That Command Centre request ID was already used for a different action.");
+    error.code = "idempotency_conflict";
+    throw error;
+  }
+}
+
+function requireFreshCommandEvent(auth, body, actionLabel = "changing") {
+  const event = auth.room.events.find((item) => item.id === String(body.eventId || ""));
+  if (!event) throw httpError(404, "Event not found.");
+  const canEdit = event.createdByParticipantId === auth.participant.id || isHost(auth.room, auth.session, auth.user);
+  if (!canEdit) throw httpError(403, `You cannot ${actionLabel} this event.`);
+  if (!body.expectedUpdatedAt || body.expectedUpdatedAt !== (event.updatedAt || event.createdAt)) {
+    const error = httpError(409, "This event changed after the preview. Review it again before continuing.");
+    error.code = "event_changed";
+    throw error;
+  }
+  return event;
+}
+
+function requireLiveCommandParticipant(auth) {
+  const roomStillExists = Object.values(store.rooms || {}).some((room) => room === auth.room);
+  const participant = roomStillExists
+    ? findParticipantById(auth.room, auth.participant?.id)
+    : null;
+  if (!participant) {
+    throw httpError(403, "You need to join this room before using Command Centre.");
+  }
+  auth.participant = participant;
+  return participant;
 }
 
 async function withCommandMutation(roomCode, task) {
@@ -3945,6 +4050,8 @@ const server = http.createServer(async (req, res) => {
   const roomCommandAvailabilityMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/availability$/);
   const roomCommandCreateMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/create-event$/);
   const roomCommandMoveMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/move-event$/);
+  const roomCommandUpdateMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/update-event$/);
+  const roomCommandDeleteMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/delete-event$/);
   const roomGoogleCalendarEventsMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/google-calendar-events$/);
   const roomEventsMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/events$/);
   const roomEventMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/events\/([^/]+)$/);
@@ -4604,6 +4711,10 @@ const server = http.createServer(async (req, res) => {
         required: true
       });
       const timezone = normalizeTimezone(body.timezone || "UTC");
+      const contextEventId = String(body.contextEventId || "").trim().slice(0, 100);
+      const contextEvent = contextEventId
+        ? auth.room.events.find((event) => event.id === contextEventId) || null
+        : null;
       let result = parseCommand(command, {
         now: new Date(),
         timezone,
@@ -4611,21 +4722,63 @@ const server = http.createServer(async (req, res) => {
           id: participant.id,
           displayName: participant.displayName
         })),
-        currentParticipantId: auth.participant.id
+        currentParticipantId: auth.participant.id,
+        context: contextEvent
+          ? {
+            selectedEventId: contextEvent.id,
+            selectedEventTitle: contextEvent.title
+          }
+          : {}
       });
 
-      if (result.intent === "move_event") {
-        const eventCandidates = resolveEventCandidates(result.eventQuery, auth.room.events, {
-          participantId: auth.participant.id,
-          isHost: isHost(auth.room, auth.session, auth.user)
-        });
+      if ([
+        "move_event",
+        "rename_event",
+        "delete_event",
+        "duplicate_event",
+        "add_participant",
+        "remove_participant"
+      ].includes(result.intent)) {
+        const canManageContextEvent = Boolean(
+          contextEvent &&
+          (
+            result.intent === "duplicate_event" ||
+            contextEvent.createdByParticipantId === auth.participant.id ||
+            isHost(auth.room, auth.session, auth.user)
+          )
+        );
+        const contextualCandidate = contextEvent
+          ? {
+            id: contextEvent.id,
+            title: contextEvent.title,
+            start: contextEvent.start,
+            end: contextEvent.end,
+            timezone: contextEvent.timezone || "UTC",
+            updatedAt: contextEvent.updatedAt || contextEvent.createdAt,
+            inviteeParticipantIds: [...(contextEvent.inviteeParticipantIds || [])],
+            location: contextEvent.location || "",
+            description: contextEvent.description || "",
+            allDay: contextEvent.allDay === true,
+            createdByParticipantId: contextEvent.createdByParticipantId || null,
+            score: 0
+          }
+          : null;
+        const eventCandidates = (
+          result.usedContextEvent === true &&
+          result.contextEventId === contextEvent?.id
+        )
+          ? (canManageContextEvent ? [contextualCandidate] : [])
+          : resolveEventCandidates(result.eventQuery, auth.room.events, {
+            participantId: auth.participant.id,
+            isHost: result.intent === "duplicate_event" || isHost(auth.room, auth.session, auth.user)
+          });
         result = {
           ...result,
           eventCandidates
         };
         if (!eventCandidates.length && !result.missingFields.includes("event")) {
           result.missingFields.push("event");
-        } else if (eventCandidates.length === 1) {
+        } else if (result.intent === "move_event" && eventCandidates.length === 1) {
           result = completeMoveTarget(result, eventCandidates[0], timezone);
         }
       }
@@ -4671,16 +4824,68 @@ const server = http.createServer(async (req, res) => {
       if (!auth) return;
       const body = await readJsonBody(req);
       const event = await withCommandMutation(auth.room.code, async () => {
+        requireLiveCommandParticipant(auth);
+        const requestId = normalizedCommandRequestId(body.requestId, { required: true });
         const participantIds = strictCommandParticipantIds(auth.room, body.inviteeParticipantIds || [], {
           currentParticipantId: auth.participant.id,
           includeCurrent: true
         });
         const eventFields = validateEventInput(body);
+        const fingerprint = commandMutationFingerprint({
+          ...eventFields,
+          inviteeParticipantIds: participantIds,
+          syncToGoogle: body.syncToGoogle === true,
+          syncToOutlook: body.syncToOutlook === true
+        });
+        const receipt = commandReceiptFor(auth.room, auth.participant.id, "create-event", requestId);
+        verifyCommandReceipt(receipt, fingerprint);
+        if (receipt) {
+          const existingEvent = auth.room.events.find((item) => item.id === receipt.eventId);
+          if (existingEvent) return existingEvent;
+          const error = httpError(409, "That event was already created and has since been removed.");
+          error.code = "idempotency_conflict";
+          throw error;
+        }
+        const recoveredEvent = auth.room.events.find((item) => (
+          item.createdByParticipantId === auth.participant.id &&
+          item.commandRequestId === requestId
+        ));
+        if (recoveredEvent) {
+          const recoveredFingerprint = recoveredEvent.commandRequestFingerprint ||
+            commandMutationFingerprint({
+              title: recoveredEvent.title,
+              date: recoveredEvent.date,
+              start: recoveredEvent.start,
+              end: recoveredEvent.end,
+              timezone: recoveredEvent.timezone,
+              allDay: recoveredEvent.allDay === true,
+              location: recoveredEvent.location || "",
+              description: recoveredEvent.description || "",
+              inviteeParticipantIds: [...(recoveredEvent.inviteeParticipantIds || [])],
+              syncToGoogle: recoveredEvent.syncToGoogle === true,
+              syncToOutlook: recoveredEvent.syncToOutlook === true
+            });
+          verifyCommandReceipt({ fingerprint: recoveredFingerprint }, fingerprint);
+          rememberCommandReceipt(auth.room, auth.participant.id, "create-event", requestId, {
+            fingerprint,
+            eventId: recoveredEvent.id
+          });
+          saveStore();
+          return recoveredEvent;
+        }
         await revalidateCommandEventTime(auth, eventFields, participantIds);
-        return createRoomEvent(auth, {
+        const createdEvent = await createRoomEvent(auth, {
           ...body,
+          commandRequestId: requestId || null,
+          commandRequestFingerprint: fingerprint,
           inviteeParticipantIds: participantIds
         });
+        rememberCommandReceipt(auth.room, auth.participant.id, "create-event", requestId, {
+          fingerprint,
+          eventId: createdEvent.id
+        });
+        saveStore();
+        return createdEvent;
       });
       sendJson(res, 201, { event: publicEvent(event, auth.room, auth.participant.id) });
       return;
@@ -4692,15 +4897,8 @@ const server = http.createServer(async (req, res) => {
       if (!auth) return;
       const body = await readJsonBody(req);
       const event = await withCommandMutation(auth.room.code, async () => {
-        const currentEvent = auth.room.events.find((item) => item.id === String(body.eventId || ""));
-        if (!currentEvent) throw httpError(404, "Event not found.");
-        const canEdit = currentEvent.createdByParticipantId === auth.participant.id || isHost(auth.room, auth.session, auth.user);
-        if (!canEdit) throw httpError(403, "You cannot move this event.");
-        if (!body.expectedUpdatedAt || body.expectedUpdatedAt !== (currentEvent.updatedAt || currentEvent.createdAt)) {
-          const error = httpError(409, "This event changed after the preview. Review it again before moving it.");
-          error.code = "event_changed";
-          throw error;
-        }
+        requireLiveCommandParticipant(auth);
+        const currentEvent = requireFreshCommandEvent(auth, body, "move");
         const participantIds = strictCommandParticipantIds(
           auth.room,
           currentEvent.inviteeParticipantIds || [],
@@ -4728,6 +4926,138 @@ const server = http.createServer(async (req, res) => {
         });
       });
       sendJson(res, 200, { event: publicEvent(event, auth.room, auth.participant.id) });
+      return;
+    }
+
+    if (roomCommandUpdateMatch && req.method === "POST") {
+      if (!enforceRateLimit(req, res, "command-update", 60, 60 * 60 * 1000)) return;
+      const auth = requireExistingRoomParticipant(req, res, roomCommandUpdateMatch[1]);
+      if (!auth) return;
+      const body = await readJsonBody(req);
+      const event = await withCommandMutation(auth.room.code, async () => {
+        requireLiveCommandParticipant(auth);
+        const allowedFields = new Set([
+          "eventId",
+          "expectedUpdatedAt",
+          "title",
+          "start",
+          "end",
+          "timezone",
+          "allDay",
+          "location",
+          "description",
+          "syncToGoogle",
+          "syncToOutlook",
+          "inviteeParticipantIds"
+        ]);
+        const unknownFields = Object.keys(body).filter((key) => !allowedFields.has(key));
+        if (unknownFields.length) {
+          throw httpError(400, `Unsupported event update field: ${unknownFields[0]}.`);
+        }
+        for (const key of ["allDay", "syncToGoogle", "syncToOutlook"]) {
+          if (Object.hasOwn(body, key) && typeof body[key] !== "boolean") {
+            throw httpError(400, `${key} must be true or false.`);
+          }
+        }
+        const currentEvent = requireFreshCommandEvent(auth, body, "change");
+        const updates = {};
+        for (const key of [
+          "title",
+          "start",
+          "end",
+          "timezone",
+          "allDay",
+          "location",
+          "description",
+          "syncToGoogle",
+          "syncToOutlook"
+        ]) {
+          if (Object.hasOwn(body, key)) updates[key] = body[key];
+        }
+        const inviteesChanged = Object.hasOwn(body, "inviteeParticipantIds");
+        const participantIds = inviteesChanged
+          ? strictCommandParticipantIds(auth.room, body.inviteeParticipantIds || [], {
+            currentParticipantId: currentEvent.createdByParticipantId,
+            includeCurrent: true
+          })
+          : strictCommandParticipantIds(auth.room, currentEvent.inviteeParticipantIds || [], {
+            currentParticipantId: currentEvent.createdByParticipantId,
+            includeCurrent: true
+          });
+        if (!Object.keys(updates).length && !inviteesChanged) {
+          throw httpError(400, "Choose something to change.");
+        }
+        const eventFields = validateEventInput({
+          ...currentEvent,
+          ...updates,
+          inviteeParticipantIds: participantIds
+        }, currentEvent);
+        const rangeChanged = [
+          "start",
+          "end",
+          "timezone",
+          "allDay"
+        ].some((key) => Object.hasOwn(updates, key) && eventFields[key] !== currentEvent[key]);
+        const participantsChanged = inviteesChanged && (
+          participantIds.length !== (currentEvent.inviteeParticipantIds || []).length ||
+          participantIds.some((participantId) => !(currentEvent.inviteeParticipantIds || []).includes(participantId))
+        );
+        if (rangeChanged || participantsChanged) {
+          await revalidateCommandEventTime(auth, eventFields, participantIds, {
+            excludeEventId: currentEvent.id
+          });
+        }
+        return updateRoomEvent(auth, currentEvent, {
+          ...updates,
+          inviteeParticipantIds: participantIds
+        });
+      });
+      sendJson(res, 200, { event: publicEvent(event, auth.room, auth.participant.id) });
+      return;
+    }
+
+    if (roomCommandDeleteMatch && req.method === "POST") {
+      if (!enforceRateLimit(req, res, "command-delete", 30, 60 * 60 * 1000)) return;
+      const auth = requireExistingRoomParticipant(req, res, roomCommandDeleteMatch[1]);
+      if (!auth) return;
+      const body = await readJsonBody(req);
+      const result = await withCommandMutation(auth.room.code, async () => {
+        requireLiveCommandParticipant(auth);
+        const requestId = normalizedCommandRequestId(body.requestId, { required: true });
+        const fingerprint = commandMutationFingerprint({
+          eventId: String(body.eventId || ""),
+          expectedUpdatedAt: String(body.expectedUpdatedAt || "")
+        });
+        const receipt = commandReceiptFor(auth.room, auth.participant.id, "delete-event", requestId);
+        verifyCommandReceipt(receipt, fingerprint);
+        if (receipt) {
+          return {
+            deleted: true,
+            repeated: true,
+            eventId: receipt.eventId
+          };
+        }
+        const event = requireFreshCommandEvent(auth, body, "delete");
+        await deleteSyncedGoogleCalendarEvents(auth.room, event);
+        await deleteSyncedOutlookCalendarEvents(auth.room, event);
+        notifyEventParticipants(auth.room, event, auth.participant, "event_cancelled", event.inviteeParticipantIds || [], {
+          dedupeSuffix: nowIso()
+        });
+        auth.room.events = auth.room.events.filter((item) => item.id !== event.id);
+        auth.room.updatedAt = nowIso();
+        rememberCommandReceipt(auth.room, auth.participant.id, "delete-event", requestId, {
+          fingerprint,
+          eventId: event.id
+        });
+        saveStore();
+        return {
+          deleted: true,
+          repeated: false,
+          eventId: event.id,
+          title: event.title
+        };
+      });
+      sendJson(res, 200, result);
       return;
     }
 

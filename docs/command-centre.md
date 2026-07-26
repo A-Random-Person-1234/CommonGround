@@ -6,7 +6,8 @@ Open it with the **Ask CommonGround** toolbar button, `Cmd+K` on macOS, `Ctrl+K`
 
 ## Supported commands
 
-The deterministic router supports eight intent families.
+The deterministic router supports calendar navigation, scheduling, availability,
+room settings, and versioned event-management intents.
 
 ### Create an event
 
@@ -58,6 +59,48 @@ Reschedule football to 6pm
 ```
 
 Only editable CommonGround events are candidates. Multiple title matches produce a selection step. The interface shows the current and proposed ranges and requires confirmation.
+
+### Rename, duplicate, or delete an event
+
+```text
+Rename project planning to Sprint planning
+Duplicate lunch tomorrow at 1
+Delete economics revision
+```
+
+Rename and delete are limited to the event creator or room host. Duplication
+creates a new event through the normal conflict-checked create path. Every
+destructive action has a dedicated preview and confirmation step.
+
+### Add or remove event participants
+
+```text
+Add Will to project planning
+Invite Mylo to lunch
+Remove Alex from design review
+```
+
+Names are resolved only against the active room. Duplicate first names require
+the full name. Participant changes re-check shared availability before saving,
+and the event creator cannot be removed.
+
+### Contextual follow-ups
+
+After CommonGround displays an event or pending preview, short follow-ups can
+reuse that exact event safely:
+
+```text
+Move it 15 minutes later
+Make that 45 minutes
+Rename it to Project review
+Add Will
+Delete that
+Duplicate it
+```
+
+Only the CommonGround event ID is sent as context. Titles, descriptions,
+locations, provider payloads, and calendar tokens are never placed into the
+context request.
 
 ### Navigate or search
 
@@ -116,11 +159,12 @@ public/command-centre.js
 
 public/command-centre-actions.js
   Reusable action handlers returning { success, message, payload }, including
-  date/view navigation, availability, event creation, OAuth, and room settings
+  date/view navigation, availability, versioned event mutations, OAuth, and
+  room settings
 
 command-centre-parser.js
-  Pure command normalization, intent detection, participant resolution,
-  duration/time/date extraction, and event candidate resolution
+  Pure typo/contraction normalization, intent detection, participant
+  resolution, duration/time/date extraction, and event candidate resolution
 
 command-centre-date-time.js
   Timezone-aware date keys, British calendar phrases, time labels,
@@ -132,7 +176,7 @@ command-centre-scheduling.js
 
 server.js
   Room-scoped parsing, authoritative availability, permission enforcement,
-  conflict revalidation, event creation, and event movement
+  conflict revalidation, and versioned event mutations
 ```
 
 The UI follows these phases:
@@ -149,12 +193,14 @@ The browser debounces lightweight command submission, cancels obsolete requests,
 
 `parseCommand()` follows a fixed pipeline:
 
-1. Normalize whitespace, punctuation, matching case, and common wording.
+1. Normalize whitespace, punctuation, contractions, abbreviations, common
+   misspellings, matching case, and common wording.
 2. Detect an intent from explicit verbs and supported calendar patterns.
 3. Parse a British date or date range in the supplied timezone.
 4. Parse start/end times, duration, `after` constraints, and morning/afternoon/evening windows.
 5. Resolve names only against current-room members plus `me`/`myself` and `everyone`/`the whole room`.
-6. Resolve editable CommonGround event titles for move commands.
+6. Resolve CommonGround event titles for navigation, move, rename, duplicate,
+   delete, and participant-change commands.
 7. Apply safe defaults, such as a one-hour duration when a create command supplies a start time.
 8. Return missing fields and ambiguities rather than guessing a material date, time, person, or event.
 
@@ -191,21 +237,32 @@ POST /api/rooms/:roomCode/command-centre/parse
 POST /api/rooms/:roomCode/command-centre/availability
 POST /api/rooms/:roomCode/command-centre/create-event
 POST /api/rooms/:roomCode/command-centre/move-event
+POST /api/rooms/:roomCode/command-centre/update-event
+POST /api/rooms/:roomCode/command-centre/delete-event
 ```
 
-The parse route accepts at most 500 characters. Availability is read-only. Create and move are serialized per room and use the existing event persistence, notifications, and Google Calendar synchronization paths. Move requests include the previewed `updatedAt` value; a stale preview is rejected with `409 event_changed`.
+The parse route accepts at most 500 characters. Availability is read-only.
+Create, move, update, and delete are serialized per room and reuse the existing
+event persistence, notification, and calendar-sync paths. Create and delete
+require stable request IDs so network retries cannot duplicate work. Mutations
+include the previewed `updatedAt` value; a stale preview is rejected with
+`409 event_changed`.
 
 ## Security and privacy
 
 - Every endpoint requires a valid session and current membership in the requested room.
 - Participant IDs are never trusted merely because the browser supplied them.
-- Only the event creator or room host can move a CommonGround event.
+- Only the event creator or room host can move, rename, delete, or change the
+  participants of a CommonGround event.
 - Dates, durations, timezones, invitees, and event fields are validated on the server.
-- Parse, availability, create, and move routes have separate rate limits.
+- Parse, availability, create, move, update, and delete routes have separate rate limits.
 - External calendar data contributes busy intervals only. The Command Centre does not expose provider titles, descriptions, locations, attendees, raw payloads, or OAuth tokens.
 - Responses use the existing public-event projection.
 - Raw command text is not persisted or logged by the feature.
-- Creating or moving always requires a visible preview and explicit user confirmation.
+- Every event mutation requires a visible preview and explicit user confirmation.
+- Room membership is re-checked when a queued mutation actually executes.
+- Create/delete request IDs are idempotent, and event versions advance
+  monotonically to reject stale double submissions.
 - Google Calendar writes remain within the existing CommonGround event-sync workflow and permissions.
 
 ## Adding an intent
@@ -249,7 +306,15 @@ npm test
 npm start
 ```
 
-`npm run check` is the production syntax/build-equivalent check because this repository has no transpilation step. `tests/command-centre.mjs` covers parsing, participant ambiguity and fuzzy matching, event ambiguity, interval merging, availability/no-availability, conflicts, and Europe/London daylight-saving transitions. `tests/command-centre-integration.mjs` covers strict membership, confirmed creation, server conflict revalidation, metadata-preserving moves, and stale-preview rejection. The main smoke suite covers the wider HTTP application, privacy, persistence, existing event flows, and frontend contracts.
+`npm run check` is the production syntax/build-equivalent check because this
+repository has no transpilation step. `tests/command-centre.mjs` covers typos,
+contractions, destructive-command negation, participant ambiguity, event
+actions, date/time parsing, scheduling, and Europe/London daylight-saving
+transitions. `tests/command-centre-integration.mjs` covers strict membership,
+idempotent creation/deletion, conflict revalidation, contextual event IDs,
+versioned updates, participant changes, provider privacy, and stale-preview
+rejection. The main smoke suite covers the wider HTTP application, persistence,
+existing event flows, and frontend contracts.
 
 When changing the feature, test keyboard-only use, mobile bottom-sheet layout, focus restoration, stale-room request cancellation, confirmation behavior, conflict responses, and the absence of calls to external AI services.
 
@@ -272,7 +337,8 @@ The normal Render persistence warning still applies: SQLite data needs the confi
 - Parsing is deterministic English, with British date/time conventions; it is not general natural-language understanding.
 - Only current-room members can be resolved or invited.
 - Fuzzy matching is deliberately conservative, and similar names require selection.
-- Move commands target CommonGround events, not arbitrary external Google Calendar events.
+- Event-management commands target CommonGround events, not arbitrary external
+  Google Calendar events.
 - Availability searches are limited to 31 days, 15-minute granularity, and 15-minute-to-8-hour durations.
 - Default daily availability is 08:00–21:00 unless a supported phrase narrows it.
 - Ranking is deterministic and favors requested windows and earlier suitable slots; it does not learn personal preferences.

@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import {
   completeMoveTarget,
+  normaliseCommandLanguage,
   parseCommand,
+  parseDateRange,
   parseDuration,
+  parseTime,
   resolveEventCandidates,
   resolveParticipants
 } from "../command-centre-parser.js";
@@ -266,7 +269,7 @@ for (const command of ["set", "sett", "settings review", "asset", "upsetting"]) 
 }
 
 assert.equal(matchCommandViewKeyword("settings")?.view, "settings");
-assert.equal(matchCommandViewKeyword("setings")?.match, "typo");
+assert.equal(matchCommandViewKeyword("setings")?.view, "settings");
 assert.equal(matchCommandViewKeyword("settigns")?.corrected, "settings");
 assert.equal(matchCommandViewKeyword("open setings")?.view, "settings");
 assert.equal(matchCommandViewKeyword("set"), null);
@@ -298,6 +301,46 @@ assert.equal(exactSettingsPrediction?.kind, "exact");
 assert.equal(exactSettingsPrediction?.label, "Open settings");
 assert.equal(predictCommand("set room code"), null);
 assert.equal(predictCommand("create set"), null);
+
+assert.equal(
+  predictCommand("conect googl calender")?.acceptedCommand,
+  "connect Google Calendar"
+);
+assert.equal(
+  predictCommand("please opn setings")?.acceptedCommand,
+  "open settings"
+);
+assert.equal(
+  predictCommand("could you fnd time")?.acceptedCommand,
+  "find a time for everyone"
+);
+
+const memberPrediction = predictCommand("find time with my", {
+  members: [{ id: "mylo", displayName: "Mylo Hart" }]
+});
+assert.equal(memberPrediction?.acceptedCommand, "find a time with Mylo");
+assert.equal(memberPrediction?.label, "Find time with Mylo");
+
+const eventPrediction = predictCommand("move design rev", {
+  events: [{ id: "design-review", title: "Design Review" }]
+});
+assert.equal(eventPrediction?.acceptedCommand, "move Design Review");
+
+const duplicateFirstNamePredictionContext = {
+  members: [
+    { id: "john-smith", displayName: "John Smith" },
+    { id: "john-jones", displayName: "John Jones" }
+  ]
+};
+assert.equal(
+  predictCommand("find time with john", duplicateFirstNamePredictionContext),
+  null,
+  "A shared first name must not silently choose one room member."
+);
+assert.equal(
+  predictCommand("find time with john sm", duplicateFirstNamePredictionContext)?.acceptedCommand,
+  "find a time with John Smith"
+);
 
 const connectGoogle = parseCommand("Connect my Google Calendar", options);
 assert.equal(connectGoogle.intent, "connect_google");
@@ -357,6 +400,298 @@ assert.equal(unsupported.intent, "unsupported");
 assert.match(unsupported.reason, /create events, find shared free time, show availability, move events and navigate/i);
 assert.equal(parseDuration("Find time with Matthew tomorrow"), null);
 
+const correctedLanguage = normaliseCommandLanguage(
+  "Could you craete an evnt w/ Sam tmrw for 45 mins?"
+);
+assert.equal(
+  correctedLanguage.text,
+  "could you create an event with sam tomorrow for 45 minutes"
+);
+assert.deepEqual(
+  correctedLanguage.corrections.map(({ from, to }) => `${from}:${to}`),
+  ["craete:create", "evnt:event", "tmrw:tomorrow", "mins:minutes"]
+);
+
+const typoCreate = parseCommand(
+  "craete lunch w/ Sam tmrw @ 1pm for 45 mins",
+  options
+);
+assert.equal(typoCreate.intent, "create_event");
+assert.equal(typoCreate.title, "lunch");
+assert.deepEqual(typoCreate.participantIds, ["sam"]);
+assert.equal(typoCreate.dateKey, "2026-07-21");
+assert.equal(typoCreate.startMinute, 13 * 60);
+assert.equal(typoCreate.durationMinutes, 45);
+assert.ok(typoCreate.confidence < 0.9);
+assert.equal(typoCreate.interpretation.normalised.includes("tomorrow"), true);
+
+for (const verb of ["creat", "ceate", "craete", "cretae", "createe"]) {
+  assert.equal(
+    parseCommand(`${verb} planning tmrw at 2pm`, options).intent,
+    "create_event",
+    `${verb} should conservatively normalize to create`
+  );
+}
+for (const verb of ["schedual", "scheduel", "scedule", "shcedule"]) {
+  assert.equal(
+    parseCommand(`${verb} planning tomorrow at 2pm`, options).intent,
+    "create_event",
+    `${verb} should conservatively normalize to schedule`
+  );
+}
+for (const tomorrow of ["tmr", "tmrw", "tmw", "tomo", "tomorow", "tommorow", "2moro"]) {
+  assert.equal(
+    parseCommand(`create planning ${tomorrow} at 2pm`, options).dateKey,
+    "2026-07-21",
+    `${tomorrow} should normalize to tomorrow`
+  );
+}
+for (const [misspelling, expectedDate] of [
+  ["tueaday", "2026-07-21"],
+  ["wednsday", "2026-07-22"],
+  ["thurday", "2026-07-23"],
+  ["friady", "2026-07-24"]
+]) {
+  assert.equal(
+    parseCommand(`create planning on ${misspelling} at 2pm`, options).dateKey,
+    expectedDate
+  );
+}
+
+const politeTypoFind = parseCommand(
+  "could you fnd an hr for evryone nxt wk after 5 p.m.",
+  options
+);
+assert.equal(politeTypoFind.intent, "find_time");
+assert.deepEqual(new Set(politeTypoFind.participantIds), allRoomParticipantIds);
+assert.equal(politeTypoFind.durationMinutes, 60);
+assert.equal(politeTypoFind.rangeKind, "next_week");
+assert.equal(politeTypoFind.earliestMinute, 17 * 60);
+
+const contractedAvailability = parseCommand(
+  "when's everyone free nxt wk?",
+  options
+);
+assert.equal(contractedAvailability.intent, "show_availability");
+assert.equal(contractedAvailability.rangeKind, "next_week");
+assert.deepEqual(new Set(contractedAvailability.participantIds), allRoomParticipantIds);
+
+const contractedRoomAvailability = parseCommand("when're we free nxt wk?", options);
+assert.equal(contractedRoomAvailability.intent, "show_availability");
+assert.deepEqual(
+  new Set(contractedRoomAvailability.participantIds),
+  allRoomParticipantIds
+);
+
+const contractedCreate = parseCommand(
+  "Let's meet Sam tomorrow at quarter past 4",
+  options
+);
+assert.equal(contractedCreate.intent, "create_event");
+assert.deepEqual(contractedCreate.participantIds, ["sam"]);
+assert.equal(contractedCreate.startMinute, 16 * 60 + 15);
+
+const typoGoogle = parseCommand("conect my googel calender", options);
+assert.equal(typoGoogle.intent, "connect_google");
+assert.equal(typoGoogle.provider, "google");
+
+const typoNamedDate = parseCommand("opne the 15th of Aug", options);
+assert.equal(typoNamedDate.intent, "navigate");
+assert.equal(typoNamedDate.targetDate, "2026-08-15");
+
+const typoCreateWithRichTime = parseCommand(
+  "schedual a meetng with Mathew day after tomorrow at half past 3 for an hour and a half",
+  options
+);
+assert.equal(typoCreateWithRichTime.intent, "create_event");
+assert.deepEqual(typoCreateWithRichTime.participantIds, ["matthew"]);
+assert.equal(typoCreateWithRichTime.dateKey, "2026-07-22");
+assert.equal(typoCreateWithRichTime.startMinute, 15 * 60 + 30);
+assert.equal(typoCreateWithRichTime.durationMinutes, 90);
+assert.deepEqual(typoCreateWithRichTime.unmatchedParticipants, []);
+
+assert.equal(parseDuration("for a quarter of an hour"), 15);
+assert.equal(parseDuration("lasting three quarters of an hour"), 45);
+assert.equal(parseDuration("for an hour and a half"), 90);
+assert.equal(parseDuration("for 1h 30m"), 90);
+assert.equal(parseDuration("for 2 hours and 15 minutes"), 135);
+assert.equal(parseDuration("for forty five minutes"), 45);
+
+assert.equal(parseTime("at noon").startMinute, 12 * 60);
+assert.equal(parseTime("at midnight").startMinute, 0);
+assert.equal(parseTime("at quarter to 4pm").startMinute, 15 * 60 + 45);
+assert.equal(parseTime("at half past 3").startMinute, 15 * 60 + 30);
+assert.deepEqual(
+  {
+    startMinute: parseTime("between 9am and 5pm").startMinute,
+    endMinute: parseTime("between 9am and 5pm").endMinute
+  },
+  { startMinute: 9 * 60, endMinute: 17 * 60 }
+);
+
+assert.equal(
+  parseDateRange("day after tomorrow", options).dateKey,
+  "2026-07-22"
+);
+assert.equal(parseDateRange("in three days", options).dateKey, "2026-07-23");
+assert.equal(parseDateRange("in a fortnight", options).dateKey, "2026-08-03");
+assert.equal(parseDateRange("on 29/07/2026", options).dateKey, "2026-07-29");
+assert.equal(parseDateRange("on 2026-08-04", options).dateKey, "2026-08-04");
+
+const nextWeekendTypo = parseCommand(
+  "fnd time w/ Sam nxt weekend",
+  options
+);
+assert.equal(nextWeekendTypo.intent, "find_time");
+assert.equal(nextWeekendTypo.rangeKind, "next_weekend");
+assert.equal(dateKeyInZone(nextWeekendTypo.rangeStart, timezone), "2026-08-01");
+assert.equal(
+  dateKeyInZone(new Date(new Date(nextWeekendTypo.rangeEnd).getTime() - 1), timezone),
+  "2026-08-02"
+);
+
+const weekAfterNext = parseCommand(
+  "Find a time for all of us the week after next",
+  options
+);
+assert.equal(weekAfterNext.intent, "find_time");
+assert.equal(weekAfterNext.rangeKind, "week_after_next");
+assert.equal(dateKeyInZone(weekAfterNext.rangeStart, timezone), "2026-08-03");
+
+const workingDayAvailability = parseCommand(
+  "Find 30 minutes for everyone next week between 9am and 5pm",
+  options
+);
+assert.equal(workingDayAvailability.earliestMinute, 9 * 60);
+assert.equal(workingDayAvailability.latestMinute, 17 * 60);
+
+const afterWorkAvailability = parseCommand(
+  "Find time with Sam this week after work",
+  options
+);
+assert.equal(afterWorkAvailability.earliestMinute, 17 * 60);
+
+const renamedEvent = parseCommand(
+  "Rename Economics revision to Macro Review",
+  options
+);
+assert.equal(renamedEvent.intent, "rename_event");
+assert.equal(renamedEvent.eventQuery, "Economics revision");
+assert.equal(renamedEvent.newTitle, "Macro Review");
+assert.equal(renamedEvent.requiresConfirmation, true);
+
+const typoRenamedEvent = parseCommand(
+  "renmae Economics revision to Team Planning",
+  options
+);
+assert.equal(typoRenamedEvent.intent, "rename_event");
+assert.equal(typoRenamedEvent.eventQuery, "Economics revision");
+assert.equal(typoRenamedEvent.newTitle, "Team Planning");
+
+const bareDelete = parseCommand("delete", options);
+assert.equal(bareDelete.intent, "delete_event");
+assert.equal(bareDelete.eventQuery, "");
+assert.ok(bareDelete.missingFields.includes("event"));
+
+const typoDelete = parseCommand("delet Economics revision", options);
+assert.equal(typoDelete.intent, "delete_event");
+assert.equal(typoDelete.eventQuery, "economics revision");
+assert.equal(typoDelete.requiresConfirmation, true);
+
+const duplicateEvent = parseCommand(
+  "duplicte Economics revision tomorrow at 2pm",
+  options
+);
+assert.equal(duplicateEvent.intent, "duplicate_event");
+assert.equal(duplicateEvent.eventQuery, "economics revision");
+assert.equal(duplicateEvent.targetDateKey, "2026-07-21");
+assert.equal(duplicateEvent.targetStartMinute, 14 * 60);
+assert.equal(duplicateEvent.requiresConfirmation, true);
+
+const bareCopy = parseCommand("copy event", options);
+assert.equal(bareCopy.intent, "duplicate_event");
+assert.ok(bareCopy.missingFields.includes("event"));
+assert.ok(bareCopy.missingFields.includes("target_date_or_time"));
+assert.equal(parseCommand("copy notes", options).intent, "unsupported");
+
+const typoInvite = parseCommand(
+  "invte Mathew to Economics revision",
+  options
+);
+assert.equal(typoInvite.intent, "add_participant");
+assert.equal(typoInvite.eventQuery, "economics revision");
+assert.deepEqual(typoInvite.participantIds, ["matthew"]);
+assert.deepEqual(typoInvite.unmatchedParticipants, []);
+
+const ambiguousInvite = parseCommand(
+  "invite John to Economics revision",
+  {
+    ...options,
+    members: [
+      ...members,
+      { id: "john-smith", displayName: "John Smith" },
+      { id: "john-jones", displayName: "John Jones" }
+    ]
+  }
+);
+assert.equal(ambiguousInvite.intent, "add_participant");
+assert.deepEqual(ambiguousInvite.participantIds, []);
+assert.equal(ambiguousInvite.ambiguities[0].type, "participant");
+
+const contextOptions = {
+  ...options,
+  context: {
+    selectedEventId: "event-selected",
+    selectedEventTitle: "Economics revision"
+  }
+};
+const contextRemoval = parseCommand("remove Sam from it", contextOptions);
+assert.equal(contextRemoval.intent, "remove_participant");
+assert.deepEqual(contextRemoval.participantIds, ["sam"]);
+assert.equal(contextRemoval.eventQuery, "Economics revision");
+assert.equal(contextRemoval.contextEventRequested, true);
+assert.equal(contextRemoval.usedContextEvent, true);
+assert.equal(contextRemoval.contextEventId, "event-selected");
+
+const relativeMove = parseCommand(
+  "move Economics revision 15 mins earlier",
+  options
+);
+assert.equal(relativeMove.intent, "move_event");
+assert.equal(relativeMove.eventQuery, "economics revision");
+assert.equal(relativeMove.relativeOffsetMinutes, -15);
+assert.equal(relativeMove.missingFields.includes("target_date_or_time"), false);
+const relativeMoveCompleted = completeMoveTarget(relativeMove, {
+  id: "relative-event",
+  title: "Economics revision",
+  start: "2026-07-22T15:00:00.000Z",
+  end: "2026-07-22T16:00:00.000Z",
+  createdByParticipantId: "me"
+}, timezone);
+assert.equal(relativeMoveCompleted.targetStart, "2026-07-22T14:45:00.000Z");
+assert.equal(relativeMoveCompleted.targetEnd, "2026-07-22T15:45:00.000Z");
+
+const contextMove = parseCommand("move it back 30m", contextOptions);
+assert.equal(contextMove.eventQuery, "Economics revision");
+assert.equal(contextMove.relativeOffsetMinutes, 30);
+assert.equal(contextMove.contextEventId, "event-selected");
+assert.equal(contextMove.usedContextEvent, true);
+
+for (const [command, expectedIntent] of [
+  ["created equal", "unsupported"],
+  ["connective tissue", "unsupported"],
+  ["copy notes", "unsupported"],
+  ["update budget", "unsupported"],
+  ["remove blockers tomorrow at 3", "create_event"],
+  ["assets and settings review", "unsupported"]
+]) {
+  assert.equal(
+    parseCommand(command, options).intent,
+    expectedIntent,
+    `${command} must not be over-corrected into a destructive command`
+  );
+}
+
 const fuzzyParticipant = resolveParticipants(
   "Find an hour with Mathew next week",
   members,
@@ -398,7 +733,11 @@ const eventCandidates = resolveEventCandidates("economics revision", [
     start: "2026-07-22T15:00:00.000Z",
     end: "2026-07-22T16:00:00.000Z",
     createdByParticipantId: "me",
-    updatedAt: "2026-07-20T11:00:00.000Z"
+    updatedAt: "2026-07-20T11:00:00.000Z",
+    inviteeParticipantIds: ["sam"],
+    location: "Library",
+    description: "Bring notes",
+    allDay: false
   },
   {
     id: "event-two",
@@ -410,6 +749,11 @@ const eventCandidates = resolveEventCandidates("economics revision", [
   }
 ], { participantId: "me" });
 assert.equal(eventCandidates.length, 2);
+assert.equal(eventCandidates[0].createdByParticipantId, "me");
+assert.deepEqual(eventCandidates[0].inviteeParticipantIds, ["sam"]);
+assert.equal(eventCandidates[0].location, "Library");
+assert.equal(eventCandidates[0].description, "Bring notes");
+assert.equal(eventCandidates[0].allDay, false);
 
 const focusedEventCandidates = resolveEventCandidates("economics revision edited", [
   {

@@ -250,6 +250,11 @@ async function createCalendarEvent(eventData = {}) {
     const inviteeParticipantIds = commandActionParticipantIds(
       eventData.participants || eventData.inviteeParticipantIds || []
     );
+    const requestId = String(
+      eventData.requestId ||
+      globalThis.crypto?.randomUUID?.() ||
+      `create_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    );
     const data = await fetchJson(`/api/rooms/${roomCodeSnapshot}/command-centre/create-event`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -262,7 +267,8 @@ async function createCalendarEvent(eventData = {}) {
         location: String(eventData.location || "").trim(),
         description: String(eventData.description || "").trim(),
         inviteeParticipantIds,
-        syncToGoogle: eventData.syncToGoogle ?? Boolean(calendarEventSyncEnabled())
+        syncToGoogle: eventData.syncToGoogle ?? Boolean(calendarEventSyncEnabled()),
+        requestId
       })
     });
     if (currentRoom?.code === roomCodeSnapshot) {
@@ -279,6 +285,168 @@ async function createCalendarEvent(eventData = {}) {
     );
   } catch (error) {
     return commandActionFailure(error, "CommonGround could not create the event.");
+  }
+}
+
+function commandActionEditableEvent(eventId, {
+  requireManage = true,
+  expectedUpdatedAt = null
+} = {}) {
+  if (!currentRoom?.code) throw new Error("Open a room before changing an event.");
+  const event = roomEventById(eventId);
+  if (!event) {
+    const error = new Error("That event is no longer available.");
+    error.code = "event_not_found";
+    throw error;
+  }
+  if (
+    requireManage &&
+    !currentIsHost &&
+    event.createdByParticipantId !== currentParticipant?.id
+  ) {
+    const error = new Error("You cannot change this event.");
+    error.code = "event_forbidden";
+    throw error;
+  }
+  if (
+    expectedUpdatedAt &&
+    expectedUpdatedAt !== (event.updatedAt || event.createdAt)
+  ) {
+    const error = new Error("This event changed after the preview. Review it again before continuing.");
+    error.code = "event_changed";
+    throw error;
+  }
+  return event;
+}
+
+function commandActionInviteeIds(value, creatorParticipantId) {
+  const requested = Array.isArray(value) ? value : [];
+  const memberIds = new Set((currentRoom?.participants || []).map((participant) => participant.id));
+  const looksLikeIds = requested.every((entry) => memberIds.has(String(entry || "")));
+  const resolved = looksLikeIds
+    ? requested.map((entry) => String(entry || ""))
+    : commandActionParticipantIds(requested);
+  const ids = new Set(resolved.filter((participantId) => memberIds.has(participantId)));
+  if (creatorParticipantId && memberIds.has(creatorParticipantId)) ids.add(creatorParticipantId);
+  return [...ids];
+}
+
+function commandActionApplyEvent(event) {
+  if (!currentRoom?.events || !event?.id) return;
+  const index = currentRoom.events.findIndex((entry) => entry.id === event.id);
+  if (index >= 0) currentRoom.events[index] = event;
+  else currentRoom.events.push(event);
+  render();
+  fetchNotifications();
+}
+
+async function updateCalendarEvent(eventId, updates = {}, options = {}) {
+  try {
+    const source = commandActionEditableEvent(eventId, {
+      expectedUpdatedAt: options.expectedUpdatedAt || updates.expectedUpdatedAt || null
+    });
+    const roomCodeSnapshot = currentRoom.code;
+    const payload = {};
+
+    if (Object.hasOwn(updates, "title")) {
+      const title = String(updates.title || "").trim();
+      if (!title) throw new Error("Add an event title.");
+      payload.title = title;
+    }
+    for (const key of ["location", "description"]) {
+      if (Object.hasOwn(updates, key)) payload[key] = String(updates[key] || "").trim();
+    }
+    for (const key of ["start", "end", "timezone", "allDay", "syncToGoogle", "syncToOutlook"]) {
+      if (Object.hasOwn(updates, key)) payload[key] = updates[key];
+    }
+    if (Object.hasOwn(updates, "inviteeParticipantIds") || Object.hasOwn(updates, "participants")) {
+      payload.inviteeParticipantIds = commandActionInviteeIds(
+        updates.inviteeParticipantIds ?? updates.participants,
+        source.createdByParticipantId
+      );
+    }
+    if (!Object.keys(payload).length) throw new Error("Choose something to change.");
+
+    const data = await fetchJson(`/api/rooms/${roomCodeSnapshot}/command-centre/update-event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventId: source.id,
+        expectedUpdatedAt:
+          options.expectedUpdatedAt ||
+          updates.expectedUpdatedAt ||
+          source.updatedAt ||
+          source.createdAt,
+        ...payload
+      })
+    });
+    if (currentRoom?.code === roomCodeSnapshot) commandActionApplyEvent(data.event);
+    return commandActionSuccess(`Updated “${data.event.title}”.`, { event: data.event });
+  } catch (error) {
+    return commandActionFailure(error, "CommonGround could not update the event.");
+  }
+}
+
+async function deleteCalendarEvent(eventId, options = {}) {
+  try {
+    const source = commandActionEditableEvent(eventId, {
+      expectedUpdatedAt: options.expectedUpdatedAt || null
+    });
+    const roomCodeSnapshot = currentRoom.code;
+    const requestId = String(
+      options.requestId ||
+      globalThis.crypto?.randomUUID?.() ||
+      `delete_${Date.now()}_${Math.random().toString(36).slice(2)}`
+    );
+    await fetchJson(`/api/rooms/${roomCodeSnapshot}/command-centre/delete-event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        eventId: source.id,
+        expectedUpdatedAt: options.expectedUpdatedAt || source.updatedAt || source.createdAt,
+        requestId
+      })
+    });
+    if (currentRoom?.code === roomCodeSnapshot) {
+      currentRoom.events = (currentRoom.events || []).filter((event) => event.id !== source.id);
+      removeEventFromUndoStack(source.id, roomCodeSnapshot);
+      if (selectedEventId === source.id) clearDetailPanel();
+      render();
+      fetchNotifications();
+    }
+    return commandActionSuccess(`Deleted “${source.title}”.`, {
+      eventId: source.id,
+      title: source.title
+    });
+  } catch (error) {
+    return commandActionFailure(error, "CommonGround could not delete the event.");
+  }
+}
+
+async function duplicateCalendarEvent(eventId, overrides = {}) {
+  try {
+    const source = commandActionEditableEvent(eventId, { requireManage: false });
+    const title = String(overrides.title || `${source.title || "Event"} copy`).trim();
+    const start = overrides.start || overrides.startTime || source.start;
+    const end = overrides.end || overrides.endTime || source.end;
+    return await createCalendarEvent({
+      title,
+      start,
+      end,
+      timezone: overrides.timezone || source.timezone || commandCentreTimezone(),
+      allDay: overrides.allDay ?? source.allDay === true,
+      location: overrides.location ?? source.location ?? "",
+      description: overrides.description ?? source.description ?? "",
+      inviteeParticipantIds:
+        overrides.inviteeParticipantIds ??
+        overrides.participants ??
+        source.inviteeParticipantIds ??
+        [],
+      syncToGoogle: overrides.syncToGoogle ?? Boolean(calendarEventSyncEnabled()),
+      requestId: overrides.requestId
+    });
+  } catch (error) {
+    return commandActionFailure(error, "CommonGround could not duplicate the event.");
   }
 }
 
@@ -330,6 +498,9 @@ window.CommonGroundCommandActions = Object.freeze({
   navigateToView,
   findOverlapAvailability,
   createCalendarEvent,
+  updateCalendarEvent,
+  deleteCalendarEvent,
+  duplicateCalendarEvent,
   connectGoogleCalendar,
   updateCustomRoomCode
 });

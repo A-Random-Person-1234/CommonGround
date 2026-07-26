@@ -30,9 +30,17 @@ npm test
 
 ## Command Centre
 
-CommonGround includes a deterministic command palette for creating and moving events, finding or highlighting shared availability, and navigating the current room. Open **Ask CommonGround** from the calendar toolbar or press `Cmd/Ctrl+K`; `/` also opens it when focus is not inside an editable control.
+CommonGround includes a typo-tolerant deterministic command palette for
+creating, moving, renaming, duplicating, and deleting events; managing
+participants; finding or highlighting shared availability; and navigating the
+current room. It also supports short contextual follow-ups such as “move it 15
+minutes later.” Open **Ask CommonGround** from the calendar toolbar or press
+`Cmd/Ctrl+K`; `/` also opens it when focus is not inside an editable control.
 
-The Command Centre uses local parsing plus CommonGround's existing server-side room, availability, permission, event, and Google Calendar sync systems. It does not call an LLM, require an AI API key, or create events without an editable preview and explicit confirmation.
+The Command Centre uses local parsing plus CommonGround's existing server-side
+room, availability, permission, event, and Google Calendar sync systems. It
+does not call an LLM, require an AI API key, or mutate events without an
+editable preview and explicit confirmation.
 
 See [Command Centre architecture and usage](docs/command-centre.md) for supported commands, security details, extension guidance, tests, Render considerations, and current limitations.
 

@@ -252,11 +252,28 @@ try {
         start: "2030-01-15T08:00:00.000Z",
         end: "2030-01-15T09:00:00.000Z",
         timezone: "UTC",
-        inviteeParticipantIds: ["participant-not-in-room"]
+        inviteeParticipantIds: ["participant-not-in-room"],
+        requestId: "create_invalid_invitee_20300115"
       }
     }
   );
   assert.equal(unknownParticipant.payload.code, "participant_access_denied");
+
+  const missingCreateRequestId = await host.request(
+    `/api/rooms/${roomCode}/command-centre/create-event`,
+    {
+      method: "POST",
+      expected: 400,
+      body: {
+        title: "Missing request ID",
+        start: "2030-01-15T08:00:00.000Z",
+        end: "2030-01-15T09:00:00.000Z",
+        timezone: "UTC",
+        inviteeParticipantIds: [hostId]
+      }
+    }
+  );
+  assert.match(missingCreateRequestId.payload.error, /request ID/i);
 
   const blockingEvent = await host.request(`/api/rooms/${roomCode}/events`, {
     method: "POST",
@@ -407,7 +424,8 @@ try {
         location: "Meeting room",
         description: "Should never be saved",
         inviteeParticipantIds: [hostId, guestId],
-        syncToGoogle: false
+        syncToGoogle: false,
+        requestId: "create_conflict_20300115"
       }
     }
   );
@@ -427,21 +445,23 @@ try {
     "Conflict revalidation must happen before an event is written"
   );
 
+  const confirmedCreateBody = {
+    title: "Planning session",
+    start: "2030-01-15T12:00:00.000Z",
+    end: "2030-01-15T13:00:00.000Z",
+    timezone: "UTC",
+    location: "Library",
+    description: "Bring the project outline",
+    inviteeParticipantIds: [guestId, hostId],
+    syncToGoogle: false,
+    requestId: "create_planning_20300115"
+  };
   const confirmedCreate = await host.request(
     `/api/rooms/${roomCode}/command-centre/create-event`,
     {
       method: "POST",
       expected: 201,
-      body: {
-        title: "Planning session",
-        start: "2030-01-15T12:00:00.000Z",
-        end: "2030-01-15T13:00:00.000Z",
-        timezone: "UTC",
-        location: "Library",
-        description: "Bring the project outline",
-        inviteeParticipantIds: [guestId, hostId],
-        syncToGoogle: false
-      }
+      body: confirmedCreateBody
     }
   );
   const createdEvent = confirmedCreate.payload.event;
@@ -451,6 +471,88 @@ try {
   assert.equal(createdEvent.start, "2030-01-15T12:00:00.000Z");
   assert.equal(createdEvent.end, "2030-01-15T13:00:00.000Z");
   assert.deepEqual(inviteeIds(createdEvent), expectedInviteeIds);
+
+  const contextualRename = await host.request(
+    `/api/rooms/${roomCode}/command-centre/parse`,
+    {
+      method: "POST",
+      body: {
+        command: "Rename it to Project planning",
+        timezone: "UTC",
+        contextEventId: createdEvent.id
+      }
+    }
+  );
+  assert.equal(contextualRename.payload.result.intent, "rename_event");
+  assert.equal(contextualRename.payload.result.usedContextEvent, true);
+  assert.equal(contextualRename.payload.result.eventCandidates.length, 1);
+  assert.equal(contextualRename.payload.result.eventCandidates[0].id, createdEvent.id);
+  assert.ok(
+    !("googleCalendarSync" in contextualRename.payload.result.eventCandidates[0]),
+    "Contextual candidates must not expose private provider sync metadata"
+  );
+
+  const forbiddenContextualRename = await guest.request(
+    `/api/rooms/${roomCode}/command-centre/parse`,
+    {
+      method: "POST",
+      body: {
+        command: "Delete that",
+        timezone: "UTC",
+        contextEventId: createdEvent.id
+      }
+    }
+  );
+  assert.equal(forbiddenContextualRename.payload.result.intent, "delete_event");
+  assert.deepEqual(forbiddenContextualRename.payload.result.eventCandidates, []);
+  assert.ok(forbiddenContextualRename.payload.result.missingFields.includes("event"));
+
+  const contextualDuplicate = await guest.request(
+    `/api/rooms/${roomCode}/command-centre/parse`,
+    {
+      method: "POST",
+      body: {
+        command: "Duplicate that tomorrow",
+        timezone: "UTC",
+        contextEventId: createdEvent.id
+      }
+    }
+  );
+  assert.equal(contextualDuplicate.payload.result.intent, "duplicate_event");
+  assert.equal(contextualDuplicate.payload.result.eventCandidates[0].id, createdEvent.id);
+
+  const repeatedCreate = await host.request(
+    `/api/rooms/${roomCode}/command-centre/create-event`,
+    {
+      method: "POST",
+      expected: 201,
+      body: confirmedCreateBody
+    }
+  );
+  assert.equal(
+    repeatedCreate.payload.event.id,
+    createdEvent.id,
+    "Retrying the same create request must return the original event"
+  );
+  const afterRepeatedCreate = await host.request(`/api/rooms/${roomCode}`);
+  assert.equal(
+    afterRepeatedCreate.payload.room.events.filter((event) => event.id === createdEvent.id).length,
+    1,
+    "A repeated create request must not duplicate the event"
+  );
+
+  const conflictingRequestReuse = await host.request(
+    `/api/rooms/${roomCode}/command-centre/create-event`,
+    {
+      method: "POST",
+      expected: 409,
+      body: {
+        ...confirmedCreateBody,
+        title: "Different event"
+      }
+    }
+  );
+  assert.equal(conflictingRequestReuse.payload.code, "idempotency_conflict");
 
   const forbiddenGuestMove = await guest.request(
     `/api/rooms/${roomCode}/command-centre/move-event`,
@@ -507,6 +609,237 @@ try {
     }
   );
   assert.equal(staleMove.payload.code, "event_changed");
+
+  const mutationCreate = await host.request(
+    `/api/rooms/${roomCode}/command-centre/create-event`,
+    {
+      method: "POST",
+      expected: 201,
+      body: {
+        title: "Temporary command event",
+        start: "2030-01-15T18:00:00.000Z",
+        end: "2030-01-15T19:00:00.000Z",
+        timezone: "UTC",
+        inviteeParticipantIds: [hostId],
+        syncToGoogle: false,
+        requestId: "create_temporary_20300115"
+      }
+    }
+  );
+  const temporaryEvent = mutationCreate.payload.event;
+
+  const forbiddenGuestUpdate = await guest.request(
+    `/api/rooms/${roomCode}/command-centre/update-event`,
+    {
+      method: "POST",
+      expected: 403,
+      body: {
+        eventId: temporaryEvent.id,
+        expectedUpdatedAt: temporaryEvent.updatedAt,
+        title: "Guest overwrite"
+      }
+    }
+  );
+  assert.match(forbiddenGuestUpdate.payload.error, /cannot change/i);
+
+  const unsupportedUpdate = await host.request(
+    `/api/rooms/${roomCode}/command-centre/update-event`,
+    {
+      method: "POST",
+      expected: 400,
+      body: {
+        eventId: temporaryEvent.id,
+        expectedUpdatedAt: temporaryEvent.updatedAt,
+        titel: "Misspelled field"
+      }
+    }
+  );
+  assert.match(unsupportedUpdate.payload.error, /unsupported event update field/i);
+
+  const invalidSyncUpdate = await host.request(
+    `/api/rooms/${roomCode}/command-centre/update-event`,
+    {
+      method: "POST",
+      expected: 400,
+      body: {
+        eventId: temporaryEvent.id,
+        expectedUpdatedAt: temporaryEvent.updatedAt,
+        syncToGoogle: "yes"
+      }
+    }
+  );
+  assert.match(invalidSyncUpdate.payload.error, /true or false/i);
+
+  const renamedTemporary = await host.request(
+    `/api/rooms/${roomCode}/command-centre/update-event`,
+    {
+      method: "POST",
+      body: {
+        eventId: temporaryEvent.id,
+        expectedUpdatedAt: temporaryEvent.updatedAt,
+        title: "Renamed command event"
+      }
+    }
+  );
+  assert.equal(renamedTemporary.payload.event.title, "Renamed command event");
+  assert.equal(renamedTemporary.payload.event.start, temporaryEvent.start);
+  assert.equal(renamedTemporary.payload.event.end, temporaryEvent.end);
+
+  const renamedAgain = await host.request(
+    `/api/rooms/${roomCode}/command-centre/update-event`,
+    {
+      method: "POST",
+      body: {
+        eventId: temporaryEvent.id,
+        expectedUpdatedAt: renamedTemporary.payload.event.updatedAt,
+        title: "Renamed command event again"
+      }
+    }
+  );
+  assert.ok(
+    renamedAgain.payload.event.updatedAt > renamedTemporary.payload.event.updatedAt,
+    "Every successful mutation must advance the stale-write token"
+  );
+
+  const staleRename = await host.request(
+    `/api/rooms/${roomCode}/command-centre/update-event`,
+    {
+      method: "POST",
+      expected: 409,
+      body: {
+        eventId: temporaryEvent.id,
+        expectedUpdatedAt: temporaryEvent.updatedAt,
+        title: "Stale overwrite"
+      }
+    }
+  );
+  assert.equal(staleRename.payload.code, "event_changed");
+
+  const missingDeleteRequestId = await host.request(
+    `/api/rooms/${roomCode}/command-centre/delete-event`,
+    {
+      method: "POST",
+      expected: 400,
+      body: {
+        eventId: temporaryEvent.id,
+        expectedUpdatedAt: renamedAgain.payload.event.updatedAt
+      }
+    }
+  );
+  assert.match(missingDeleteRequestId.payload.error, /request ID/i);
+
+  const deleteRequest = {
+    eventId: temporaryEvent.id,
+    expectedUpdatedAt: renamedAgain.payload.event.updatedAt,
+    requestId: "delete_temporary_20300115"
+  };
+  const deletedTemporary = await host.request(
+    `/api/rooms/${roomCode}/command-centre/delete-event`,
+    {
+      method: "POST",
+      body: deleteRequest
+    }
+  );
+  assert.equal(deletedTemporary.payload.deleted, true);
+  assert.equal(deletedTemporary.payload.repeated, false);
+
+  const repeatedDelete = await host.request(
+    `/api/rooms/${roomCode}/command-centre/delete-event`,
+    {
+      method: "POST",
+      body: deleteRequest
+    }
+  );
+  assert.equal(repeatedDelete.payload.deleted, true);
+  assert.equal(repeatedDelete.payload.repeated, true);
+  assert.equal(repeatedDelete.payload.eventId, temporaryEvent.id);
+
+  const outsiderDelete = await outsider.request(
+    `/api/rooms/${roomCode}/command-centre/delete-event`,
+    {
+      method: "POST",
+      expected: 403,
+      body: deleteRequest
+    }
+  );
+  assert.match(outsiderDelete.payload.error, /join this room/i);
+
+  const guestBusy = await guest.request(`/api/rooms/${roomCode}/events`, {
+    method: "POST",
+    expected: 201,
+    body: {
+      title: "Guest-only commitment",
+      start: "2030-01-15T20:00:00.000Z",
+      end: "2030-01-15T21:00:00.000Z",
+      timezone: "UTC",
+      inviteeParticipantIds: [guestId],
+      syncToGoogle: false
+    }
+  });
+  const hostCandidate = await host.request(`/api/rooms/${roomCode}/events`, {
+    method: "POST",
+    expected: 201,
+    body: {
+      title: "Host-only candidate",
+      start: "2030-01-15T20:00:00.000Z",
+      end: "2030-01-15T21:00:00.000Z",
+      timezone: "UTC",
+      inviteeParticipantIds: [hostId],
+      syncToGoogle: false
+    }
+  });
+
+  const conflictingInviteeUpdate = await host.request(
+    `/api/rooms/${roomCode}/command-centre/update-event`,
+    {
+      method: "POST",
+      expected: 409,
+      body: {
+        eventId: hostCandidate.payload.event.id,
+        expectedUpdatedAt: hostCandidate.payload.event.updatedAt,
+        inviteeParticipantIds: [hostId, guestId]
+      }
+    }
+  );
+  assert.equal(conflictingInviteeUpdate.payload.code, "availability_conflict");
+  assert.deepEqual(
+    conflictingInviteeUpdate.payload.details?.conflictingParticipantIds,
+    [guestId]
+  );
+  const conflictingInviteeText = JSON.stringify(conflictingInviteeUpdate.payload);
+  assert.ok(!conflictingInviteeText.includes("Guest-only commitment"));
+
+  const unknownInviteeUpdate = await host.request(
+    `/api/rooms/${roomCode}/command-centre/update-event`,
+    {
+      method: "POST",
+      expected: 403,
+      body: {
+        eventId: hostCandidate.payload.event.id,
+        expectedUpdatedAt: hostCandidate.payload.event.updatedAt,
+        inviteeParticipantIds: [hostId, "participant-not-in-room"]
+      }
+    }
+  );
+  assert.equal(unknownInviteeUpdate.payload.code, "participant_access_denied");
+
+  const afterRejectedInviteeUpdate = await host.request(`/api/rooms/${roomCode}`);
+  assert.deepEqual(
+    inviteeIds(
+      afterRejectedInviteeUpdate.payload.room.events.find(
+        (event) => event.id === hostCandidate.payload.event.id
+      )
+    ),
+    [hostId],
+    "Rejected participant changes must not partially update the event"
+  );
+
+  await host.request(`/api/rooms/${roomCode}/events/${hostCandidate.payload.event.id}`, {
+    method: "DELETE"
+  });
+  await host.request(`/api/rooms/${roomCode}/events/${guestBusy.payload.event.id}`, {
+    method: "DELETE"
+  });
 
   const finalRoom = await host.request(`/api/rooms/${roomCode}`);
   const finalEvent = finalRoom.payload.room.events.find((event) => event.id === createdEvent.id);

@@ -41,7 +41,16 @@ const commandCentreState = {
   composing: false,
   announcedPrediction: null,
   createSuggestionCursor: 0,
-  createTitleSuggestion: ""
+  createTitleSuggestion: "",
+  createRequestId: null,
+  createCommandKey: "",
+  deleteRequestId: null,
+  deleteCommandKey: "",
+  deleteCandidateId: null,
+  interpretation: null,
+  lastCommand: "",
+  contextEvent: null,
+  pendingEventAction: null
 };
 
 const commandEventIdeaLabels = Object.freeze([
@@ -52,7 +61,7 @@ const commandEventIdeaLabels = Object.freeze([
 ]);
 
 let commandCentrePredictor = null;
-import("/command-centre-predictor.js?v=20260725-predictive-commands")
+import("/command-centre-predictor.js?v=20260726-assistant-upgrade")
   .then((module) => {
     commandCentrePredictor = module;
     if (commandCentreDialog?.open) commandCentreHandleInput();
@@ -60,6 +69,318 @@ import("/command-centre-predictor.js?v=20260725-predictive-commands")
   .catch(() => {
     commandCentrePredictor = null;
   });
+
+const commandWordAliases = Object.freeze({
+  "2moro": "tomorrow",
+  "2morow": "tomorrow",
+  "tmrw": "tomorrow",
+  "tmr": "tomorrow",
+  "tomorow": "tomorrow",
+  "tommorow": "tomorrow",
+  "tommorrow": "tomorrow",
+  "nxt": "next",
+  "w": "with",
+  "wk": "week",
+  "wks": "weeks",
+  "mins": "minutes",
+  "min": "minutes",
+  "hr": "hour",
+  "hrs": "hours",
+  "cal": "calendar",
+  "calender": "calendar",
+  "calandar": "calendar",
+  "clendar": "calendar",
+  "avail": "availability",
+  "availablity": "availability",
+  "schedual": "schedule",
+  "shedule": "schedule",
+  "shcedule": "schedule",
+  "creat": "create",
+  "craete": "create",
+  "evnt": "event",
+  "evt": "event",
+  "mtg": "meeting",
+  "meetting": "meeting",
+  "mvoe": "move",
+  "moev": "move",
+  "delet": "delete",
+  "delte": "delete",
+  "remvoe": "remove",
+  "cancle": "cancel",
+  "duplicte": "duplicate",
+  "duplciate": "duplicate",
+  "renmae": "rename",
+  "opne": "open",
+  "googl": "google",
+  "evryone": "everyone",
+  "every1": "everyone",
+  "setings": "settings",
+  "settigns": "settings",
+  "settting": "settings",
+  "thrusday": "thursday",
+  "thurday": "thursday",
+  "thurs": "thursday",
+  "wensday": "wednesday",
+  "wednsday": "wednesday",
+  "tues": "tuesday",
+  "weds": "wednesday",
+  "fri": "friday",
+  "sat": "saturday",
+  "sun": "sunday",
+  "tody": "today",
+  "todya": "today",
+  "whens": "when is"
+});
+
+function commandNormalizeVocabulary(value) {
+  const normalized = String(value || "")
+    .normalize("NFKC")
+    .toLocaleLowerCase("en-GB")
+    .replace(/[’']/g, "")
+    .replace(/\bw\s*\/\s*/g, "with ")
+    .replace(/\b(?:could|can|would)\s+(?:you|u)\s+/g, "")
+    .replace(/\b(?:please|pls)\b/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+  return normalized
+    .split(" ")
+    .map((token) => commandWordAliases[token] || token)
+    .join(" ")
+    .replace(/\b(?:id like to|i want to|i need to|let me)\s+/g, "")
+    .trim();
+}
+
+function commandExpandForParser(value) {
+  let expanded = String(value || "")
+    .normalize("NFKC")
+    .replace(/[’]/g, "'")
+    .replace(/\bwhen's\b/gi, "when is")
+    .replace(/\bwho's\b/gi, "who is")
+    .replace(/\bwhat's\b/gi, "what is")
+    .replace(/\blet's\b/gi, "let me")
+    .replace(/\bw\s*\/\s*/gi, "with ")
+    .replace(/^\s*(?:(?:could|can|would)\s+(?:you|u)|please|pls)\s+/i, "")
+    .trim();
+  for (const [alias, replacement] of Object.entries(commandWordAliases)) {
+    const escaped = alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    expanded = expanded.replace(new RegExp(`\\b${escaped}\\b`, "gi"), replacement);
+  }
+  return expanded
+    .replace(/^\s*(?:i(?:'d| would)? like to|i want to|i need to|let me)\s+/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function commandEditDistance(left, right) {
+  if (commandCentrePredictor?.damerauLevenshtein) {
+    return commandCentrePredictor.damerauLevenshtein(left, right);
+  }
+  const a = String(left || "");
+  const b = String(right || "");
+  const row = Array.from({ length: b.length + 1 }, (_, index) => index);
+  for (let leftIndex = 1; leftIndex <= a.length; leftIndex += 1) {
+    let diagonal = row[0];
+    row[0] = leftIndex;
+    for (let rightIndex = 1; rightIndex <= b.length; rightIndex += 1) {
+      const previous = row[rightIndex];
+      row[rightIndex] = Math.min(
+        row[rightIndex] + 1,
+        row[rightIndex - 1] + 1,
+        diagonal + (a[leftIndex - 1] === b[rightIndex - 1] ? 0 : 1)
+      );
+      diagonal = previous;
+    }
+  }
+  return row[b.length];
+}
+
+function commandTokenMatches(typed, target, { allowPrefix = false } = {}) {
+  if (typed === target) return { matched: true, cost: 0, prefix: false };
+  if (allowPrefix && typed.length >= 2 && target.startsWith(typed)) {
+    return { matched: true, cost: 0, prefix: true };
+  }
+  const limit = typed.length >= 8 ? 2 : typed.length >= 4 ? 1 : 0;
+  const distance = Math.abs(typed.length - target.length) <= limit
+    ? commandEditDistance(typed, target)
+    : limit + 1;
+  return { matched: distance <= limit, cost: distance, prefix: false };
+}
+
+function commandPhraseMatch(typedValue, targetValue) {
+  const typed = commandNormalizeVocabulary(typedValue).split(" ").filter(Boolean);
+  const target = commandNormalizeVocabulary(targetValue).split(" ").filter(Boolean);
+  if (!typed.length || typed.length > target.length) return null;
+  let cost = 0;
+  let usedPrefix = false;
+  for (let index = 0; index < typed.length; index += 1) {
+    const match = commandTokenMatches(typed[index], target[index], {
+      allowPrefix: index === typed.length - 1
+    });
+    if (!match.matched) return null;
+    cost += match.cost;
+    usedPrefix ||= match.prefix;
+  }
+  if (cost > Math.max(2, Math.floor(typed.length / 2))) return null;
+  return {
+    cost,
+    prefix: usedPrefix || typed.length < target.length,
+    exact: cost === 0 && typed.length === target.length
+  };
+}
+
+function commandPredictionEntries() {
+  const entries = [
+    ["Open settings", "open settings", ["settings", "open settings", "show settings", "preferences"]],
+    ["Open day view", "day view", ["day", "day view", "show day"]],
+    ["Open week view", "week view", ["week", "week view", "show week"]],
+    ["Open month view", "month view", ["month", "month view", "show month"]],
+    ["Open year view", "year view", ["year", "year view", "show year"]],
+    ["Connect Google Calendar", "connect Google Calendar", ["google calendar", "connect google", "sync google calendar"]],
+    ["Create an event", "create an event", ["create", "create event", "new event", "schedule event"]],
+    ["Find shared time", "find a time for everyone this week", ["find time", "find a time", "everyone free", "shared availability"]]
+  ].map(([label, command, aliases]) => ({ label, command, aliases }));
+
+  const roomParticipants = currentRoom?.participants || [];
+  const firstNameCounts = new Map();
+  for (const participant of roomParticipants) {
+    const firstName = commandNormalizeVocabulary(
+      String(participant?.displayName || "").trim().split(/\s+/)[0]
+    );
+    if (firstName) firstNameCounts.set(firstName, (firstNameCounts.get(firstName) || 0) + 1);
+  }
+  for (const participant of roomParticipants) {
+    if (!participant?.displayName || participant.id === currentParticipant?.id) continue;
+    const name = String(participant.displayName).trim();
+    const firstName = name.split(/\s+/)[0];
+    const firstNameIsUnique = firstNameCounts.get(commandNormalizeVocabulary(firstName)) === 1;
+    const findAliases = [`find time with ${name}`, `when is ${name} free`];
+    const createAliases = [`create event with ${name}`, `meet ${name}`];
+    if (firstNameIsUnique) {
+      findAliases.push(`find time with ${firstName}`, `when is ${firstName} free`);
+      createAliases.push(`create event with ${firstName}`, `meet ${firstName}`);
+    }
+    entries.push(
+      {
+        label: `Find time with ${name}`,
+        command: `find a time with ${name} this week`,
+        aliases: findAliases,
+        specificTerms: [name, ...(firstNameIsUnique ? [firstName] : [])]
+      },
+      {
+        label: `Create event with ${name}`,
+        command: `create an event with ${name}`,
+        aliases: createAliases,
+        specificTerms: [name, ...(firstNameIsUnique ? [firstName] : [])]
+      }
+    );
+  }
+
+  for (const event of (currentRoom?.events || []).slice(0, 80)) {
+    const title = String(event?.title || "").trim();
+    if (!title || title === "(No title)") continue;
+    entries.push(
+      {
+        label: `Move ${title}`,
+        command: `move ${title}`,
+        aliases: [`move ${title}`, `reschedule ${title}`],
+        specificTerms: [title]
+      },
+      {
+        label: `Rename ${title}`,
+        command: `rename ${title}`,
+        aliases: [`rename ${title}`, `change ${title} title`],
+        specificTerms: [title]
+      },
+      {
+        label: `Duplicate ${title}`,
+        command: `duplicate ${title}`,
+        aliases: [`duplicate ${title}`, `copy ${title}`],
+        specificTerms: [title]
+      },
+      {
+        label: `Delete ${title}`,
+        command: `delete ${title}`,
+        aliases: [`delete ${title}`, `remove ${title}`, `cancel ${title}`],
+        specificTerms: [title]
+      }
+    );
+  }
+  return entries;
+}
+
+function commandDynamicPrediction(value) {
+  const normalized = commandNormalizeVocabulary(value);
+  if (normalized.length < 2) return null;
+  const typedTokens = normalized.split(" ");
+  const candidates = [];
+  for (const entry of commandPredictionEntries()) {
+    if (entry.specificTerms?.length) {
+      const hasSpecificTerm = entry.specificTerms.some((term) => (
+        commandNormalizeVocabulary(term).split(" ").some((targetToken) => (
+          typedTokens.some((typedToken) => commandTokenMatches(typedToken, targetToken, { allowPrefix: true }).matched)
+        ))
+      ));
+      if (!hasSpecificTerm) continue;
+    }
+    for (const alias of entry.aliases) {
+      const match = commandPhraseMatch(normalized, alias);
+      if (!match) continue;
+      const acceptedCommand = entry.command;
+      const raw = String(value || "");
+      const rawComparable = raw.trim().toLocaleLowerCase("en-GB");
+      const acceptedComparable = acceptedCommand.toLocaleLowerCase("en-GB");
+      const corrected = match.cost > 0 || commandNormalizeVocabulary(raw) !== rawComparable;
+      const inlineSuffix = (
+        !corrected &&
+        raw === raw.trim() &&
+        acceptedComparable.startsWith(rawComparable)
+      ) ? acceptedCommand.slice(raw.length) : "";
+      candidates.push({
+        kind: match.exact ? "exact" : corrected ? "typo" : "prefix",
+        label: entry.label,
+        acceptedCommand,
+        inlineSuffix,
+        corrected,
+        parseTyped: match.exact,
+        rank: match.cost * 100 + (match.prefix ? 20 : 0) + acceptedCommand.length - normalized.length
+      });
+    }
+  }
+  candidates.sort((left, right) => left.rank - right.rank || left.acceptedCommand.length - right.acceptedCommand.length);
+  const best = candidates[0] || null;
+  if (
+    best &&
+    candidates.some((candidate, index) => (
+      index > 0 &&
+      candidate.rank === best.rank &&
+      commandNormalizeVocabulary(candidate.acceptedCommand) !==
+        commandNormalizeVocabulary(best.acceptedCommand)
+    ))
+  ) {
+    return null;
+  }
+  return best;
+}
+
+function commandBestPrediction(value) {
+  const dynamic = commandDynamicPrediction(value);
+  const base = commandCentrePredictor?.predictCommand(value, {
+    members: currentRoom?.participants || [],
+    events: currentRoom?.events || []
+  }) || null;
+  if (!dynamic) return base;
+  if (!base) return dynamic;
+  const normalized = commandNormalizeVocabulary(value);
+  const hasRoomVocabulary = (currentRoom?.participants || []).some((participant) => (
+    normalized.includes(commandNormalizeVocabulary(participant.displayName).split(" ")[0])
+  )) || (currentRoom?.events || []).some((event) => (
+    normalized.includes(commandNormalizeVocabulary(event.title))
+  ));
+  return hasRoomVocabulary || dynamic.corrected || normalized.split(" ").length > 2
+    ? dynamic
+    : base;
+}
 
 function commandCentreTimezone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
@@ -71,6 +392,52 @@ function commandEscape(value) {
 
 function commandAttribute(value) {
   return escapeAttribute(String(value ?? ""));
+}
+
+function commandIntentLabel(result = {}) {
+  const labels = {
+    create_event: "Create event",
+    find_time: "Find shared time",
+    show_availability: "Show availability",
+    move_event: "Move event",
+    delete_event: "Delete event",
+    duplicate_event: "Duplicate event",
+    update_event: "Update event",
+    rename_event: "Rename event",
+    adjust_participants: "Update participants",
+    update_participants: "Update participants",
+    participant_adjustment: "Update participants",
+    add_participant: "Add participant",
+    remove_participant: "Remove participant",
+    navigate_date: "Open date",
+    navigate_view: "Switch view",
+    connect_google: "Connect Google Calendar",
+    update_room_code: "Change room code"
+  };
+  return labels[result.intent] || "Calendar command";
+}
+
+function commandSetInterpretation(result, rawCommand = commandCentreState.lastCommand, parsedCommand = rawCommand) {
+  const raw = String(rawCommand || "").trim();
+  const parsed = String(parsedCommand || "").trim();
+  commandCentreState.interpretation = {
+    label: commandIntentLabel(result),
+    correction: raw && parsed && raw.toLocaleLowerCase("en-GB") !== parsed.toLocaleLowerCase("en-GB")
+      ? parsed
+      : ""
+  };
+}
+
+function commandInterpretationMarkup() {
+  const interpretation = commandCentreState.interpretation;
+  if (!interpretation) return "";
+  return `
+    <div class="command-interpretation" aria-label="Interpreted command">
+      <span>Understood</span>
+      <strong>${commandEscape(interpretation.label)}</strong>
+      ${interpretation.correction ? `<span>as “${commandEscape(interpretation.correction)}”</span>` : ""}
+    </div>
+  `;
 }
 
 function commandTimePickerMarkup({
@@ -112,6 +479,14 @@ function commandTimePickerMarkup({
   `;
 }
 
+function commandCreateRequestId() {
+  if (!commandCentreState.createRequestId) {
+    commandCentreState.createRequestId = globalThis.crypto?.randomUUID?.()
+      || `command-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+  return commandCentreState.createRequestId;
+}
+
 function commandCentreSetPhase(phase, announcement = "") {
   const nextPhase = commandCentrePhases.has(phase) ? phase : "error";
   commandCentreState.phase = nextPhase;
@@ -124,6 +499,13 @@ function commandCentreSetBody(markup) {
   window.closeLocationAutocompletes?.({ immediate: true, resetSession: true });
   window.CommonGroundTimePicker?.close({ commit: false });
   commandCentreBody.innerHTML = markup;
+  if (
+    commandCentreState.interpretation &&
+    ["needs_clarification", "preview", "results", "success", "error"].includes(commandCentreState.phase) &&
+    !commandCentreBody.querySelector(".command-interpretation")
+  ) {
+    commandCentreBody.insertAdjacentHTML("afterbegin", commandInterpretationMarkup());
+  }
   window.CommonGroundTimePicker?.initialize(commandCentreBody);
 }
 
@@ -197,7 +579,6 @@ function commandCentreSyncCompletionScroll() {
 function commandCentreUpdatePrediction() {
   if (
     commandCentreState.composing ||
-    !commandCentrePredictor ||
     commandCentreInput.selectionStart !== commandCentreInput.value.length ||
     commandCentreInput.selectionEnd !== commandCentreInput.value.length
   ) {
@@ -205,7 +586,7 @@ function commandCentreUpdatePrediction() {
     return null;
   }
 
-  const prediction = commandCentrePredictor.predictCommand(commandCentreInput.value);
+  const prediction = commandBestPrediction(commandCentreInput.value);
   commandCentreState.prediction = prediction;
   commandCentreCompletionPrefix.textContent = prediction?.inlineSuffix ? commandCentreInput.value : "";
   commandCentreCompletionSuffix.textContent = prediction?.inlineSuffix || "";
@@ -216,6 +597,10 @@ function commandCentreUpdatePrediction() {
 
 function commandCentreRenderPrediction(prediction) {
   commandCentreState.selectedIndex = 0;
+  commandCentreState.interpretation = {
+    label: prediction.label,
+    correction: prediction.corrected ? prediction.acceptedCommand : ""
+  };
   const detail = prediction.corrected
     ? `Correct to “${prediction.acceptedCommand}”`
     : prediction.kind === "prefix"
@@ -231,17 +616,13 @@ function commandCentreRenderPrediction(prediction) {
     commandCentreStatus.textContent = `Suggestion: ${prediction.label}. ${completionHint}`;
   }
   commandCentreSetBody(`
-    <div class="command-results-heading">
-      <h3>Suggested command</h3>
-      <span>Nothing runs until you confirm</span>
-    </div>
-    <div class="command-event-candidate-list" role="listbox" aria-label="Predicted command">
-      <button class="command-option is-selected" type="button" role="option" aria-selected="true" data-command-option data-command-prediction-command="${commandAttribute(prediction.acceptedCommand)}">
+    <div class="command-event-candidate-list command-prediction-list" role="listbox" aria-label="Predicted command">
+      <button class="command-option command-prediction-option is-selected" type="button" role="option" aria-selected="true" data-command-option data-command-prediction-command="${commandAttribute(prediction.acceptedCommand)}">
         <span class="command-candidate-copy">
-          <strong>${commandEscape(prediction.label)}</strong>
+          <strong>${commandEscape(prediction.acceptedCommand)}</strong>
           <span>${commandEscape(detail)}</span>
         </span>
-        <span>Run</span>
+        <span>Tab to complete</span>
       </button>
     </div>
   `);
@@ -286,6 +667,15 @@ function openCommandCentre(opener = commandCentreButton) {
   commandCentreState.moveCandidate = null;
   commandCentreState.conflictDraft = null;
   commandCentreState.createTitleSuggestion = "";
+  commandCentreState.createRequestId = null;
+  commandCentreState.createCommandKey = "";
+  commandCentreState.deleteRequestId = null;
+  commandCentreState.deleteCommandKey = "";
+  commandCentreState.deleteCandidateId = null;
+  commandCentreState.interpretation = null;
+  commandCentreState.lastCommand = "";
+  commandCentreState.pendingEventAction = null;
+  commandCentreState.contextEvent = typeof activeEvent === "function" ? activeEvent() : null;
   commandCentreState.selectedIndex = 0;
   commandCentreState.composing = false;
   commandCentreState.announcedPrediction = null;
@@ -344,6 +734,12 @@ function commandParticipantName(participantId) {
   return currentRoom?.participants?.find((participant) => participant.id === participantId)?.displayName || "Room member";
 }
 
+function commandCanManageEvent(event = {}) {
+  if (typeof canManageEvent === "function") return canManageEvent(event);
+  const isHost = typeof currentIsHost !== "undefined" && currentIsHost;
+  return Boolean(isHost || (currentParticipant?.id && event.createdByParticipantId === currentParticipant.id));
+}
+
 function commandParticipantNames(participantIds = [], { includeCurrent = true } = {}) {
   return participantIds
     .filter((participantId) => includeCurrent || participantId !== currentParticipant?.id)
@@ -392,18 +788,31 @@ function commandPrepareEventTitleSuggestion(result) {
     : "";
 }
 
-function commandParticipantEditorMarkup(selectedIds = []) {
-  const selected = new Set([currentParticipant?.id, ...selectedIds].filter(Boolean));
+function commandParticipantEditorMarkup(selectedIds = [], {
+  creatorParticipantId = null,
+  includeCurrent = true
+} = {}) {
+  const requiredIds = [
+    creatorParticipantId,
+    includeCurrent ? currentParticipant?.id : null
+  ].filter(Boolean);
+  const selected = new Set([...requiredIds, ...selectedIds].filter(Boolean));
   return `
     <div class="command-participant-editor">
       <span>Participants</span>
       <div class="command-participant-list">
         ${(currentRoom?.participants || []).map((participant) => {
           const isCurrent = participant.id === currentParticipant?.id;
+          const isCreator = participant.id === creatorParticipantId;
+          const required = isCreator || (includeCurrent && isCurrent);
+          const suffix = [
+            isCreator ? "Creator" : "",
+            isCurrent ? "You" : ""
+          ].filter(Boolean).join(" · ");
           return `
             <label class="command-participant-chip" style="--participant-color:${commandAttribute(participant.color)}">
-              <input type="checkbox" value="${commandAttribute(participant.id)}" data-command-participant ${selected.has(participant.id) ? "checked" : ""} ${isCurrent ? "disabled" : ""} />
-              <span>${commandEscape(participant.displayName)}${isCurrent ? " (You)" : ""}</span>
+              <input type="checkbox" value="${commandAttribute(participant.id)}" data-command-participant ${selected.has(participant.id) ? "checked" : ""} ${required ? "disabled" : ""} />
+              <span>${commandEscape(participant.displayName)}${suffix ? ` (${commandEscape(suffix)})` : ""}</span>
             </label>
           `;
         }).join("")}
@@ -503,12 +912,103 @@ function commandMissingQuestion(result) {
   if (missing.includes("start_time")) return "What time should this event begin?";
   if (missing.includes("date_range")) return "What day or date range should CommonGround search?";
   if (missing.includes("participants")) return "Who should CommonGround include?";
-  if (missing.includes("event")) return "Which event should CommonGround move?";
+  if (missing.includes("event")) {
+    const action = {
+      rename_event: "rename",
+      delete_event: "delete",
+      duplicate_event: "duplicate",
+      add_participant: "update",
+      remove_participant: "update",
+      update_event: "update"
+    }[result?.intent] || "move";
+    return `Which event should CommonGround ${action}?`;
+  }
   if (missing.includes("target_date_or_time")) return "When should the event move to?";
   if (missing.includes("title")) return "What should this event be called?";
   if (missing.includes("room_code")) return "What six-character room code should CommonGround use?";
   if (missing.includes("view")) return "Which view should CommonGround open?";
   return "";
+}
+
+function commandRecoveryCommand(suffix) {
+  const base = String(commandCentreInput?.value || commandCentreState.lastCommand || "").trim().replace(/[.,;:!?]+$/, "");
+  return `${base} ${suffix}`.trim();
+}
+
+function commandReplaceRecoveryToken(token, replacement) {
+  const base = String(commandCentreInput?.value || commandCentreState.lastCommand || "").trim();
+  if (!token) return commandRecoveryCommand(`with ${replacement}`);
+  const escaped = String(token).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const replaced = base.replace(new RegExp(`\\b${escaped}\\b`, "i"), replacement);
+  return replaced === base ? commandRecoveryCommand(`with ${replacement}`) : replaced;
+}
+
+function commandRecoveryMarkup(result) {
+  const missing = result?.missingFields || [];
+  const participantIssue = (result?.ambiguities || []).find((ambiguity) => (
+    ambiguity.type === "participant_not_found" || ambiguity.type === "participant"
+  ));
+  const options = [];
+  if (missing.includes("date")) {
+    options.push(
+      ["Today", commandRecoveryCommand("today")],
+      ["Tomorrow", commandRecoveryCommand("tomorrow")],
+      ["Next Monday", commandRecoveryCommand("next Monday")]
+    );
+  } else if (missing.includes("start_time") || missing.includes("target_date_or_time")) {
+    options.push(
+      ["9:00am", commandRecoveryCommand("at 9am")],
+      ["1:00pm", commandRecoveryCommand("at 1pm")],
+      ["5:00pm", commandRecoveryCommand("at 5pm")]
+    );
+    if (missing.includes("target_date_or_time")) {
+      options.unshift(["15 minutes later", commandRecoveryCommand("15 minutes later")]);
+    }
+  } else if (missing.includes("date_range")) {
+    options.push(
+      ["This week", commandRecoveryCommand("this week")],
+      ["Next week", commandRecoveryCommand("next week")],
+      ["This month", commandRecoveryCommand("this month")]
+    );
+  } else if (missing.includes("participants") || participantIssue) {
+    for (const participant of (currentRoom?.participants || []).filter((entry) => entry.id !== currentParticipant?.id).slice(0, 5)) {
+      options.push([
+        participant.displayName,
+        commandReplaceRecoveryToken(participantIssue?.token, participant.displayName)
+      ]);
+    }
+    if ((currentRoom?.participants || []).length > 1) {
+      options.push([
+        "Everyone",
+        participantIssue
+          ? commandReplaceRecoveryToken(participantIssue.token, "everyone")
+          : commandRecoveryCommand("with everyone")
+      ]);
+    }
+  } else if (missing.includes("event")) {
+    const canUseEvent = (entry) => result?.intent === "duplicate_event" || commandCanManageEvent(entry);
+    for (const event of (currentRoom?.events || []).filter(canUseEvent).slice(0, 5)) {
+      const title = event.title || "(No title)";
+      options.push([
+        title,
+        result?.eventQuery
+          ? commandReplaceRecoveryToken(result.eventQuery, title)
+          : commandRecoveryCommand(title)
+      ]);
+    }
+  } else if (missing.includes("title")) {
+    for (const label of ["Catch-up", "Planning", "Lunch"]) {
+      options.push([label, commandRecoveryCommand(`called ${label}`)]);
+    }
+  }
+  if (!options.length) return "";
+  return `
+    <div class="command-recovery" aria-label="Quick answers">
+      ${options.map(([label, command]) => `
+        <button type="button" data-command-recovery-command="${commandAttribute(command)}">${commandEscape(label)}</button>
+      `).join("")}
+    </div>
+  `;
 }
 
 function commandRenderAmbiguity(result) {
@@ -522,6 +1022,7 @@ function commandRenderAmbiguity(result) {
         ? "CommonGround will not guess when two room members could match."
         : "Adjust the command and try again."}</p>
     </div>
+    ${!hasOptions ? commandRecoveryMarkup(result) : ""}
     ${hasOptions ? `<div class="command-event-candidate-list" role="listbox" aria-label="Clarification choices">
       ${(ambiguity.options || []).map((option, index) => `
         <button class="command-option ${index === 0 ? "is-selected" : ""}" type="button" role="option" aria-selected="${index === 0}" data-command-option data-command-participant-option="${commandAttribute(option.id)}">
@@ -557,6 +1058,7 @@ function commandRenderCreatePreview(result, {
     : dateValue;
   commandCentreSetPhase(question ? "needs_clarification" : "preview", question || "Event preview ready.");
   commandCentreSetBody(`
+    ${question ? `<div class="command-clarification">${commandEscape(question)}</div>${commandRecoveryMarkup(result)}` : ""}
     <div class="command-preview-card command-create-preview" aria-label="Event details">
       <h3>Event preview</h3>
       <div class="command-preview-grid">
@@ -687,6 +1189,7 @@ function commandRenderAvailabilityClarification(result) {
   commandCentreSetPhase("needs_clarification", question);
   commandCentreSetBody(`
     <div class="command-clarification">${commandEscape(question)}</div>
+    ${commandRecoveryMarkup(result)}
     <div class="command-preview-card">
       <h3>Availability search</h3>
       <div class="command-preview-grid">
@@ -712,10 +1215,12 @@ function commandRenderAvailabilityClarification(result) {
   `);
 }
 
-function commandSelectedParticipantIds() {
+function commandSelectedParticipantIds({ includeCurrent = true } = {}) {
   const ids = [...commandCentreBody.querySelectorAll("[data-command-participant]:checked")]
     .map((input) => input.value);
-  if (currentParticipant?.id && !ids.includes(currentParticipant.id)) ids.unshift(currentParticipant.id);
+  if (includeCurrent && currentParticipant?.id && !ids.includes(currentParticipant.id)) {
+    ids.unshift(currentParticipant.id);
+  }
   return ids;
 }
 
@@ -748,6 +1253,7 @@ function commandReadCreateDraft() {
     throw new Error("The end time must be after the start time.");
   }
   return {
+    requestId: commandCreateRequestId(),
     title,
     start: start.toISOString(),
     end: end.toISOString(),
@@ -897,6 +1403,7 @@ async function commandConfirmCreate() {
 }
 
 function commandCentreRenderSuccess(event, title, { allowUndo = false } = {}) {
+  commandCentreState.contextEvent = event;
   commandCentreSetPhase("success", `${title}: ${event.title}`);
   commandCentreSetBody(`
     <div class="command-state-card">
@@ -1109,13 +1616,40 @@ function commandMoveTargetForCandidate(result, candidate) {
   };
 }
 
+function commandEventActionCandidate(result) {
+  const candidates = result?.eventCandidates || [];
+  if (candidates.length === 1) return candidates[0];
+  const explicitId = result?.eventId || result?.targetEventId || result?.contextEventId;
+  if (explicitId) return (currentRoom?.events || []).find((event) => event.id === explicitId) || null;
+  if (result?.usedContextEvent && commandCentreState.contextEvent?.id) {
+    return (currentRoom?.events || []).find((event) => event.id === commandCentreState.contextEvent.id) || null;
+  }
+  return result?.eventCandidate || result?.event || null;
+}
+
+function commandEventActionLabel(intent) {
+  return {
+    move_event: "move",
+    delete_event: "delete",
+    duplicate_event: "duplicate",
+    update_event: "update",
+    rename_event: "rename",
+    adjust_participants: "update",
+    update_participants: "update",
+    participant_adjustment: "update",
+    add_participant: "update",
+    remove_participant: "update"
+  }[intent] || "update";
+}
+
 function commandRenderEventCandidates(result) {
   const candidates = result.eventCandidates || [];
   commandCentreSetPhase("needs_clarification", `I found ${candidates.length} matching events.`);
   commandCentreState.selectedIndex = 0;
+  const action = commandEventActionLabel(result.intent);
   commandCentreSetBody(`
     <div class="command-state-card">
-      <h3>Which event should move?</h3>
+      <h3>Which event should ${commandEscape(action)}?</h3>
       <p>Select the exact CommonGround event. External calendar titles remain private.</p>
     </div>
     <div class="command-event-candidate-list" role="listbox" aria-label="Matching events">
@@ -1132,15 +1666,141 @@ function commandRenderEventCandidates(result) {
   `);
 }
 
+function commandIntendedParticipantIds(result, candidate) {
+  const existing = new Set(candidate.inviteeParticipantIds || candidate.invitees?.map((entry) => entry.participantId) || []);
+  const additions = result.addParticipantIds || result.participantIdsToAdd || [];
+  const removals = result.removeParticipantIds || result.participantIdsToRemove || [];
+  additions.forEach((id) => existing.add(id));
+  removals.forEach((id) => existing.delete(id));
+  if (
+    ["adjust_participants", "update_participants", "participant_adjustment", "add_participant", "remove_participant"].includes(result.intent) &&
+    result.participantIds?.length
+  ) {
+    if (result.intent === "remove_participant" || result.participantAction === "remove") {
+      result.participantIds.forEach((id) => existing.delete(id));
+    } else {
+      result.participantIds.forEach((id) => existing.add(id));
+    }
+  }
+  return [...existing];
+}
+
+function commandRenderDeletePreview(result, candidate) {
+  const commandKey = commandNormalizeVocabulary(commandCentreState.lastCommand);
+  if (
+    !commandCentreState.deleteRequestId ||
+    commandCentreState.deleteCandidateId !== candidate.id ||
+    commandCentreState.deleteCommandKey !== commandKey
+  ) {
+    commandCentreState.deleteRequestId = globalThis.crypto?.randomUUID?.()
+      || `delete-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    commandCentreState.deleteCandidateId = candidate.id;
+    commandCentreState.deleteCommandKey = commandKey;
+  }
+  commandCentreState.pendingEventAction = { intent: "delete_event", candidate };
+  commandCentreState.contextEvent = candidate;
+  if (!commandCanManageEvent(candidate)) {
+    commandCentreRenderMessage("Read-only event", "Only the event creator or room host can delete this event.");
+    return;
+  }
+  commandCentreSetPhase("confirming", "Deletion requires confirmation.");
+  commandCentreSetBody(`
+    <div class="command-preview-card command-destructive-preview">
+      <h3>Delete “${commandEscape(candidate.title)}”?</h3>
+      <p>${commandEscape(commandHumanRange(candidate.start, candidate.end))}</p>
+      <p>This removes the CommonGround event and any calendar copies created through CommonGround.</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Keep event</button>
+        <button class="command-destructive-action" type="button" data-command-confirm-delete>Delete event</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandRenderDuplicatePreview(result, candidate) {
+  if (!candidate?.start || !candidate?.end) {
+    commandCentreRenderMessage("Event unavailable", "The source event no longer has a complete time range.");
+    return;
+  }
+  commandCentreState.createRequestId = null;
+  const duplicate = {
+    intent: "create_event",
+    sourceIntent: "duplicate_event",
+    title: result.newTitle || `${candidate.title || "Event"} copy`,
+    start: result.targetStart || result.start || candidate.start,
+    end: result.targetEnd || result.end || candidate.end,
+    participantIds: result.participantIds?.length
+      ? result.participantIds
+      : (candidate.inviteeParticipantIds || []),
+    location: candidate.location || "",
+    description: candidate.description || "",
+    allDay: candidate.allDay === true,
+    missingFields: [],
+    ambiguities: []
+  };
+  commandCentreState.parseResult = duplicate;
+  commandCentreState.contextEvent = candidate;
+  commandRenderCreatePreview(duplicate, duplicate);
+}
+
+function commandRenderUpdatePreview(result, candidate) {
+  commandCentreState.pendingEventAction = { intent: result.intent, candidate };
+  commandCentreState.contextEvent = candidate;
+  if (!commandCanManageEvent(candidate)) {
+    commandCentreRenderMessage("Read-only event", "Only the event creator or room host can change this event.");
+    return;
+  }
+  const proposedTitle = result.newTitle || result.updatedTitle || candidate.title || "(No title)";
+  const selectedParticipantIds = commandIntendedParticipantIds(result, candidate);
+  commandCentreSetPhase("preview", "Event update ready for review.");
+  commandCentreSetBody(`
+    <div class="command-preview-card command-update-preview">
+      <h3>Review event changes</h3>
+      <p>${commandEscape(commandHumanRange(candidate.start, candidate.end))}</p>
+      <label class="command-field">
+        <span>Title</span>
+        <input id="commandUpdateEventTitle" type="text" maxlength="120" value="${commandAttribute(proposedTitle)}" />
+      </label>
+      ${commandParticipantEditorMarkup(selectedParticipantIds, {
+        creatorParticipantId: candidate.createdByParticipantId,
+        includeCurrent: false
+      })}
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-confirm-update>Save changes</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandContinueEventAction(result, candidate) {
+  if (!candidate) {
+    commandCentreRenderMessage("Event not found", "Try the event’s exact CommonGround title.", {
+      actions: commandRecoveryMarkup({ ...result, missingFields: ["event"] })
+    });
+    return;
+  }
+  if (result.intent === "move_event") {
+    commandRenderMovePreview(result, candidate);
+  } else if (result.intent === "delete_event") {
+    commandRenderDeletePreview(result, candidate);
+  } else if (result.intent === "duplicate_event") {
+    commandRenderDuplicatePreview(result, candidate);
+  } else {
+    commandRenderUpdatePreview(result, candidate);
+  }
+}
+
 function commandRenderMovePreview(result, candidate) {
   const target = result.targetStart && result.targetEnd
     ? { start: result.targetStart, end: result.targetEnd }
     : commandMoveTargetForCandidate(result, candidate);
   commandCentreState.moveCandidate = candidate;
+  commandCentreState.contextEvent = candidate;
   const question = commandMissingQuestion(result);
   commandCentreSetPhase(question ? "needs_clarification" : "preview", question || "Move preview ready.");
   commandCentreSetBody(`
-    ${question ? `<div class="command-clarification">${commandEscape(question)}</div>` : ""}
+    ${question ? `<div class="command-clarification">${commandEscape(question)}</div>${commandRecoveryMarkup(result)}` : ""}
     <div class="command-preview-card">
       <h3>${commandEscape(candidate.title)}</h3>
       <p>Review the new time before saving.</p>
@@ -1237,6 +1897,91 @@ async function commandConfirmMove() {
     if (action) {
       action.disabled = false;
       action.textContent = "Move event";
+    }
+  }
+}
+
+async function commandConfirmEventUpdate() {
+  if (commandCentreState.phase === "saving" || !currentRoom?.code) return;
+  const candidate = commandCentreState.pendingEventAction?.candidate || commandCentreState.contextEvent;
+  if (!candidate || !commandCanManageEvent(candidate)) {
+    commandSetPreviewError("This event is no longer editable.");
+    return;
+  }
+  const title = commandCentreBody.querySelector("#commandUpdateEventTitle")?.value.trim();
+  if (!title) {
+    commandSetPreviewError("Add an event title.");
+    return;
+  }
+  const action = commandCentreBody.querySelector("[data-command-confirm-update]");
+  if (action) {
+    action.disabled = true;
+    action.textContent = "Saving…";
+  }
+  commandCentreSetPhase("saving", "Updating event.");
+  try {
+    const updateAction = window.CommonGroundCommandActions?.updateCalendarEvent;
+    if (typeof updateAction !== "function") {
+      throw new Error("Event updates are temporarily unavailable. Open the event to edit it directly.");
+    }
+    const outcome = await updateAction(
+      candidate.id,
+      {
+        title,
+        inviteeParticipantIds: commandSelectedParticipantIds({ includeCurrent: false })
+      },
+      { expectedUpdatedAt: candidate.updatedAt || candidate.createdAt }
+    );
+    if (!outcome.success) throw Object.assign(new Error(outcome.message), { code: outcome.code });
+    commandCentreState.contextEvent = outcome.payload.event;
+    commandCentreState.pendingEventAction = null;
+    commandCentreRenderSuccess(outcome.payload.event, "Event updated");
+  } catch (error) {
+    commandSetPreviewError(error.message || "The event could not be updated.");
+    if (action) {
+      action.disabled = false;
+      action.textContent = "Save changes";
+    }
+  }
+}
+
+async function commandConfirmEventDelete() {
+  if (commandCentreState.phase === "saving" || !currentRoom?.code) return;
+  const candidate = commandCentreState.pendingEventAction?.candidate;
+  if (!candidate || !commandCanManageEvent(candidate)) {
+    commandCentreRenderMessage("Event unavailable", "This event can no longer be deleted.");
+    return;
+  }
+  const action = commandCentreBody.querySelector("[data-command-confirm-delete]");
+  if (action) {
+    action.disabled = true;
+    action.textContent = "Deleting…";
+  }
+  commandCentreSetPhase("saving", "Deleting event.");
+  try {
+    const deleteAction = window.CommonGroundCommandActions?.deleteCalendarEvent;
+    if (typeof deleteAction !== "function") {
+      throw new Error("Event deletion is temporarily unavailable. Open the event to delete it directly.");
+    }
+    const outcome = await deleteAction(candidate.id, {
+      expectedUpdatedAt: candidate.updatedAt || candidate.createdAt,
+      requestId: commandCentreState.deleteRequestId
+    });
+    if (!outcome.success) throw Object.assign(new Error(outcome.message), { code: outcome.code });
+    commandCentreState.pendingEventAction = null;
+    commandCentreState.contextEvent = null;
+    commandCentreState.deleteRequestId = null;
+    commandCentreState.deleteCommandKey = "";
+    commandCentreState.deleteCandidateId = null;
+    commandCentreRenderMessage("Event deleted", `${candidate.title} was removed.`, {
+      phase: "success",
+      actions: '<button class="command-primary-action" type="button" data-command-close>Done</button>'
+    });
+  } catch (error) {
+    commandSetPreviewError(error.message || "The event could not be deleted.");
+    if (action) {
+      action.disabled = false;
+      action.textContent = "Delete event";
     }
   }
 }
@@ -1448,7 +2193,245 @@ async function commandOpenRoomEvent(eventId) {
   openEventDetail(event.id);
 }
 
+function commandCurrentCreateContext() {
+  const result = commandCentreState.parseResult;
+  const titleInput = commandCentreBody.querySelector("#commandEventTitle");
+  if (!titleInput && result?.intent !== "create_event") return null;
+  const date = commandCentreBody.querySelector("#commandEventDate")?.value;
+  const startTime = commandCentreBody.querySelector("#commandEventStart")?.value;
+  const endTime = commandCentreBody.querySelector("#commandEventEnd")?.value;
+  let start = result?.start || null;
+  let end = result?.end || null;
+  if (date && startTime) {
+    const nextStart = new Date(`${date}T${startTime}`);
+    if (!Number.isNaN(nextStart.getTime())) start = nextStart.toISOString();
+  }
+  if (date && endTime) {
+    const nextEnd = new Date(`${date}T${endTime}`);
+    if (!Number.isNaN(nextEnd.getTime())) {
+      if (start && nextEnd <= new Date(start) && endTime === "00:00") nextEnd.setDate(nextEnd.getDate() + 1);
+      end = nextEnd.toISOString();
+    }
+  }
+  return {
+    ...(result || {}),
+    intent: "create_event",
+    title: titleInput?.value.trim() || result?.title || "",
+    start,
+    end,
+    participantIds: titleInput ? commandSelectedParticipantIds() : (result?.participantIds || []),
+    location: commandCentreBody.querySelector("#commandEventLocation")?.value.trim() || result?.location || "",
+    description: commandCentreBody.querySelector("#commandEventDescription")?.value.trim() || result?.description || "",
+    allDay: commandCentreBody.querySelector("#commandEventAllDay")?.checked === true || result?.allDay === true,
+    missingFields: [...(result?.missingFields || [])],
+    ambiguities: []
+  };
+}
+
+function commandCurrentMoveContext() {
+  const candidate = commandCentreState.moveCandidate || commandCentreState.contextEvent;
+  if (!candidate || !commandCanManageEvent(candidate)) return null;
+  try {
+    if (commandCentreBody.querySelector("#commandMoveDate")) {
+      const draft = commandReadMoveDraft();
+      return { candidate, start: draft.start, end: draft.end };
+    }
+  } catch {
+    // Fall back to the last complete target below.
+  }
+  const result = commandCentreState.parseResult || {};
+  if (result.targetStart && result.targetEnd) {
+    return { candidate, start: result.targetStart, end: result.targetEnd };
+  }
+  return { candidate, start: candidate.start, end: candidate.end };
+}
+
+function commandDurationFromWords(text) {
+  if (/\bhalf (?:an )?hour\b/.test(text)) return 30;
+  if (/\b(?:an|one) hour\b/.test(text)) return 60;
+  const match = text.match(/\b(\d{1,3})\s*(minutes?|hours?)\b/);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  return match[2].startsWith("hour") ? amount * 60 : amount;
+}
+
+function commandResolveMember(value) {
+  const phrase = commandNormalizeVocabulary(value);
+  const matches = [];
+  for (const participant of currentRoom?.participants || []) {
+    if (participant.id === currentParticipant?.id) continue;
+    const full = commandNormalizeVocabulary(participant.displayName);
+    const first = full.split(" ")[0];
+    if (phrase === full || phrase === first) {
+      matches.push({ participant, score: 0 });
+      continue;
+    }
+    const fullDistance = commandEditDistance(phrase, full);
+    const firstDistance = commandEditDistance(phrase, first);
+    const score = Math.min(fullDistance, firstDistance);
+    const limit = phrase.length >= 8 ? 2 : phrase.length >= 4 ? 1 : 0;
+    if (score <= limit) matches.push({ participant, score });
+  }
+  matches.sort((left, right) => left.score - right.score);
+  const bestScore = matches[0]?.score;
+  const best = matches.filter((entry) => entry.score === bestScore);
+  return best.length === 1 ? best[0].participant : null;
+}
+
+function commandRenderContextPreviewMessage(message) {
+  commandCentreStatus.textContent = message;
+  commandCentreSetPhase("preview", message);
+}
+
+function commandApplyDurationContext(durationMinutes) {
+  if (!Number.isFinite(durationMinutes) || durationMinutes < 15 || durationMinutes > 24 * 60) return false;
+  const create = commandCurrentCreateContext();
+  if (create?.start) {
+    const start = new Date(create.start);
+    const next = {
+      ...create,
+      end: new Date(start.getTime() + durationMinutes * 60000).toISOString(),
+      durationMinutes,
+      missingFields: create.missingFields.filter((field) => field !== "start_time")
+    };
+    commandCentreState.parseResult = next;
+    commandRenderCreatePreview(next, next);
+    commandRenderContextPreviewMessage(`Duration updated to ${durationMinutes} minutes.`);
+    return true;
+  }
+  const move = commandCurrentMoveContext();
+  if (!move) return false;
+  const next = {
+    ...(commandCentreState.parseResult || {}),
+    intent: "move_event",
+    targetStart: move.start,
+    targetEnd: new Date(new Date(move.start).getTime() + durationMinutes * 60000).toISOString(),
+    durationMinutes,
+    missingFields: []
+  };
+  commandCentreState.parseResult = next;
+  commandRenderMovePreview(next, move.candidate);
+  commandRenderContextPreviewMessage(`Duration updated to ${durationMinutes} minutes.`);
+  return true;
+}
+
+function commandApplyShiftContext(deltaMinutes) {
+  if (!Number.isFinite(deltaMinutes) || !deltaMinutes || Math.abs(deltaMinutes) > 14 * 24 * 60) return false;
+  const create = commandCurrentCreateContext();
+  if (create?.start && create?.end) {
+    const next = {
+      ...create,
+      start: new Date(new Date(create.start).getTime() + deltaMinutes * 60000).toISOString(),
+      end: new Date(new Date(create.end).getTime() + deltaMinutes * 60000).toISOString(),
+      missingFields: create.missingFields.filter((field) => !["date", "start_time", "target_date_or_time"].includes(field))
+    };
+    commandCentreState.parseResult = next;
+    commandRenderCreatePreview(next, next);
+    commandRenderContextPreviewMessage(`Event shifted ${Math.abs(deltaMinutes)} minutes ${deltaMinutes > 0 ? "later" : "earlier"}.`);
+    return true;
+  }
+  const move = commandCurrentMoveContext();
+  if (!move) return false;
+  const next = {
+    ...(commandCentreState.parseResult || {}),
+    intent: "move_event",
+    targetStart: new Date(new Date(move.start).getTime() + deltaMinutes * 60000).toISOString(),
+    targetEnd: new Date(new Date(move.end).getTime() + deltaMinutes * 60000).toISOString(),
+    missingFields: []
+  };
+  commandCentreState.parseResult = next;
+  commandRenderMovePreview(next, move.candidate);
+  commandRenderContextPreviewMessage(`Event shifted ${Math.abs(deltaMinutes)} minutes ${deltaMinutes > 0 ? "later" : "earlier"}.`);
+  return true;
+}
+
+function commandApplyParticipantContext(memberText) {
+  const create = commandCurrentCreateContext();
+  const participant = commandResolveMember(memberText);
+  if (!participant) return false;
+  if (!create) {
+    const candidate = commandCentreState.moveCandidate || commandCentreState.contextEvent;
+    if (!candidate || !commandCanManageEvent(candidate)) return false;
+    const result = {
+      intent: "update_participants",
+      addParticipantIds: [participant.id],
+      missingFields: [],
+      ambiguities: []
+    };
+    commandCentreState.parseResult = result;
+    commandRenderUpdatePreview(result, candidate);
+    commandRenderContextPreviewMessage(`${participant.displayName} will be added when you save.`);
+    return true;
+  }
+  const participantIds = [...new Set([...(create.participantIds || []), participant.id])];
+  const next = {
+    ...create,
+    participantIds,
+    missingFields: create.missingFields.filter((field) => field !== "participants")
+  };
+  commandCentreState.parseResult = next;
+  commandRenderCreatePreview(next, next);
+  commandRenderContextPreviewMessage(`${participant.displayName} added to the pending event.`);
+  return true;
+}
+
+function commandTryContextualFollowUp(rawCommand) {
+  const text = commandNormalizeVocabulary(rawCommand);
+  const contextual = /\b(?:that|it|event)\b/.test(text) || /^(?:add|invite|include)\b/.test(text);
+  if (!contextual) return false;
+
+  if (/^(?:make|set|change)\b/.test(text) && /\b(?:minutes?|hours?)\b/.test(text)) {
+    const duration = commandDurationFromWords(text);
+    return duration ? commandApplyDurationContext(duration) : false;
+  }
+
+  const shift = text.match(/^(?:move|shift|push)\s+(?:that|it|event)(?:\s+by)?\s+(.+?)\s+(later|forward|earlier|back)$/);
+  if (shift) {
+    const duration = commandDurationFromWords(shift[1]);
+    if (!duration) return false;
+    return commandApplyShiftContext(["earlier", "back"].includes(shift[2]) ? -duration : duration);
+  }
+
+  const member = text.match(/^(?:add|invite|include)\s+(.+)$/);
+  const memberName = member?.[1]?.replace(/\s+to\s+(?:that|it|event)$/, "").trim();
+  if (memberName && commandApplyParticipantContext(memberName)) return true;
+
+  const candidate = commandCentreState.moveCandidate || commandCentreState.contextEvent;
+  if (!candidate || !commandCanManageEvent(candidate)) return false;
+  const rename = String(rawCommand || "").trim().match(
+    /^(?:rename|call|name)\s+(?:that|it|event)(?:\s+to)?\s+(.+)$/i
+  );
+  if (rename?.[1]) {
+    const result = {
+      intent: "rename_event",
+      newTitle: rename[1].trim(),
+      missingFields: [],
+      ambiguities: []
+    };
+    commandCentreState.parseResult = result;
+    commandRenderUpdatePreview(result, candidate);
+    commandRenderContextPreviewMessage("The new title is ready for review.");
+    return true;
+  }
+  if (/^(?:delete|remove|cancel)\s+(?:that|it|event)$/.test(text)) {
+    commandRenderDeletePreview({ intent: "delete_event" }, candidate);
+    return true;
+  }
+  if (/^(?:duplicate|copy)\s+(?:that|it|event)$/.test(text)) {
+    commandRenderDuplicatePreview({ intent: "duplicate_event" }, candidate);
+    return true;
+  }
+  return false;
+}
+
+function commandSafeContextEventId() {
+  const eventId = commandCentreState.moveCandidate?.id || commandCentreState.contextEvent?.id;
+  if (!eventId) return null;
+  return (currentRoom?.events || []).some((event) => event.id === eventId) ? eventId : null;
+}
+
 function commandContinueParsedResult(result, { submitted = false } = {}) {
+  const previousResult = commandCentreState.parseResult;
   commandCentreState.parseResult = result;
   if (result.ambiguities?.length) {
     commandRenderAmbiguity(result);
@@ -1475,6 +2458,11 @@ function commandContinueParsedResult(result, { submitted = false } = {}) {
     return;
   }
   if (result.intent === "create_event") {
+    const commandKey = commandNormalizeVocabulary(commandCentreState.lastCommand);
+    if (previousResult?.intent !== "create_event" || commandCentreState.createCommandKey !== commandKey) {
+      commandCentreState.createRequestId = null;
+      commandCentreState.createCommandKey = commandKey;
+    }
     commandCentreState.conflictDraft = null;
     commandPrepareEventTitleSuggestion(result);
     if (submitted) {
@@ -1494,28 +2482,58 @@ function commandContinueParsedResult(result, { submitted = false } = {}) {
     else commandRenderAvailabilityReady(result);
     return;
   }
-  if (result.intent === "move_event") {
-    if (!result.eventCandidates?.length) {
-      commandCentreRenderMessage("Event not found", "Try the event’s exact CommonGround title.");
-      return;
-    }
-    if (result.eventCandidates.length > 1) {
+  if ([
+    "move_event",
+    "delete_event",
+    "duplicate_event",
+    "update_event",
+    "rename_event",
+    "adjust_participants",
+    "update_participants",
+    "participant_adjustment",
+    "add_participant",
+    "remove_participant"
+  ].includes(result.intent)) {
+    const candidates = result.eventCandidates || [];
+    const candidate = commandEventActionCandidate(result);
+    if (!candidate && candidates.length > 1) {
       commandRenderEventCandidates(result);
       return;
     }
-    commandRenderMovePreview(result, result.eventCandidates[0]);
+    if (!candidate) {
+      commandCentreRenderMessage("Event not found", "Try the event’s exact CommonGround title.", {
+        actions: commandRecoveryMarkup({ ...result, missingFields: ["event"] })
+      });
+      return;
+    }
+    commandContinueEventAction(result, candidate);
     return;
   }
   commandRenderNavigate(result);
 }
 
 async function processUserIntent(inputText, { submitted = true } = {}) {
-  const command = String(inputText || "").trim();
-  if (command.length < 2 || !currentRoom?.code) {
+  const rawCommand = String(inputText || "").trim();
+  const command = commandExpandForParser(rawCommand);
+  commandCentreState.lastCommand = rawCommand;
+  if (rawCommand.length < 2 || !currentRoom?.code) {
     commandCentreRenderIntro();
     return {
       success: false,
       message: currentRoom?.code ? "Enter a calendar command." : "Open a room before using Command Centre."
+    };
+  }
+  if (submitted) {
+    commandCentreState.interpretation = {
+      label: "Update pending event",
+      correction: command !== rawCommand ? command : ""
+    };
+  }
+  if (submitted && commandTryContextualFollowUp(rawCommand)) {
+    return {
+      success: true,
+      message: "The pending event preview was updated.",
+      payload: commandCentreState.parseResult
     };
   }
   commandCentreClearDebounce();
@@ -1532,7 +2550,8 @@ async function processUserIntent(inputText, { submitted = true } = {}) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         command,
-        timezone: commandCentreTimezone()
+        timezone: commandCentreTimezone(),
+        contextEventId: commandSafeContextEventId()
       }),
       signal: controller.signal
     });
@@ -1547,6 +2566,7 @@ async function processUserIntent(inputText, { submitted = true } = {}) {
         code: "stale_command"
       };
     }
+    commandSetInterpretation(data.result, rawCommand, command);
     commandContinueParsedResult(data.result, { submitted });
     return {
       success: true,
@@ -1675,6 +2695,15 @@ window.commandCentreReset = () => {
   commandCentreState.composing = false;
   commandCentreState.announcedPrediction = null;
   commandCentreState.createTitleSuggestion = "";
+  commandCentreState.createRequestId = null;
+  commandCentreState.createCommandKey = "";
+  commandCentreState.deleteRequestId = null;
+  commandCentreState.deleteCommandKey = "";
+  commandCentreState.deleteCandidateId = null;
+  commandCentreState.interpretation = null;
+  commandCentreState.lastCommand = "";
+  commandCentreState.contextEvent = null;
+  commandCentreState.pendingEventAction = null;
   commandCentreClearDebounce();
   commandCentreAbortRequest();
   commandCentreClearPrediction();
@@ -1717,6 +2746,14 @@ commandCentreForm?.addEventListener("submit", (event) => {
 });
 
 commandCentreBody?.addEventListener("click", async (event) => {
+  const recoveryButton = event.target.closest("[data-command-recovery-command]");
+  if (recoveryButton) {
+    commandCentreInput.value = recoveryButton.dataset.commandRecoveryCommand;
+    commandCentreInput.setSelectionRange(commandCentreInput.value.length, commandCentreInput.value.length);
+    commandCentreClearPrediction();
+    await requestCommandParse({ submitted: true });
+    return;
+  }
   const predictionButton = event.target.closest("[data-command-prediction-command]");
   if (predictionButton) {
     commandCentreInput.value = predictionButton.dataset.commandPredictionCommand;
@@ -1782,7 +2819,7 @@ commandCentreBody?.addEventListener("click", async (event) => {
   if (candidateButton) {
     const candidate = commandCentreState.parseResult.eventCandidates
       .find((entry) => entry.id === candidateButton.dataset.commandEventCandidate);
-    if (candidate) commandRenderMovePreview(commandCentreState.parseResult, candidate);
+    if (candidate) commandContinueEventAction(commandCentreState.parseResult, candidate);
     return;
   }
   const navigationButton = event.target.closest("[data-command-navigate-kind]");
@@ -1814,6 +2851,14 @@ commandCentreBody?.addEventListener("click", async (event) => {
   }
   if (event.target.closest("[data-command-confirm-move]")) {
     await commandConfirmMove();
+    return;
+  }
+  if (event.target.closest("[data-command-confirm-update]")) {
+    await commandConfirmEventUpdate();
+    return;
+  }
+  if (event.target.closest("[data-command-confirm-delete]")) {
+    await commandConfirmEventDelete();
     return;
   }
   if (event.target.closest("[data-command-search-availability]")) {
