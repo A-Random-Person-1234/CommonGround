@@ -256,14 +256,14 @@ try {
   assert.match(home.text, /CommonGround/);
   assert.match(home.text, /href="\/styles\.css\?v=20260726-shared-date-picker"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260726-universal-time-picker"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260726-home-recovery"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
-  assert.match(home.text, /src="\/command-centre\.js\?v=20260726-universal-time-picker"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260726-home-recovery"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260726-universal-time-picker"'
+      'src="/app.js?v=20260726-home-recovery"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
@@ -571,12 +571,125 @@ try {
   });
   assert.equal(emojiDictionaryHead.text, "");
   assert.equal(Number(emojiDictionaryHead.response.headers.get("content-length")), Buffer.byteLength(emojiDictionaryResponse.text));
+  const datePickerScript = await publicSession.request("/date-picker.js", { accept: "text/javascript" });
+  assert.match(
+    datePickerScript.response.headers.get("content-type") || "",
+    /javascript/,
+    "The shared date-picker asset must be served as JavaScript"
+  );
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
   const commandActionsScript = await publicSession.request("/command-centre-actions.js", { accept: "text/javascript" });
   const commandCentreScript = await publicSession.request("/command-centre.js", { accept: "text/javascript" });
   const commandPredictorScript = await publicSession.request("/command-centre-predictor.js", {
     accept: "text/javascript"
   });
+  const dynamicDateInputIds = [
+    "commandEventDate",
+    "commandEventEndDate",
+    "commandRangeStartDate",
+    "commandRangeEndDate",
+    "commandMoveDate"
+  ];
+  for (const inputId of dynamicDateInputIds) {
+    assert.match(
+      commandCentreScript.text,
+      new RegExp(`id="${inputId}"\\s+type="date"`),
+      `${inputId} must retain native date-input semantics beneath the shared picker`
+    );
+  }
+  assert.equal(
+    (commandCentreScript.text.match(/type="date"/g) || []).length,
+    dynamicDateInputIds.length,
+    "The Command Centre must expose exactly five dynamically rendered date inputs"
+  );
+  assert.equal(
+    staticDateInputIds.length + dynamicDateInputIds.length,
+    8,
+    "CommonGround must route all eight static and dynamic date inputs through one picker"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /id="commandEventEndDate" type="date" min="\$\{commandAttribute\(dateValue\)\}"/,
+    "The all-day Command Centre end date must retain its start-date minimum"
+  );
+  assert.match(
+    datePickerScript.text,
+    /const DATE_INPUT_SELECTOR = 'input\[type="date"\]:not\(\[data-native-date-picker\]\)'/,
+    "The shared controller must delegate from canonical date inputs"
+  );
+  assert.match(
+    datePickerScript.text,
+    /document\.addEventListener\("pointerdown",[\s\S]*?dateInputFromTarget\(event\.target\)[\s\S]*?openDatePicker\(input\)/,
+    "Pointer delegation must cover date inputs rendered after initial page load"
+  );
+  assert.match(
+    datePickerScript.text,
+    /const dateInputObserver = new MutationObserver\([\s\S]*?record\.addedNodes\.forEach\([\s\S]*?prepareDateInputs\(node\)[\s\S]*?record\.type === "attributes"[\s\S]*?prepareDateInput\(record\.target\)[\s\S]*?dateInputObserver\.observe\(document\.documentElement,[\s\S]*?childList: true,[\s\S]*?subtree: true/,
+    "The observer must enhance inserted date fields and inputs whose type changes dynamically"
+  );
+  assert.match(
+    datePickerScript.text,
+    /function pickerHostForInput\(input\)[\s\S]*?input\.closest\("dialog\[open\]"\)[\s\S]*?input\.closest\("\.detail-panel:not\(\.hidden\)"\)[\s\S]*?document\.body[\s\S]*?const host = pickerHostForInput\(input\);[\s\S]*?host\.appendChild\(picker\)/,
+    "The picker must be hosted inside an open dialog or detail panel so modal inertness cannot block it"
+  );
+  assert.match(
+    datePickerScript.text,
+    /function inputMinimum\(input\)[\s\S]*?input\?\.min[\s\S]*?function inputMaximum\(input\)[\s\S]*?input\?\.max[\s\S]*?function clampToInputRange\(input, date\)[\s\S]*?function dateIsDisabled\(input, date\)[\s\S]*?previousMonthButton\.disabled[\s\S]*?nextMonthButton\.disabled/,
+    "Date selection and month navigation must honor each input's min and max constraints"
+  );
+  assert.match(
+    datePickerScript.text,
+    /picker\.setAttribute\("aria-describedby", `\$\{PICKER_ID\}Help`\)[\s\S]*?for \(let index = 0; index < 42; index \+= 1\)[\s\S]*?row\.setAttribute\("role", "row"\)[\s\S]*?cell\.setAttribute\("role", "gridcell"\)[\s\S]*?cell\.appendChild\(button\)/,
+    "Every picker must render a labelled six-week ARIA grid without replacing native button semantics"
+  );
+  assert.match(
+    datePickerScript.text,
+    /function selectDate\(key\)[\s\S]*?input\.value = key;[\s\S]*?dispatchEvent\(new Event\("input", \{ bubbles: true \}\)\)[\s\S]*?dispatchEvent\(new Event\("change", \{ bubbles: true \}\)\)/,
+    "A picker selection must drive both input and change listeners used by existing forms"
+  );
+  const datePickerKeyboardStart = datePickerScript.text.indexOf("function handleDatePickerKeydown");
+  const datePickerKeyboardEnd = datePickerScript.text.indexOf("createWeekdayLabels();", datePickerKeyboardStart);
+  assert.ok(
+    datePickerKeyboardStart >= 0 && datePickerKeyboardEnd > datePickerKeyboardStart,
+    "The date picker keyboard controller must be present"
+  );
+  const datePickerKeyboardSource = datePickerScript.text.slice(
+    datePickerKeyboardStart,
+    datePickerKeyboardEnd
+  );
+  for (const key of [
+    "Enter",
+    " ",
+    "Escape",
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "ArrowDown",
+    "Home",
+    "End",
+    "PageUp",
+    "PageDown"
+  ]) {
+    assert.ok(
+      datePickerKeyboardSource.includes(`"${key}"`),
+      `The shared date picker must handle the ${key === " " ? "Space" : key} key`
+    );
+  }
+  assert.match(
+    datePickerKeyboardSource,
+    /event\.target\.closest\("\[data-date-picker-previous\], \[data-date-picker-next\]"\)[\s\S]*?return;/,
+    "Month-navigation buttons must retain their own keyboard focus behavior"
+  );
+  assert.match(
+    datePickerKeyboardSource,
+    /event\.shiftKey \? 12 : 1/,
+    "Shift plus Page Up or Page Down must support year navigation"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function dismissOutsideFloatingSurfaces\(target\)[\s\S]*?const datePickerTarget = window\.commonGroundDatePicker\?\.containsTarget\(target\) === true;[\s\S]*?panelIsVisible\(detailPanel\)[\s\S]*?!datePickerTarget[\s\S]*?return datePickerTarget \? false : dismissed;/,
+    "The app-wide outside-surface guard must exempt picker clicks and preserve the detail editor"
+  );
   assert.match(
     serverSource,
     /const googleMapsApiKey = String\(process\.env\.GOOGLE_MAPS_API_KEY \|\| ""\)\.trim\(\);[\s\S]*?https:\/\/places\.googleapis\.com\/v1\/places:autocomplete/,
@@ -1357,6 +1470,21 @@ try {
     "Resize cancellation must be able to restore the original start and duration"
   );
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerStyles.text,
+    /\.common-ground-date-picker\[popover\]\s*\{[^}]*--date-picker-accent:\s*#b39458;[^}]*--date-picker-accent-strong:\s*#d1ad69;[^}]*width:\s*min\(296px, calc\(100vw - 16px\)\);[^}]*max-height:\s*calc\(100dvh - 16px\);[^}]*overflow-y:\s*auto;[^}]*background:\s*rgba\(24, 23, 22, 0\.98\);/s,
+    "The shared picker must use CommonGround's compact dark-and-gold visual system and remain reachable on short screens"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.common-ground-date-picker-row\s*\{[^}]*grid-template-columns:\s*repeat\(7, minmax\(0, 1fr\)\);[^}]*\}[\s\S]*?\.common-ground-date-picker-day\.is-today:not\(\.is-selected\)\s*\{[^}]*color:\s*var\(--date-picker-accent-strong\);[^}]*box-shadow:\s*inset 0 0 0 1px rgba\(179, 148, 88, 0\.78\);[^}]*\}[\s\S]*?\.common-ground-date-picker-day\.is-selected\s*\{[^}]*background:\s*var\(--date-picker-accent\);[^}]*color:\s*#17140f;/s,
+    "The six-week grid must keep today and the selected date distinct in the universal gold palette"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-height: 420px\)\s*\{[\s\S]*?\.common-ground-date-picker\[popover\]\s*\{[^}]*width:\s*min\(264px, calc\(100vw - 16px\)\);[^}]*padding:\s*8px;/,
+    "Short landscape screens must receive a compact calendar layout"
+  );
   assert.match(
     eventComposerStyles.text,
     /\.rsvp-control\s*\{[^}]*display:\s*flex;[^}]*align-items:\s*center;[^}]*justify-content:\s*space-between;[^}]*min-height:\s*46px;[^}]*border-radius:\s*12px;/s,
