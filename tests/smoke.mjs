@@ -256,14 +256,14 @@ try {
   assert.match(home.text, /CommonGround/);
   assert.match(home.text, /href="\/styles\.css\?v=20260726-shared-date-picker"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260726-universal-time-picker"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260726-home-recovery"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260725-flexible-availability"/);
-  assert.match(home.text, /src="\/command-centre\.js\?v=20260726-universal-time-picker"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260726-home-recovery"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260726-universal-time-picker"'
+      'src="/app.js?v=20260726-home-recovery"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
