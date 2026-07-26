@@ -644,6 +644,15 @@ function commandCentreAcceptPrediction({ submit = false } = {}) {
 
 function commandCentreHandleInput() {
   if (commandCentreState.composing) return;
+  if (
+    commandCentreState.phase === "results" &&
+    commandCentreSelectableOptions().length &&
+    !commandCentreBody.querySelector("[data-command-prediction-command]")
+  ) {
+    commandCentreState.selectedIndex = 0;
+    commandCentreSetPhase("idle", "Reading updated command.");
+    commandCentreSetBody(commandCentreIntroMarkup());
+  }
   commandCentreClearDebounce();
   commandCentreAbortRequest();
   commandCentreState.generation += 1;
@@ -2738,7 +2747,19 @@ commandCentreInput?.addEventListener("keyup", (event) => {
 commandCentreForm?.addEventListener("submit", (event) => {
   event.preventDefault();
   if (commandCentreState.composing) return;
-  if (commandCentreState.phase === "results" && commandCentreSelectableOptions().length) {
+  const selectableOptions = commandCentreSelectableOptions();
+  const hasPredictionOption = Boolean(
+    commandCentreBody.querySelector("[data-command-prediction-command]")
+  );
+  const inputMatchesRenderedCommand = (
+    commandNormalizeVocabulary(commandCentreInput.value) ===
+    commandNormalizeVocabulary(commandCentreState.lastCommand)
+  );
+  if (
+    commandCentreState.phase === "results" &&
+    selectableOptions.length &&
+    (hasPredictionOption || inputMatchesRenderedCommand)
+  ) {
     commandCentreActivateSelected();
     return;
   }

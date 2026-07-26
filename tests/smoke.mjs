@@ -258,7 +258,7 @@ try {
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
   assert.match(home.text, /src="\/app\.js\?v=20260726-discard-event-draft"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
-  assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-upgrade"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
   assertInOrder(
     home.text,
     [
@@ -817,6 +817,16 @@ try {
     commandCentreScript.text,
     /function commandCentreHandleInput\(\)[\s\S]*?commandCentreAbortRequest\(\);[\s\S]*?commandCentreState\.generation \+= 1;[\s\S]*?commandCentreScheduleParse\(\);/,
     "Every genuine input change must invalidate an older parse before showing a new prediction"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /function commandCentreHandleInput\(\)[\s\S]*?commandCentreState\.phase === "results"[\s\S]*?commandCentreSelectableOptions\(\)\.length[\s\S]*?!commandCentreBody\.querySelector\("\[data-command-prediction-command\]"\)[\s\S]*?commandCentreSetPhase\("idle", "Reading updated command\."\)[\s\S]*?commandCentreScheduleParse\(\)/,
+    "Editing a command must immediately retire stale selectable results"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /commandCentreForm\?\.addEventListener\("submit",[\s\S]*?hasPredictionOption[\s\S]*?inputMatchesRenderedCommand[\s\S]*?\(hasPredictionOption \|\| inputMatchesRenderedCommand\)[\s\S]*?commandCentreActivateSelected\(\)[\s\S]*?requestCommandParse\(\{ submitted: true \}\)/,
+    "Enter must never activate a stale result after the user changes the command"
   );
   assert.match(
     commandCentreScript.text,
