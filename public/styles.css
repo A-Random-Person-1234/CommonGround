@@ -1422,6 +1422,23 @@ a:focus-visible {
   text-overflow: ellipsis;
 }
 
+.weather-attribution {
+  flex: 0 1 auto;
+  min-width: 0;
+  margin-right: auto;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weather-attribution[hidden] {
+  display: none;
+}
+
 .calendar-date-nav {
   display: inline-flex;
   align-items: center;
@@ -2985,6 +3002,64 @@ button.room-switch-tab:not(:disabled):active .room-switch-mark {
   color: var(--brand-strong);
 }
 
+.weather-symbol {
+  --weather-icon: none;
+  display: block;
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  background-color: currentColor;
+  color: color-mix(in srgb, var(--muted) 86%, var(--ink));
+  pointer-events: none;
+  -webkit-mask-image: var(--weather-icon);
+  mask-image: var(--weather-icon);
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.weather-icon-sun {
+  --weather-icon: url("/icons/weather/sun.svg?v=20260804-weather");
+}
+
+.weather-icon-cloud-sun {
+  --weather-icon: url("/icons/weather/cloud-sun.svg?v=20260804-weather");
+}
+
+.weather-icon-cloudy {
+  --weather-icon: url("/icons/weather/cloudy.svg?v=20260804-weather");
+}
+
+.weather-icon-cloud-drizzle {
+  --weather-icon: url("/icons/weather/cloud-drizzle.svg?v=20260804-weather");
+}
+
+.weather-icon-thermometer-sun {
+  --weather-icon: url("/icons/weather/thermometer-sun.svg?v=20260804-weather");
+}
+
+.weather-icon-thermometer-snowflake {
+  --weather-icon: url("/icons/weather/thermometer-snowflake.svg?v=20260804-weather");
+}
+
+.weather-symbol.is-hot {
+  color: color-mix(in srgb, var(--brand-strong) 82%, #e7a36d);
+}
+
+.weather-symbol.is-freezing {
+  color: #9bbbd3;
+}
+
+.weather-symbol--planner {
+  position: absolute;
+  top: 43px;
+  left: calc(50% + 22px);
+  z-index: 2;
+}
+
 .time-cell {
   position: sticky;
   left: 0;
@@ -3296,6 +3371,22 @@ button.free-block:not(:disabled):active {
   background: color-mix(in srgb, var(--brand) 78%, #20252d);
   border: 1px solid color-mix(in srgb, var(--brand) 72%, #111827);
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18);
+}
+
+.event-card.is-group-event,
+.event-card.is-group-event.invitee {
+  background: linear-gradient(
+    180deg,
+    rgba(218, 165, 32, 0.05) 0%,
+    rgba(218, 165, 32, 0.02) 100%
+  );
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 8px;
+  box-shadow:
+    0 0 16px rgba(218, 165, 32, 0.12),
+    inset 0 0 24px rgba(218, 165, 32, 0.08);
+  isolation: isolate;
+  mix-blend-mode: normal;
 }
 
 .event-card.can-resize {
@@ -4274,6 +4365,15 @@ button.free-block:not(:disabled):active {
   outline-offset: 1px;
 }
 
+.weather-symbol--month {
+  position: absolute;
+  top: 10px;
+  right: 9px;
+  z-index: 2;
+  width: 15px;
+  height: 15px;
+}
+
 .month-cell.free-day .month-date-number {
   color: color-mix(in srgb, var(--warning) 86%, var(--ink));
   background: color-mix(in srgb, var(--warning) 16%, transparent);
@@ -4326,6 +4426,26 @@ button.free-block:not(:disabled):active {
   border-radius: 999px;
   background: var(--event-color, var(--brand));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--event-color, var(--brand)) 14%, transparent);
+}
+
+.event-chip.is-group-event {
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 8px;
+  background: linear-gradient(
+    180deg,
+    rgba(218, 165, 32, 0.05) 0%,
+    rgba(218, 165, 32, 0.02) 100%
+  );
+  box-shadow:
+    0 0 16px rgba(218, 165, 32, 0.12),
+    inset 0 0 24px rgba(218, 165, 32, 0.08);
+  isolation: isolate;
+  mix-blend-mode: normal;
+}
+
+.event-chip.is-group-event::before {
+  background: rgb(218, 165, 32);
+  box-shadow: 0 0 0 2px rgba(218, 165, 32, 0.14);
 }
 
 .month-more-button {
@@ -7709,6 +7829,19 @@ button.free-block:not(:disabled):active {
   box-shadow: var(--event-shadow);
 }
 
+:root:not([data-theme="dark"]) .event-card.is-group-event,
+:root:not([data-theme="dark"]) .event-card.is-group-event.invitee {
+  background: linear-gradient(
+    180deg,
+    rgba(218, 165, 32, 0.05) 0%,
+    rgba(218, 165, 32, 0.02) 100%
+  );
+  border-color: rgba(218, 165, 32, 0.3);
+  box-shadow:
+    0 0 16px rgba(218, 165, 32, 0.12),
+    inset 0 0 24px rgba(218, 165, 32, 0.08);
+}
+
 :root:not([data-theme="dark"]) .busy-stack-summary {
   background: linear-gradient(
     180deg,
@@ -11079,6 +11212,13 @@ button.identity-name-button:not(:disabled):active,
   text-overflow: ellipsis;
 }
 
+#roomPage .weather-attribution {
+  max-width: min(280px, 48vw);
+  color: rgba(232, 234, 237, 0.52);
+  font-size: 10px;
+  font-weight: 500;
+}
+
 #roomPage .empty-room {
   margin: 8px 12px;
   border-color: rgba(138, 180, 248, 0.24);
@@ -11415,6 +11555,21 @@ button.identity-name-button:not(:disabled):active,
 .drag-create-preview.event-card::after,
 .drag-create-preview.event-card .drag-create-preview-cap {
   display: none;
+}
+
+.drag-create-preview.event-card.is-group-event {
+  background: linear-gradient(
+    180deg,
+    rgba(218, 165, 32, 0.05) 0%,
+    rgba(218, 165, 32, 0.02) 100%
+  );
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 8px;
+  box-shadow:
+    0 0 16px rgba(218, 165, 32, 0.12),
+    inset 0 0 24px rgba(218, 165, 32, 0.08);
+  isolation: isolate;
+  mix-blend-mode: normal;
 }
 
 /* One shared 15-minute time picker for the event composer, group-event editor,
@@ -11904,6 +12059,21 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   .common-ground-date-picker-grid,
   .common-ground-date-picker-row {
     gap: 1px;
+  }
+}
+
+@media (max-width: 520px) {
+  #roomPage .weather-attribution {
+    max-width: 100%;
+  }
+
+  #roomPage .weather-attribution:not([hidden]) + .inline-status {
+    display: none;
+  }
+
+  .weather-symbol--planner {
+    width: 14px;
+    height: 14px;
   }
 }
 
