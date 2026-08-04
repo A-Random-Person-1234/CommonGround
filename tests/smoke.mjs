@@ -43,6 +43,9 @@ const expectedWeatherIconAssets = [
   "cloud-sun.svg",
   "cloudy.svg",
   "cloud-drizzle.svg",
+  "cloud-lightning.svg",
+  "snowflake.svg",
+  "wind.svg",
   "thermometer-sun.svg",
   "thermometer-snowflake.svg"
 ];
@@ -263,16 +266,16 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260804-connection-ui"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260804-hourly-weather"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260804-connection-ui"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260804-hourly-weather"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-connection-ui"'
+      'src="/app.js?v=20260804-hourly-weather"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
@@ -281,6 +284,12 @@ try {
     home.text,
     /id="weatherAttribution" translate="no" hidden>Source: Includes weather data from Google<\/span>/,
     "Displayed forecasts must have the required Google Weather attribution nearby"
+  );
+  assert.match(home.text, /id="weatherHighLowTooltip"[^>]*role="tooltip"[^>]*aria-hidden="true"/);
+  assert.match(
+    home.text,
+    /id="weatherHourlyPopover"[^>]*popover="auto"[^>]*role="dialog"[\s\S]*?id="weatherHourlyList"[\s\S]*?Source: Includes weather data from Google/,
+    "The hourly weather popover needs a top-layer dialog, list, and nearby attribution"
   );
   assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(home.text, /<meta name="theme-color" content="#101c31" \/>/);
@@ -764,8 +773,23 @@ try {
   );
   assert.match(
     serverSource,
-    /roomWeatherForecastMatch[\s\S]*?req\.method !== "POST"[\s\S]*?requireExistingRoomParticipant[\s\S]*?enforceRateLimit\([\s\S]*?"weather-forecast"[\s\S]*?12[\s\S]*?auth\.participant\.id[\s\S]*?readJsonBody\(req, \{ maxBytes: 4_096 \}\)[\s\S]*?normalizedWeatherCoordinate[\s\S]*?fetchGoogleDailyForecast/,
+    /googleWeatherHourlyForecastUrl = "https:\/\/weather\.googleapis\.com\/v1\/forecast\/hours:lookup"[\s\S]*?googleWeatherHourlyHistoryUrl = "https:\/\/weather\.googleapis\.com\/v1\/history\/hours:lookup"[\s\S]*?fetchGoogleHourlyWeatherPage[\s\S]*?"pageSize", "24"[\s\S]*?sanitizeGoogleHourlyWeather/,
+    "Hourly forecast and recent history must use fixed Google endpoints, paginated sanitized results, and the server key"
+  );
+  assert.match(
+    serverSource,
+    /roomWeatherForecastMatch[\s\S]*?req\.method !== "POST"[\s\S]*?requireExistingRoomParticipant[\s\S]*?enforceRateLimit\([\s\S]*?"weather-forecast"[\s\S]*?12[\s\S]*?auth\.participant\.id[\s\S]*?readJsonBody\(req, \{ maxBytes: 4_096 \}\)[\s\S]*?normalizedWeatherCoordinate[\s\S]*?fetchGoogleDailyWeatherWithRecentHistory/,
     "Weather must be room-scoped, rate-limited, authenticated, body-bounded, and coordinate-validated"
+  );
+  assert.match(
+    serverSource,
+    /roomWeatherHourlyMatch[\s\S]*?req\.method !== "POST"[\s\S]*?requireExistingRoomParticipant[\s\S]*?"weather-hourly"[\s\S]*?24[\s\S]*?auth\.participant\.id[\s\S]*?readJsonBody\(req, \{ maxBytes: 4_096 \}\)[\s\S]*?normalizedWeatherCoordinate[\s\S]*?valid YYYY-MM-DD[\s\S]*?fetchGoogleHourlyWeatherForDate/,
+    "Hourly weather must be room-scoped, rate-limited, authenticated, body-bounded, and date/coordinate validated"
+  );
+  assert.match(
+    serverSource,
+    /async function fetchGoogleHourlyForecastForDate[\s\S]*?while \(true\)[\s\S]*?matchingHours[\s\S]*?entry\.complete[\s\S]*?if \(!entry\.loadPromise\)[\s\S]*?await entry\.loadPromise/,
+    "Concurrent hourly requests must re-check coverage and continue pagination for each requested date"
   );
   assert.match(
     serverSource,
@@ -811,6 +835,16 @@ try {
     eventComposerScript.text,
     /const weatherSymbol = createWeatherSymbol\(day\.date, "planner"\);[\s\S]*?const weatherSymbol = createWeatherSymbol\(date, "month"\);/,
     "Day, week, and month renderers must share the weather symbol component"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function createWeatherSymbol\(date, placement\)[\s\S]*?document\.createElement\("button"\)[\s\S]*?aria-haspopup[\s\S]*?pointerenter[\s\S]*?openWeatherHourlyForecast/,
+    "Weather icons must be accessible interactive triggers with hover details and hourly click-through"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function openWeatherHourlyForecast\(trigger, date, forecast\)[\s\S]*?requestWeatherLocation\(\)[\s\S]*?\/weather\/hourly[\s\S]*?generation !== weatherHourlyRequestGeneration[\s\S]*?weatherHourlyByDate\.set/,
+    "Hourly loading must reuse consented rounded location, call the private endpoint, cache locally, and discard stale responses"
   );
   assert.doesNotMatch(
     eventComposerScript.text.slice(
@@ -1258,8 +1292,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function currentGoogleNeedsReconnect\(\)[\s\S]*?sessionInfo\?\.user\?\.googleNeedsReconnect === true[\s\S]*?function isGoogleConnected\(\) \{[\s\S]*?sessionInfo\?\.user\?\.googleConnected === true[\s\S]*?currentParticipantConnected\(\)[\s\S]*?!currentGoogleNeedsReconnect\(\)/,
-    "The UI state must require a live Google identity and room participant connection"
+    /function currentGoogleNeedsReconnect\(\)[\s\S]*?sessionInfo\?\.user\?\.googleNeedsReconnect === true[\s\S]*?function isGoogleConnected\(\) \{[\s\S]*?appConfig\?\.googleReady === true[\s\S]*?sessionInfo\?\.user\?\.googleConnected === true[\s\S]*?currentParticipantConnected\(\)[\s\S]*?!currentGoogleNeedsReconnect\(\)/,
+    "The UI state must require configured Google services, a live Google identity, and a room participant connection"
   );
   const googleConnectionStateSource = eventComposerScript.text.slice(
     eventComposerScript.text.indexOf("function isGoogleConnected()"),
@@ -2082,6 +2116,21 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
+    /#roomPage \.google-connection-indicator > span:last-child\s*\{[^}]*position:\s*absolute;[^}]*clip-path:\s*inset\(50%\);/s,
+    "Connected state must expose only the anchored status dot while retaining an accessible label"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-width: 1180px\)\s*\{[\s\S]*?#roomPage \.topbar-identity > \.identity-name-button\s*\{[^}]*display:\s*grid;[^}]*width:\s*30px;[^}]*border-radius:\s*50%;/s,
+    "Compact layouts must keep a real interactive profile control instead of a decorative pseudo-avatar"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-width: 860px\)\s*\{[\s\S]*?#roomPage \.calendar-nav-actions > #commandCentreButton,[\s\S]*?width:\s*34px;[\s\S]*?#roomPage \.calendar-google-button > span:last-child,[\s\S]*?display:\s*none;/s,
+    "Tablet layouts must collapse the two long actions before the header becomes crowded"
+  );
+  assert.match(
+    eventComposerStyles.text,
     /#roomPage \.calendar-nav-actions > :not\(\.calendar-view-menu\):not\(\.calendar-utility-actions\):not\(#calendarGoogleButton\):not\(#commandCentreButton\)\s*\{\s*display:\s*none;/,
     "Mobile navigation cleanup must explicitly preserve the Google Calendar and Command Centre actions"
   );
@@ -2705,13 +2754,24 @@ try {
   assert.match(
     eventComposerStyles.text,
     /\.weather-symbol\s*\{[^}]*width: 16px[^}]*height: 16px[^}]*background-color: currentColor[^}]*pointer-events: none[^}]*mask-image: var\(--weather-icon\)/s,
-    "Weather symbols must use the supplied vector masks without intercepting calendar clicks"
+    "Inner weather glyphs must use the supplied vector masks while the wrapping button handles interaction"
   );
-  assert.match(eventComposerStyles.text, /\.weather-symbol--planner\s*\{[^}]*position: absolute[^}]*top: 43px[^}]*left: calc\(50% \+ 22px\)/s);
-  assert.match(eventComposerStyles.text, /\.weather-symbol--month\s*\{[^}]*position: absolute[^}]*top: 10px[^}]*right: 9px/s);
+  assert.match(eventComposerStyles.text, /\.weather-trigger\s*\{[^}]*width: 28px[^}]*height: 28px[^}]*cursor: pointer[^}]*will-change: transform, opacity/s);
+  assert.match(eventComposerStyles.text, /\.weather-symbol--planner\s*\{[^}]*position: absolute[^}]*top: 37px[^}]*left: calc\(50% \+ 16px\)/s);
+  assert.match(eventComposerStyles.text, /\.weather-symbol--month\s*\{[^}]*position: absolute[^}]*top: 4px[^}]*right: 3px/s);
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.weather-attribution\s*\{[^}]*color: rgba\(232, 234, 237, 0\.52\)[^}]*font-size: 10px/s,
+    /\.weather-high-low-tooltip\s*\{[^}]*position: fixed[^}]*opacity: 0[^}]*transform: translate3d\(0, 4px, 0\) scale\(0\.96\)[\s\S]*?\.weather-high-low-tooltip\[aria-hidden="false"\][^{]*\{[^}]*opacity: 1[^}]*scale\(1\)/s,
+    "Daily high/low details must animate as a non-blocking viewport tooltip"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.weather-hourly-popover\[popover\]\s*\{[^}]*position: fixed[^}]*width: min\(352px[^}]*max-height: min\(520px[^}]*transform: translate3d\(0, 8px, 0\) scale\(0\.95\)[\s\S]*?\.weather-hour-row\s*\{[^}]*grid-template-columns: 48px 22px minmax\(0, 1fr\) 44px/s,
+    "Hourly weather must use a compact top-layer popover and readable four-column rows"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.weather-attribution\s*\{[^}]*color: rgba\(232, 234, 237, 0\.52\)[^}]*font-size: 12px/s,
     "Google Weather attribution must remain legible in the calendar toolbar"
   );
   for (const iconAsset of expectedIconAssets) {
@@ -2769,8 +2829,9 @@ try {
   }
   assert.match(privacyPage.text, /rounds your device latitude and longitude to roughly one kilometre/);
   assert.match(privacyPage.text, /not added to your room, shown to room members, or written to CommonGround's persistent database/);
+  assert.match(privacyPage.text, /hourly history for only the previous 24 hours/);
   assert.match(privacyPage.text, /deny or revoke browser location permission; the calendar will continue working without weather symbols/);
-  assert.match(termsPage.text, /Optional weather symbols include weather data from Google/);
+  assert.match(termsPage.text, /Optional daily symbols, hourly forecasts, and recent hourly history include weather data from Google/);
   await publicSession.request("/api/auth/google", { method: "POST", expected: 405 });
   await publicSession.request("/api/auth/google?popup=1", { expected: 400 });
   const popupRequestId = "a1B2_c3D4-e5F6_g7H8-i9J0_k1L2-m3N4";
@@ -2938,6 +2999,27 @@ try {
   });
   assert.equal(missingWeatherConfiguration.payload.error, "Weather forecasts are not configured.");
   assert.deepEqual(Object.keys(missingWeatherConfiguration.payload), ["error"]);
+
+  const hourlyWeatherPath = `/api/rooms/${firstCode}/weather/hourly`;
+  await host.request(hourlyWeatherPath, { expected: 405 });
+  await host.request(hourlyWeatherPath, { method: "POST", expected: 415 });
+  await publicSession.request(hourlyWeatherPath, {
+    method: "POST",
+    expected: 403,
+    body: { latitude: 51.5, longitude: -0.12, date: "2026-08-04" }
+  });
+  await host.request(hourlyWeatherPath, {
+    method: "POST",
+    expected: 400,
+    body: { latitude: 51.5, longitude: -0.12, date: "2026-02-30" }
+  });
+  const missingHourlyWeatherConfiguration = await host.request(hourlyWeatherPath, {
+    method: "POST",
+    expected: 503,
+    body: { latitude: 51.5, longitude: -0.12, date: "2026-08-04" }
+  });
+  assert.equal(missingHourlyWeatherConfiguration.payload.error, "Weather forecasts are not configured.");
+  assert.deepEqual(Object.keys(missingHourlyWeatherConfiguration.payload), ["error"]);
 
   for (const { value: color } of expectedParticipantPalette) {
     const recolored = await host.request(`/api/rooms/${firstCode}/participants/${hostId}`, {
