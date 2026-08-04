@@ -192,6 +192,7 @@ let weatherLoadPromise = null;
 let weatherForecastFetchedAt = 0;
 let weatherRetryAfter = 0;
 let weatherLocationUnavailable = false;
+let weatherGeolocationPermissionStatus = null;
 let currentView = "week";
 let currentFocusDate = new Date();
 let miniCalendarCursor = new Date(currentFocusDate.getFullYear(), currentFocusDate.getMonth(), 1);
@@ -784,10 +785,27 @@ function roundedWeatherCoordinate(value) {
   return Object.is(rounded, -0) ? 0 : rounded;
 }
 
+function clearWeatherForecast({ rerender = false } = {}) {
+  const hadWeather = weatherForecastByDate.size > 0 || weatherForecastFetchedAt > 0;
+  weatherForecastByDate = new Map();
+  weatherForecastFetchedAt = 0;
+  weatherRetryAfter = 0;
+  if (rerender && hadWeather && currentView !== "year") {
+    renderCalendar();
+    return;
+  }
+  syncWeatherAttribution();
+}
+
+function markWeatherLocationUnavailable() {
+  weatherLocationUnavailable = true;
+  clearWeatherForecast({ rerender: true });
+}
+
 function requestWeatherLocation() {
   if (weatherLocationPromise) return weatherLocationPromise;
   if (!navigator.geolocation) {
-    weatherLocationUnavailable = true;
+    markWeatherLocationUnavailable();
     return Promise.reject(new Error("Location is unavailable in this browser."));
   }
   weatherLocationPromise = new Promise((resolve, reject) => {
@@ -795,21 +813,47 @@ function requestWeatherLocation() {
       const latitude = roundedWeatherCoordinate(position.coords?.latitude);
       const longitude = roundedWeatherCoordinate(position.coords?.longitude);
       if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-        weatherLocationUnavailable = true;
+        markWeatherLocationUnavailable();
         reject(new Error("The browser did not provide a valid location."));
         return;
       }
+      weatherLocationUnavailable = false;
       resolve({ latitude, longitude });
     }, (error) => {
-      weatherLocationUnavailable = true;
+      markWeatherLocationUnavailable();
       reject(error);
     }, {
       enableHighAccuracy: false,
       maximumAge: 30 * 60 * 1000,
       timeout: 10_000
     });
+  }).finally(() => {
+    // Keep only an in-flight lookup. Every stale forecast re-checks permission/location.
+    weatherLocationPromise = null;
   });
   return weatherLocationPromise;
+}
+
+async function observeWeatherLocationPermission() {
+  if (!navigator.permissions?.query) return;
+  try {
+    const permissionStatus = await navigator.permissions.query({ name: "geolocation" });
+    weatherGeolocationPermissionStatus = permissionStatus;
+    const handlePermissionChange = () => {
+      if (weatherGeolocationPermissionStatus !== permissionStatus) return;
+      if (permissionStatus.state === "denied") {
+        markWeatherLocationUnavailable();
+        return;
+      }
+      weatherLocationUnavailable = false;
+      weatherRetryAfter = 0;
+      if (currentView !== "year") void ensureWeatherForecast();
+    };
+    permissionStatus.addEventListener?.("change", handlePermissionChange);
+    if (permissionStatus.state === "denied") markWeatherLocationUnavailable();
+  } catch {
+    // The Permissions API is optional; geolocation still handles consent itself.
+  }
 }
 
 async function ensureWeatherForecast() {
@@ -6735,6 +6779,7 @@ function resetRoomScopedState({ clearRoom = false } = {}) {
   clearDetailPanel();
 
   if (clearRoom) {
+    clearWeatherForecast();
     currentRoom = null;
     currentParticipant = null;
     currentIsHost = false;
@@ -8648,4 +8693,5 @@ updateFullscreenControl();
 document.addEventListener("pointerdown", handleOutsideFloatingSurfacePointer, true);
 document.addEventListener("click", handleOutsideFloatingSurfaceClick, true);
 initializeEmojiPickers();
+void observeWeatherLocationPermission();
 boot();
