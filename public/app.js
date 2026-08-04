@@ -251,6 +251,9 @@ const weatherIconNames = new Set([
   "cloud-sun",
   "cloudy",
   "cloud-drizzle",
+  "cloud-lightning",
+  "snowflake",
+  "wind",
   "thermometer-sun",
   "thermometer-snowflake"
 ]);
@@ -816,7 +819,9 @@ function weatherForecastLabel(forecast) {
 function weatherHighLowLabel(forecast) {
   const high = Number.isFinite(forecast?.highC) ? `${Math.round(forecast.highC)}\u00b0` : "\u2014";
   const low = Number.isFinite(forecast?.lowC) ? `${Math.round(forecast.lowC)}\u00b0` : "\u2014";
-  return `${forecast?.source === "history" ? "Observed" : "High"} ${high}  \u00b7  Low ${low}`;
+  return forecast?.source === "history"
+    ? `Recent high ${high}  \u00b7  Low ${low}`
+    : `High ${high}  \u00b7  Low ${low}`;
 }
 
 function hideWeatherHighLowTooltip({ immediate = false } = {}) {
@@ -3016,6 +3021,7 @@ function currentGoogleNeedsReconnect() {
 
 function isGoogleConnected() {
   return Boolean(
+    appConfig?.googleReady === true &&
     sessionInfo?.user?.googleConnected === true &&
     currentParticipantConnected() &&
     !currentGoogleNeedsReconnect()
@@ -3825,7 +3831,7 @@ function renderTopbarIdentity() {
   const profileInitial = [...String(currentParticipant.displayName || "G").trim()][0]?.toUpperCase() || "G";
   topbarIdentity.dataset.initial = profileInitial;
   topbarIdentity.innerHTML = `
-    <button class="identity-name-button" id="topbarIdentityName" type="button">${escapeHtml(currentParticipant.displayName)}</button>
+    <button class="identity-name-button" id="topbarIdentityName" type="button" data-initial="${escapeAttribute(profileInitial)}" aria-label="Edit your profile name">${escapeHtml(currentParticipant.displayName)}</button>
     <details class="color-picker-menu topbar-identity-menu">
       <summary class="color-picker-trigger topbar-color-trigger" aria-label="Choose your color, current ${escapeAttribute(currentColorOption.name)}">
         <span class="current-color-dot" style="--swatch-color: ${escapeAttribute(currentColorOption.value)}"></span>
