@@ -549,17 +549,30 @@ async function fetchGoogleHourlyForecastForDate(latitude, longitude, targetDate)
     return entry.hours.filter((hour) => hour.date === targetDate);
   };
 
-  if (!entry.loadPromise) {
-    entry.loadPromise = loadUntilTarget().finally(() => {
-      entry.loadPromise = null;
-    });
+  while (true) {
+    const matchingHours = entry.hours.filter((hour) => hour.date === targetDate);
+    const earliestDate = entry.hours[0]?.date || "";
+    const latestDate = entry.hours.at(-1)?.date || "";
+    if (
+      matchingHours.length ||
+      entry.complete ||
+      (earliestDate && targetDate < earliestDate) ||
+      (latestDate && latestDate > targetDate)
+    ) {
+      return matchingHours;
+    }
+
+    if (!entry.loadPromise) {
+      entry.loadPromise = loadUntilTarget().finally(() => {
+        entry.loadPromise = null;
+      });
+    }
+    await entry.loadPromise;
   }
-  await entry.loadPromise;
-  return entry.hours.filter((hour) => hour.date === targetDate);
 }
 
 async function fetchGoogleHourlyWeatherForDate(latitude, longitude, targetDate) {
-  const history = await fetchGoogleRecentWeatherHistory(latitude, longitude);
+  const history = await fetchGoogleRecentWeatherHistory(latitude, longitude).catch(() => []);
   const historyDates = [...new Set(history.map((hour) => hour.date))].sort();
   const latestHistoryDate = historyDates.at(-1) || "";
   const historyForDate = history.filter((hour) => hour.date === targetDate);
@@ -579,7 +592,7 @@ async function fetchGoogleHourlyWeatherForDate(latitude, longitude, targetDate) 
 async function fetchGoogleDailyWeatherWithRecentHistory(latitude, longitude) {
   const [dailyForecast, recentHistory] = await Promise.all([
     fetchGoogleDailyForecast(latitude, longitude),
-    fetchGoogleRecentWeatherHistory(latitude, longitude)
+    fetchGoogleRecentWeatherHistory(latitude, longitude).catch(() => [])
   ]);
   const byDate = new Map(
     summarizeHourlyWeather(recentHistory, { source: "history" })
