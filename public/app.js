@@ -41,6 +41,8 @@ const roomName = document.querySelector("#roomName");
 const roomCode = document.querySelector("#roomCode");
 const hostPill = document.querySelector("#hostPill");
 const calendarStatus = document.querySelector("#calendarStatus");
+const googleConnectionIndicator = document.querySelector("#googleConnectionIndicator");
+const calendarConnectionNotice = document.querySelector("#calendarConnectionNotice");
 const weatherAttribution = document.querySelector("#weatherAttribution");
 const calendarPeriodLabel = document.querySelector("#calendarPeriodLabel");
 const prevPeriodButton = document.querySelector("#prevPeriodButton");
@@ -500,6 +502,8 @@ let pendingEntryMode = null;
 let pendingHostRoomState = null;
 let roomCodeCopyTimer = null;
 let copiedRoomCodeValue = "";
+let topbarInviteCopyTimer = null;
+let copiedTopbarInviteRoomCode = "";
 let roomDataGeneration = 0;
 let roomDataController = null;
 let freeBusyGeneration = 0;
@@ -2011,7 +2015,7 @@ function updateEventPanelSaveState() {
 
 function updateDetailGoogleSyncControl(canManage) {
   if (!detailGoogleSyncInput || !detailGoogleSyncStatus) return;
-  const connected = currentUserConnected() && currentParticipantConnected();
+  const connected = isGoogleConnected();
   const googleWriteReady = calendarWriteReady();
   detailGoogleSyncInput.disabled = !canManage || !connected || !googleWriteReady;
 
@@ -2707,6 +2711,21 @@ function currentParticipantNeedsReconnect() {
   return Boolean(currentParticipant?.needsReconnect);
 }
 
+function currentGoogleNeedsReconnect() {
+  return Boolean(
+    sessionInfo?.user?.googleNeedsReconnect === true ||
+    (sessionInfo?.user?.googleConnected === true && currentParticipantNeedsReconnect())
+  );
+}
+
+function isGoogleConnected() {
+  return Boolean(
+    sessionInfo?.user?.googleConnected === true &&
+    currentParticipantConnected() &&
+    !currentGoogleNeedsReconnect()
+  );
+}
+
 function calendarWriteReady() {
   return Boolean(sessionInfo?.user?.calendarWriteReady);
 }
@@ -3278,6 +3297,34 @@ async function copyInviteLink() {
   }
 }
 
+async function copyRoomInviteLinkFromTopbar() {
+  if (!currentRoom?.code || !isGoogleConnected()) return;
+  const roomCodeSnapshot = currentRoom.code;
+  try {
+    await copyTextToClipboard(roomInviteLink());
+    calendarStatus.textContent = "Invite link copied.";
+    copiedTopbarInviteRoomCode = roomCodeSnapshot;
+    if (topbarInviteCopyTimer) window.clearTimeout(topbarInviteCopyTimer);
+    renderCalendarGoogleControl();
+    topbarInviteCopyTimer = window.setTimeout(() => {
+      if (copiedTopbarInviteRoomCode === roomCodeSnapshot) {
+        copiedTopbarInviteRoomCode = "";
+        renderCalendarGoogleControl();
+      }
+      topbarInviteCopyTimer = null;
+    }, 1600);
+  } catch {
+    calendarStatus.textContent = `Copy this invite link: ${roomInviteLink()}`;
+    showNotification({
+      id: `local-copy-error-${Date.now()}`,
+      type: "copy_error",
+      title: "Invite link was not copied",
+      message: `Copy this link manually: ${roomInviteLink()}`,
+      createdAt: new Date().toISOString()
+    });
+  }
+}
+
 function dismissInviteStrip() {
   if (currentRoom?.code) {
     dismissedInviteRoomCodes.add(currentRoom.code);
@@ -3479,6 +3526,8 @@ function renderInviteePicker(selectedIds = defaultInviteeIds(), options = {}) {
 function renderTopbarIdentity() {
   if (!topbarIdentity || !currentParticipant) return;
   const currentColorOption = participantColorOption(currentParticipant.color);
+  const profileInitial = [...String(currentParticipant.displayName || "G").trim()][0]?.toUpperCase() || "G";
+  topbarIdentity.dataset.initial = profileInitial;
   topbarIdentity.innerHTML = `
     <button class="identity-name-button" id="topbarIdentityName" type="button">${escapeHtml(currentParticipant.displayName)}</button>
     <details class="color-picker-menu topbar-identity-menu">
@@ -3642,7 +3691,7 @@ function renderJoinRequests() {
 function renderCalendarEventSyncControls() {
   if (!googleEventSyncToggle || !googleEventSyncStatus) return;
 
-  const connected = currentUserConnected() && currentParticipantConnected();
+  const connected = isGoogleConnected();
   const writeReady = calendarWriteReady();
   const enabled = calendarEventSyncEnabled();
 
@@ -3663,27 +3712,32 @@ function renderCalendarEventSyncControls() {
 function renderCalendarGoogleControl() {
   if (!calendarGoogleButton) return;
 
-  const connected = currentUserConnected() && currentParticipantConnected();
-  const needsReconnect = currentParticipantNeedsReconnect();
-  const writeReady = calendarWriteReady();
-  let label = "Connect Google";
+  const ready = Boolean(currentRoom?.code && currentParticipant);
+  const googleAvailable = appConfig?.googleReady === true;
+  const connected = isGoogleConnected();
+  const needsReconnect = currentGoogleNeedsReconnect();
+  let label = "Connect Google Calendar";
   let accessibleLabel = "Connect Google Calendar";
   let iconClass = "ui-icon-calendar-sync";
   let state = "needs-connection";
 
   if (needsReconnect) {
-    label = "Reconnect Google";
+    label = "Reconnect Google Calendar";
     accessibleLabel = "Reconnect Google Calendar";
     iconClass = "ui-icon-rotate";
     state = "needs-reconnect";
-  } else if (connected && !writeReady) {
-    label = "Enable Google sync";
-    accessibleLabel = "Enable Google Calendar event sync";
-    state = "needs-permission";
-  } else if (connected && writeReady) {
-    label = "Google synced";
-    accessibleLabel = "Google Calendar connected. Open sync settings";
+  } else if (connected) {
+    label = copiedTopbarInviteRoomCode === currentRoom?.code ? "Link copied" : "Copy invite link";
+    accessibleLabel = copiedTopbarInviteRoomCode === currentRoom?.code
+      ? "Google Calendar connected. Invite link copied"
+      : `Google Calendar connected. Copy invite link for room ${currentRoom?.code || ""}`;
+    iconClass = "ui-icon-link";
     state = "is-connected";
+  } else if (ready && !googleAvailable) {
+    label = "Google Calendar unavailable";
+    accessibleLabel = "Google Calendar connection is currently unavailable";
+    iconClass = "ui-icon-calendar-sync";
+    state = "is-unavailable";
   }
 
   setButtonLabelWithIcon(calendarGoogleButton, label, iconClass);
@@ -3691,13 +3745,23 @@ function renderCalendarGoogleControl() {
     "needs-connection",
     "needs-reconnect",
     "needs-permission",
+    "is-unavailable",
     "is-connected"
   );
   calendarGoogleButton.classList.add(state);
-  calendarGoogleButton.classList.toggle("hidden", state === "is-connected");
-  calendarGoogleButton.dataset.googleAction = state === "is-connected" ? "manage" : "authorize";
+  calendarGoogleButton.dataset.googleAction = connected ? "invite" : (googleAvailable ? "authorize" : "unavailable");
   calendarGoogleButton.title = accessibleLabel;
   calendarGoogleButton.setAttribute("aria-label", accessibleLabel);
+  calendarGoogleButton.disabled = !ready || (!connected && !googleAvailable);
+  calendarGoogleButton.setAttribute("aria-busy", String(!ready));
+
+  roomPage.dataset.googleReady = String(ready);
+  roomPage.dataset.googleConnected = String(connected);
+  googleConnectionIndicator?.classList.toggle("hidden", !connected);
+  googleConnectionIndicator?.setAttribute("aria-hidden", String(!connected));
+  calendarConnectionNotice?.classList.toggle("hidden", connected || !ready);
+  calendarConnectionNotice?.setAttribute("aria-hidden", String(connected || !ready));
+  setPanelVisibility(emptyRoomState, false);
 }
 
 function renderRoomMeta() {
@@ -3721,11 +3785,9 @@ function renderRoomMeta() {
   hostPanel.classList.remove("hidden");
   hostSettings.classList.toggle("hidden", !currentIsHost);
 
-  const onlyOneParticipant = (currentRoom?.participants?.length || 0) <= 1;
-  const inviteDismissed = Boolean(currentRoom?.code && dismissedInviteRoomCodes.has(currentRoom.code));
-  setPanelVisibility(emptyRoomState, onlyOneParticipant && !inviteDismissed);
+  setPanelVisibility(emptyRoomState, false);
 
-  if (currentParticipantNeedsReconnect()) {
+  if (currentGoogleNeedsReconnect()) {
     setButtonLabelWithIcon(connectGoogleButton, "Reconnect calendar", "ui-icon-rotate");
     settingsReconnectButton.classList.remove("hidden");
     settingsReconnectButton.dataset.calendarWrite = "true";
@@ -3733,7 +3795,7 @@ function renderRoomMeta() {
     connectWidgetText.textContent = currentParticipant?.lastSyncError
       ? `Last sync issue: ${currentParticipant.lastSyncError}`
       : "Reconnect calendar to keep availability updated.";
-  } else if (currentParticipantConnected()) {
+  } else if (isGoogleConnected()) {
     setButtonLabelWithIcon(connectGoogleButton, "Calendar connected", "ui-icon-calendar-sync");
     const needsWriteAccess = !calendarWriteReady();
     settingsReconnectButton.classList.toggle("hidden", !needsWriteAccess);
@@ -3759,12 +3821,7 @@ function renderRoomMeta() {
 }
 
 function refreshStatusLine() {
-  const connectedCount = (currentRoom?.participants || []).filter((participant) => participant.connected).length;
-  const lastRefreshed = currentRoom ? new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date()) : "";
-  const syncedAt = formatSyncStamp(currentParticipant?.lastSyncedAt || sessionInfo?.user?.sync?.lastSuccessAt);
-  calendarStatus.textContent = currentRoom
-    ? `${connectedCount} connected${syncedAt ? ` · synced ${syncedAt}` : ""} · refreshed ${lastRefreshed}`
-    : "Loading room…";
+  if (calendarStatus.textContent === "Loading room…") calendarStatus.textContent = "";
 }
 
 function buildSelfEditPanel() {
@@ -6784,6 +6841,13 @@ function resetRoomScopedState({ clearRoom = false } = {}) {
     currentParticipant = null;
     currentIsHost = false;
     googleBusy = [];
+    roomPage.dataset.googleReady = "false";
+    roomPage.dataset.googleConnected = "false";
+    calendarGoogleButton.disabled = true;
+    calendarGoogleButton.setAttribute("aria-busy", "true");
+    calendarGoogleButton.dataset.googleAction = "unavailable";
+    googleConnectionIndicator?.classList.add("hidden");
+    calendarConnectionNotice?.classList.add("hidden");
     topbarIdentity.innerHTML = "";
     participantStrip.innerHTML = "";
     calendarGrid.innerHTML = "";
@@ -7783,7 +7847,7 @@ function positionEventModal() {
 
 function updateEventGoogleSyncControl() {
   if (!eventGoogleSyncInput || !eventGoogleSyncStatus) return;
-  const needsAuthorization = !calendarWriteReady() || !currentUserConnected() || !currentParticipantConnected();
+  const needsAuthorization = !calendarWriteReady() || !isGoogleConnected();
   const email = String(sessionInfo?.user?.email || "").trim();
 
   eventGoogleSyncRow?.classList.toggle("is-unlinked", needsAuthorization && !googleAuthPopupPending);
@@ -7820,7 +7884,7 @@ function updateEventGoogleSyncControl() {
 }
 
 function activateEventGoogleSyncRow(event) {
-  const needsAuthorization = !calendarWriteReady() || !currentUserConnected() || !currentParticipantConnected();
+  const needsAuthorization = !calendarWriteReady() || !isGoogleConnected();
   if (!needsAuthorization || !eventGoogleSyncInput || !eventGoogleSyncRow || googleAuthPopupPending) return;
   event.preventDefault();
   event.stopPropagation();
@@ -8407,22 +8471,14 @@ settingsButton.addEventListener("click", () => {
 calendarGoogleButton?.addEventListener("click", () => {
   if (!currentRoom?.code) return;
 
-  const shouldAuthorize =
-    currentParticipantNeedsReconnect() ||
-    !currentUserConnected() ||
-    !currentParticipantConnected() ||
-    !calendarWriteReady();
-
-  if (shouldAuthorize) {
-    window.location.href = googleAuthUrl(currentRoom.code, { calendarWrite: true });
+  if (calendarGoogleButton.dataset.googleAction === "invite" && isGoogleConnected()) {
+    void copyRoomInviteLinkFromTopbar();
     return;
   }
 
-  setPanelVisibility(hostPopover, true);
-  window.requestAnimationFrame(() => {
-    syncSettingsCard?.scrollIntoView({ block: "nearest" });
-    googleEventSyncToggle?.focus({ preventScroll: true });
-  });
+  if (calendarGoogleButton.dataset.googleAction !== "authorize") return;
+
+  window.location.href = googleAuthUrl(currentRoom.code, { calendarWrite: true });
 });
 participantsSidebar?.addEventListener("pointerdown", (event) => {
   if (event.pointerType === "mouse") return;
