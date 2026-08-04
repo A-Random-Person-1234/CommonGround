@@ -848,7 +848,8 @@ function showWeatherHighLowTooltip(trigger, forecast) {
   const top = preferredTop + tooltipRect.height <= window.innerHeight - viewportPadding
     ? preferredTop
     : Math.max(viewportPadding, rect.top - tooltipRect.height - 8);
-  weatherHighLowTooltip.style.transform = `translate3d(${Math.round(left)}px, ${Math.round(top)}px, 0) scale(1)`;
+  weatherHighLowTooltip.style.left = `${Math.round(left)}px`;
+  weatherHighLowTooltip.style.top = `${Math.round(top)}px`;
 }
 
 function weatherHourlyPopoverIsOpen() {
@@ -888,8 +889,8 @@ function positionWeatherHourlyPopover(trigger) {
     viewportPadding,
     Math.min(rect.top - 12, window.innerHeight - popoverHeight - viewportPadding)
   );
-  weatherHourlyPopover.style.setProperty("--weather-popover-x", `${Math.round(left)}px`);
-  weatherHourlyPopover.style.setProperty("--weather-popover-y", `${Math.round(top)}px`);
+  weatherHourlyPopover.style.left = `${Math.round(left)}px`;
+  weatherHourlyPopover.style.top = `${Math.round(top)}px`;
 }
 
 function closeWeatherHourlyPopover({ restoreFocus = false } = {}) {
@@ -1056,6 +1057,24 @@ function syncWeatherAttribution() {
   if (!weatherAttribution) return;
   weatherAttribution.hidden = currentView === "year" || !calendarGrid.querySelector(".weather-symbol");
 }
+
+closeWeatherHourlyButton?.addEventListener("click", () => {
+  closeWeatherHourlyPopover({ restoreFocus: true });
+});
+
+weatherHourlyPopover?.addEventListener("toggle", (event) => {
+  if (event.newState === "open") return;
+  weatherHourlyRequestGeneration += 1;
+  weatherHourlyTrigger?.setAttribute("aria-expanded", "false");
+  weatherHourlyTrigger = null;
+});
+
+window.addEventListener("resize", () => {
+  hideWeatherHighLowTooltip({ immediate: true });
+  if (weatherHourlyPopoverIsOpen() && weatherHourlyTrigger?.isConnected) {
+    positionWeatherHourlyPopover(weatherHourlyTrigger);
+  }
+});
 
 function roundedWeatherCoordinate(value) {
   const rounded = Math.round(Number(value) * 100) / 100;
@@ -4822,24 +4841,6 @@ function eventBlocksForDate(date) {
       startHour,
       endHour,
       summary: `${event.responseSummary?.yes || 0} yes · ${event.responseSummary?.maybe || 0} maybe · ${event.responseSummary?.no || 0} no`,
-      isInvitee: isInvitee && !isCreator,
-      isInvitedViewer: Boolean(event.isInvited),
-      continuesBefore: start < dayStart,
-      continuesAfter: end > dayEnd,
-      showDetails,
-      allDay,
-      timezone: event.timezone || "UTC",
-      eventStart: event.start,
-      eventEnd: event.end,
-      originalEvent: event,
-      isEditable: isOwnerEditable
-    });
-  }
-  return items;
-}
-
-function eventCardMetrics(duration) {
-  const rowHeight = parseFloat(getComputedStyle(document.documentElemens · ${event.responseSummary?.maybe || 0} maybe · ${event.responseSummary?.no || 0} no`,
       isInvitee: isInvitee && !isCreator,
       isInvitedViewer: Boolean(event.isInvited),
       continuesBefore: start < dayStart,
@@ -9037,4 +9038,23 @@ createRoomModal?.addEventListener("close", () => {
   }
 });
 
-eventModa
+eventModal.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  if (activeEventTimePicker) {
+    closeEventTimePicker({ restoreFocus: true });
+    return;
+  }
+  attemptCloseEventModal();
+});
+
+discardEventDraftDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeDiscardEventDraftDialog();
+});
+
+updateFullscreenControl();
+document.addEventListener("pointerdown", handleOutsideFloatingSurfacePointer, true);
+document.addEventListener("click", handleOutsideFloatingSurfaceClick, true);
+initializeEmojiPickers();
+void observeWeatherLocationPermission();
+boot();
