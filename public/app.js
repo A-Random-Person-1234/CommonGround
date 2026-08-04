@@ -2712,10 +2712,7 @@ function currentParticipantNeedsReconnect() {
 }
 
 function currentGoogleNeedsReconnect() {
-  return Boolean(
-    sessionInfo?.user?.googleNeedsReconnect === true ||
-    (sessionInfo?.user?.googleConnected === true && currentParticipantNeedsReconnect())
-  );
+  return Boolean(sessionInfo?.user?.googleNeedsReconnect === true);
 }
 
 function isGoogleConnected() {
@@ -3721,7 +3718,12 @@ function renderCalendarGoogleControl() {
   let iconClass = "ui-icon-calendar-sync";
   let state = "needs-connection";
 
-  if (needsReconnect) {
+  if (ready && !googleAvailable && !connected) {
+    label = "Google Calendar unavailable";
+    accessibleLabel = "Google Calendar connection is currently unavailable";
+    iconClass = "ui-icon-calendar-sync";
+    state = "is-unavailable";
+  } else if (needsReconnect) {
     label = "Reconnect Google Calendar";
     accessibleLabel = "Reconnect Google Calendar";
     iconClass = "ui-icon-rotate";
@@ -3733,11 +3735,6 @@ function renderCalendarGoogleControl() {
       : `Google Calendar connected. Copy invite link for room ${currentRoom?.code || ""}`;
     iconClass = "ui-icon-link";
     state = "is-connected";
-  } else if (ready && !googleAvailable) {
-    label = "Google Calendar unavailable";
-    accessibleLabel = "Google Calendar connection is currently unavailable";
-    iconClass = "ui-icon-calendar-sync";
-    state = "is-unavailable";
   }
 
   setButtonLabelWithIcon(calendarGoogleButton, label, iconClass);
@@ -3759,6 +3756,12 @@ function renderCalendarGoogleControl() {
   roomPage.dataset.googleConnected = String(connected);
   googleConnectionIndicator?.classList.toggle("hidden", !connected);
   googleConnectionIndicator?.setAttribute("aria-hidden", String(!connected));
+  const connectionNoticeText = calendarConnectionNotice?.querySelector("span:last-child");
+  if (connectionNoticeText) {
+    connectionNoticeText.textContent = googleAvailable
+      ? "Connect your Google Calendar to see overlapping availability."
+      : "Google Calendar connection is currently unavailable.";
+  }
   calendarConnectionNotice?.classList.toggle("hidden", connected || !ready);
   calendarConnectionNotice?.setAttribute("aria-hidden", String(connected || !ready));
   setPanelVisibility(emptyRoomState, false);
@@ -7341,6 +7344,9 @@ async function loadFreeBusy() {
   const latestRangeKey = `${latestRange.start.toISOString()}::${latestRange.end.toISOString()}`;
   if (generation !== freeBusyGeneration || currentRoom?.code !== roomCodeSnapshot || latestRangeKey !== rangeKey) return false;
   googleBusy = normalizeBusyBlocks(data.busy || []);
+  if (sessionInfo?.user && typeof data.googleNeedsReconnect === "boolean") {
+    sessionInfo.user.googleNeedsReconnect = data.googleNeedsReconnect;
+  }
 
   for (const incoming of data.participants || []) {
     const participant = participantById(incoming.id);
