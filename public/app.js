@@ -518,8 +518,8 @@ let pendingEntryMode = null;
 let pendingHostRoomState = null;
 let roomCodeCopyTimer = null;
 let copiedRoomCodeValue = "";
-let topbarInviteCopyTimer = null;
-let copiedTopbarInviteRoomCode = "";
+let topbarRoomLinkCopyTimer = null;
+let copiedTopbarRoomCode = "";
 let roomDataGeneration = 0;
 let roomDataController = null;
 let freeBusyGeneration = 0;
@@ -3547,16 +3547,6 @@ async function handleGoogleAuthPopupMessage(event) {
   }
 }
 
-function roomInviteMessage() {
-  const roomLabel = `${currentRoom?.emoji || defaultRoomEmoji} ${currentRoom?.name || "CommonGround room"}`.trim();
-  return [
-    `Join my CommonGround room ${roomLabel}: ${roomInviteLink()}`,
-    `Room code: ${currentRoom?.code || ""}`,
-    currentRoom?.accessLocked ? "The host will approve your join request." : "Open the link to join as a guest or connect your calendar.",
-    "CommonGround only shares busy/free availability, not private event details."
-  ].join("\n");
-}
-
 function startOfDay(date) {
   const value = new Date(date);
   value.setHours(0, 0, 0, 0);
@@ -3586,41 +3576,41 @@ function fullyFreeParticipantsForDate(date, blocksByDate = buildBusyDayBlocks())
   return (currentRoom?.participants || []).filter((participant) => participant.connected && visibleIds.has(participant.id) && !busyParticipants.has(participant.id));
 }
 
-async function copyInviteLink() {
+async function copyRoomLink() {
   if (!currentRoom?.code) return;
   try {
-    await copyTextToClipboard(roomInviteMessage());
-    calendarStatus.textContent = "Invite message copied.";
+    await copyTextToClipboard(roomInviteLink());
+    calendarStatus.textContent = "Room link copied.";
     replayMotionClass(calendarStatus, "motion-feedback");
     replayMotionClass(copyInviteButton, "motion-feedback");
     replayMotionClass(copyInviteButtonEmpty, "motion-feedback");
   } catch {
-    calendarStatus.textContent = roomInviteMessage();
+    calendarStatus.textContent = `Copy this room link: ${roomInviteLink()}`;
   }
 }
 
-async function copyRoomInviteLinkFromTopbar() {
+async function copyRoomLinkFromTopbar() {
   if (!currentRoom?.code || !isGoogleConnected()) return;
   const roomCodeSnapshot = currentRoom.code;
   try {
     await copyTextToClipboard(roomInviteLink());
-    calendarStatus.textContent = "Invite link copied.";
-    copiedTopbarInviteRoomCode = roomCodeSnapshot;
-    if (topbarInviteCopyTimer) window.clearTimeout(topbarInviteCopyTimer);
+    calendarStatus.textContent = "Room link copied.";
+    copiedTopbarRoomCode = roomCodeSnapshot;
+    if (topbarRoomLinkCopyTimer) window.clearTimeout(topbarRoomLinkCopyTimer);
     renderCalendarGoogleControl();
-    topbarInviteCopyTimer = window.setTimeout(() => {
-      if (copiedTopbarInviteRoomCode === roomCodeSnapshot) {
-        copiedTopbarInviteRoomCode = "";
+    topbarRoomLinkCopyTimer = window.setTimeout(() => {
+      if (copiedTopbarRoomCode === roomCodeSnapshot) {
+        copiedTopbarRoomCode = "";
         renderCalendarGoogleControl();
       }
-      topbarInviteCopyTimer = null;
+      topbarRoomLinkCopyTimer = null;
     }, 1600);
   } catch {
-    calendarStatus.textContent = `Copy this invite link: ${roomInviteLink()}`;
+    calendarStatus.textContent = `Copy this room link: ${roomInviteLink()}`;
     showNotification({
       id: `local-copy-error-${Date.now()}`,
       type: "copy_error",
-      title: "Invite link was not copied",
+      title: "Room link was not copied",
       message: `Copy this link manually: ${roomInviteLink()}`,
       createdAt: new Date().toISOString()
     });
@@ -4034,10 +4024,10 @@ function renderCalendarGoogleControl() {
     iconClass = "ui-icon-rotate";
     state = "needs-reconnect";
   } else if (connected) {
-    label = copiedTopbarInviteRoomCode === currentRoom?.code ? "Link copied" : "Copy invite link";
-    accessibleLabel = copiedTopbarInviteRoomCode === currentRoom?.code
-      ? "Google Calendar connected. Invite link copied"
-      : `Google Calendar connected. Copy invite link for room ${currentRoom?.code || ""}`;
+    label = copiedTopbarRoomCode === currentRoom?.code ? "Link copied" : "Copy link";
+    accessibleLabel = copiedTopbarRoomCode === currentRoom?.code
+      ? "Google Calendar connected. Room link copied"
+      : `Google Calendar connected. Copy link to join room ${currentRoom?.code || ""}`;
     iconClass = "ui-icon-link";
     state = "is-connected";
   }
@@ -4051,7 +4041,7 @@ function renderCalendarGoogleControl() {
     "is-connected"
   );
   calendarGoogleButton.classList.add(state);
-  calendarGoogleButton.dataset.googleAction = connected ? "invite" : (googleAvailable ? "authorize" : "unavailable");
+  calendarGoogleButton.dataset.googleAction = connected ? "copy" : (googleAvailable ? "authorize" : "unavailable");
   calendarGoogleButton.title = accessibleLabel;
   calendarGoogleButton.setAttribute("aria-label", accessibleLabel);
   calendarGoogleButton.disabled = !ready || (!connected && !googleAvailable);
@@ -4973,6 +4963,15 @@ function suppressFollowupOutsideSurfaceClick() {
 function dismissOutsideFloatingSurfaces(target) {
   let dismissed = false;
   const datePickerTarget = window.commonGroundDatePicker?.containsTarget(target) === true;
+
+  if (
+    (weatherHourlyPopoverIsOpen() || weatherHourlyTrigger) &&
+    !weatherHourlyPopover?.contains(target)
+  ) {
+    closeWeatherHourlyPopover();
+    hideWeatherHighLowTooltip({ immediate: true });
+    dismissed = true;
+  }
 
   if (activeEventTimePicker && !activeEventTimePicker.field.contains(target)) {
     closeEventTimePicker({ commit: true });
@@ -8717,9 +8716,9 @@ refreshButton.addEventListener("click", refreshRoomData);
 addEventButton.addEventListener("click", () => {
   void openCalendarEventComposerAt({ date: dateKey(currentFocusDate) });
 });
-copyInviteButton.addEventListener("click", copyInviteLink);
+copyInviteButton.addEventListener("click", copyRoomLink);
 copyInviteButtonEmpty.addEventListener("click", async () => {
-  await copyInviteLink();
+  await copyRoomLink();
   dismissInviteStrip();
 });
 dismissInviteButton?.addEventListener("click", dismissInviteStrip);
@@ -8784,8 +8783,8 @@ settingsButton.addEventListener("click", () => {
 calendarGoogleButton?.addEventListener("click", () => {
   if (!currentRoom?.code) return;
 
-  if (calendarGoogleButton.dataset.googleAction === "invite" && isGoogleConnected()) {
-    void copyRoomInviteLinkFromTopbar();
+  if (calendarGoogleButton.dataset.googleAction === "copy" && isGoogleConnected()) {
+    void copyRoomLinkFromTopbar();
     return;
   }
 
