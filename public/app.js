@@ -41,6 +41,7 @@ const roomName = document.querySelector("#roomName");
 const roomCode = document.querySelector("#roomCode");
 const hostPill = document.querySelector("#hostPill");
 const calendarStatus = document.querySelector("#calendarStatus");
+const weatherAttribution = document.querySelector("#weatherAttribution");
 const calendarPeriodLabel = document.querySelector("#calendarPeriodLabel");
 const prevPeriodButton = document.querySelector("#prevPeriodButton");
 const nextPeriodButton = document.querySelector("#nextPeriodButton");
@@ -185,6 +186,12 @@ let roomSwitcherRenderSignature = "";
 let currentParticipant = null;
 let currentIsHost = false;
 let googleBusy = [];
+let weatherForecastByDate = new Map();
+let weatherLocationPromise = null;
+let weatherLoadPromise = null;
+let weatherForecastFetchedAt = 0;
+let weatherRetryAfter = 0;
+let weatherLocationUnavailable = false;
 let currentView = "week";
 let currentFocusDate = new Date();
 let miniCalendarCursor = new Date(currentFocusDate.getFullYear(), currentFocusDate.getMonth(), 1);
@@ -209,6 +216,10 @@ let eventResizeState = null;
 let eventMoveState = null;
 let dragPreviewNode = null;
 let dragPreviewFrame = 0;
+let eventComposerPreviewActive = false;
+let eventComposerPreviewFrame = 0;
+let eventComposerPreviewShouldReveal = false;
+let eventComposerPreviewShouldNavigate = false;
 let eventResizeFrame = 0;
 let eventMoveFrame = 0;
 let suppressCalendarClickUntil = 0;
@@ -217,6 +228,16 @@ let suppressOutsideSurfaceTimer = null;
 let activeEventTimePicker = null;
 let participantsDrawerGesture = null;
 const pendingEventMoveKeys = new Set();
+const weatherForecastFreshnessMs = 25 * 60 * 1000;
+const weatherForecastRetryMs = 5 * 60 * 1000;
+const weatherIconNames = new Set([
+  "sun",
+  "cloud-sun",
+  "cloudy",
+  "cloud-drizzle",
+  "thermometer-sun",
+  "thermometer-snowflake"
+]);
 
 /* TODO: Commonground Free Block Rendering - Hidden for current demo */
 const showFreeBlocks = false;
@@ -578,6 +599,10 @@ function eventInviteeIds(event = {}) {
   return [...new Set(ids.filter(Boolean))];
 }
 
+function hasMultipleEventParticipants(participantIds = []) {
+  return new Set((participantIds || []).filter(Boolean)).size > 1;
+}
+
 function canManageEvent(event = {}) {
   return Boolean(currentIsHost || (currentParticipant?.id && event.createdByParticipantId === currentParticipant.id));
 }
@@ -704,6 +729,134 @@ function formatDayHeader(day) {
     <span class="day-header-weekday">${escapeHtml(day.short)}</span>
     <button class="day-header-date" type="button" data-date="${escapeAttribute(dateKey(day.date))}" aria-label="View ${escapeAttribute(fullDate)} in week view" title="View ${escapeAttribute(fullDate)} in week view">${escapeHtml(dayNumber)}</button>
   `;
+}
+
+function normalizedWeatherForecast(entry) {
+  const date = String(entry?.date || "");
+  const icon = String(entry?.icon || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !weatherIconNames.has(icon)) return null;
+  const normalizedTemperature = (value) => {
+    if (value === null || value === undefined) return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? Math.round(number * 10) / 10 : null;
+  };
+  return {
+    date,
+    icon,
+    description: String(entry?.description || "Weather forecast").trim().slice(0, 120) || "Weather forecast",
+    highC: normalizedTemperature(entry?.highC),
+    lowC: normalizedTemperature(entry?.lowC)
+  };
+}
+
+function weatherForecastLabel(forecast) {
+  const details = [];
+  if (Number.isFinite(forecast?.highC)) details.push(`high ${forecast.highC}\u00b0C`);
+  if (Number.isFinite(forecast?.lowC)) details.push(`low ${forecast.lowC}\u00b0C`);
+  return [forecast?.description || "Weather forecast", ...details].join(", ");
+}
+
+function createWeatherSymbol(date, placement) {
+  const forecast = weatherForecastByDate.get(dateKey(date));
+  if (!forecast) return null;
+  const symbol = document.createElement("span");
+  symbol.className = [
+    "weather-symbol",
+    `weather-symbol--${placement}`,
+    `weather-icon-${forecast.icon}`,
+    forecast.icon === "thermometer-sun" ? "is-hot" : "",
+    forecast.icon === "thermometer-snowflake" ? "is-freezing" : ""
+  ].filter(Boolean).join(" ");
+  const label = weatherForecastLabel(forecast);
+  symbol.setAttribute("role", "img");
+  symbol.setAttribute("aria-label", label);
+  symbol.title = label;
+  return symbol;
+}
+
+function syncWeatherAttribution() {
+  if (!weatherAttribution) return;
+  weatherAttribution.hidden = currentView === "year" || !calendarGrid.querySelector(".weather-symbol");
+}
+
+function roundedWeatherCoordinate(value) {
+  const rounded = Math.round(Number(value) * 100) / 100;
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+function requestWeatherLocation() {
+  if (weatherLocationPromise) return weatherLocationPromise;
+  if (!navigator.geolocation) {
+    weatherLocationUnavailable = true;
+    return Promise.reject(new Error("Location is unavailable in this browser."));
+  }
+  weatherLocationPromise = new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition((position) => {
+      const latitude = roundedWeatherCoordinate(position.coords?.latitude);
+      const longitude = roundedWeatherCoordinate(position.coords?.longitude);
+      if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+        weatherLocationUnavailable = true;
+        reject(new Error("The browser did not provide a valid location."));
+        return;
+      }
+      resolve({ latitude, longitude });
+    }, (error) => {
+      weatherLocationUnavailable = true;
+      reject(error);
+    }, {
+      enableHighAccuracy: false,
+      maximumAge: 30 * 60 * 1000,
+      timeout: 10_000
+    });
+  });
+  return weatherLocationPromise;
+}
+
+async function ensureWeatherForecast() {
+  if (
+    currentView === "year" ||
+    !currentRoom?.code ||
+    appConfig?.weatherReady !== true ||
+    weatherLocationUnavailable
+  ) {
+    return false;
+  }
+  const now = Date.now();
+  if (weatherForecastFetchedAt && now - weatherForecastFetchedAt < weatherForecastFreshnessMs) return true;
+  if (weatherRetryAfter > now) return false;
+  if (weatherLoadPromise) return weatherLoadPromise;
+
+  const requestRoomCode = currentRoom.code;
+  weatherLoadPromise = (async () => {
+    try {
+      const coordinates = await requestWeatherLocation();
+      const data = await fetchJson(`/api/rooms/${requestRoomCode}/weather/forecast`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(coordinates)
+      });
+      if (currentRoom?.code !== requestRoomCode) return false;
+      const nextForecast = new Map();
+      for (const rawEntry of Array.isArray(data.forecast) ? data.forecast : []) {
+        const entry = normalizedWeatherForecast(rawEntry);
+        if (entry) nextForecast.set(entry.date, entry);
+      }
+      weatherForecastByDate = nextForecast;
+      weatherForecastFetchedAt = Date.now();
+      weatherRetryAfter = 0;
+      if (currentView !== "year") renderCalendar();
+      return true;
+    } catch {
+      weatherRetryAfter = Date.now() + weatherForecastRetryMs;
+      return false;
+    } finally {
+      weatherLoadPromise = null;
+      if (currentRoom?.code && currentRoom.code !== requestRoomCode && currentView !== "year") {
+        window.setTimeout(() => { void ensureWeatherForecast(); }, 0);
+      }
+    }
+  })();
+  return weatherLoadPromise;
 }
 
 function formatHour(hour) {
@@ -4281,6 +4434,7 @@ function eventBlocksForDate(date) {
       participantName: event.createdByDisplayName || "Someone",
       participantColor: event.createdByColor || participantPalette[0].value,
       inviteeParticipantIds: (event.invitees || []).map((invitee) => invitee.participantId),
+      isGroupEvent: hasMultipleEventParticipants(eventInviteeIds(event)),
       startHour,
       endHour,
       summary: `${event.responseSummary?.yes || 0} yes · ${event.responseSummary?.maybe || 0} maybe · ${event.responseSummary?.no || 0} no`,
@@ -4455,9 +4609,21 @@ function dismissOutsideFloatingSurfaces(target) {
   return datePickerTarget ? false : dismissed;
 }
 
+function targetAcceptsTextEntry(target) {
+  if (!(target instanceof Element)) return false;
+  const editable = target.closest(
+    'textarea:not(:disabled), input:not(:disabled), [contenteditable="true"]'
+  );
+  if (!editable) return false;
+  if (editable instanceof HTMLTextAreaElement || editable.matches('[contenteditable="true"]')) return true;
+  if (!(editable instanceof HTMLInputElement)) return false;
+  return ["text", "search", "email", "url", "tel", "password", "number"].includes(editable.type);
+}
+
 function handleOutsideFloatingSurfacePointer(event) {
   if (event.button !== undefined && event.button !== 0) return;
   if (!dismissOutsideFloatingSurfaces(event.target)) return;
+  if (targetAcceptsTextEntry(event.target)) return;
   suppressFollowupOutsideSurfaceClick();
   event.preventDefault();
   event.stopImmediatePropagation();
@@ -4741,6 +4907,7 @@ function createEventBlock(item, dayIndex, dayDate) {
     canResizeBottom ? "event-resize-bottom" : "",
     item.isInvitee ? "invitee" : "",
     item.isInvitedViewer ? "is-invited-viewer" : "",
+    item.isGroupEvent ? "is-group-event" : "",
     item.id === selectedEventId ? "is-selected" : ""
   ].filter(Boolean).join(" ");
   block.dataset.eventId = item.id;
@@ -4884,13 +5051,12 @@ function createFreeGlowBlock(segment, dayIndex, options = {}) {
     const startHour = Number(block.dataset.startHour);
     const endHour = Number(block.dataset.endHour);
     if (!Number.isFinite(startHour) || !Number.isFinite(endHour)) return;
-    pendingEventPrefill = {
+    void openCalendarEventComposerAt({
       date: block.dataset.dayKey,
-      startTime: formatInputTime(startHour),
-      endTime: formatInputTime(endHour),
+      startMinute: Math.round(startHour * 60),
+      durationMinutes: Math.max(15, Math.round((endHour - startHour) * 60)),
       inviteeParticipantIds: defaultInviteeIds()
-    };
-    openEventModal("create");
+    });
   });
   return configureFreeGlowBlock(block, segment, dayIndex, options);
 }
@@ -4982,8 +5148,10 @@ function dragSelectionRect() {
 
 function calendarComposerSelectionRect(targetDate, startHour, endHour) {
   const eventsLayer = calendarGrid.querySelector(".events-layer");
-  if (!eventsLayer || currentView !== "week") return null;
-  const days = currentWeekDays();
+  if (!eventsLayer || (currentView !== "day" && currentView !== "week")) return null;
+  const days = currentView === "day"
+    ? [{ date: startOfDay(currentFocusDate) }]
+    : currentWeekDays();
   const dayIndex = days.findIndex((day) => sameDate(day.date, targetDate));
   if (dayIndex < 0) return null;
   const rect = eventsLayer.getBoundingClientRect();
@@ -5076,11 +5244,19 @@ async function openCalendarEventComposerAt(draft = {}) {
 
 window.openCalendarEventComposerAt = openCalendarEventComposerAt;
 
-function ensureDragPreview() {
+function upsertCalendarEventPreview({
+  dayIndex,
+  startHour,
+  endHour,
+  title = "",
+  inviteeParticipantIds = [],
+  composer = false
+} = {}) {
   const eventsLayer = calendarGrid.querySelector(".events-layer");
-  if (!eventsLayer || !dragCreateState) return;
-  const selection = dragSelection();
-  if (!selection) return;
+  if (!eventsLayer) return null;
+  if (!Number.isFinite(dayIndex) || !Number.isFinite(startHour) || !Number.isFinite(endHour) || endHour <= startHour) {
+    return null;
+  }
   if (!dragPreviewNode) {
     dragPreviewNode = document.createElement("div");
     dragPreviewNode.className = "drag-create-preview";
@@ -5089,8 +5265,8 @@ function ensureDragPreview() {
   const rowHeight = resolvedCalendarRowHeight();
   const blockGap = parseFloat(rootStyles.getPropertyValue("--calendar-block-gap")) || 6;
   const halfGap = parseFloat(rootStyles.getPropertyValue("--calendar-block-half-gap")) || 3;
-  const startRows = selection.startHour - calendarStartHour;
-  const durationRows = selection.endHour - selection.startHour;
+  const startRows = startHour - calendarStartHour;
+  const durationRows = endHour - startHour;
   const previewHeight = Math.max(18, durationRows * rowHeight - blockGap);
   const { sizeClass, durationClass } = eventCardMetrics(durationRows);
   const previewColor = currentParticipant?.color || participantPalette[0]?.value || "#b39458";
@@ -5098,17 +5274,21 @@ function ensureDragPreview() {
     "drag-create-preview",
     "event-card",
     sizeClass,
-    durationClass
-  ].join(" ");
-  dragPreviewNode.style.setProperty("--day-index", dragCreateState.dayIndex);
+    durationClass,
+    composer ? "event-composer-preview" : "",
+    hasMultipleEventParticipants(inviteeParticipantIds) ? "is-group-event" : ""
+  ].filter(Boolean).join(" ");
+  dragPreviewNode.setAttribute("aria-hidden", "true");
+  dragPreviewNode.style.setProperty("--day-index", dayIndex);
   dragPreviewNode.style.setProperty("--preview-y", `${startRows * rowHeight + halfGap}px`);
   dragPreviewNode.style.setProperty("--preview-height", `${previewHeight}px`);
   dragPreviewNode.style.setProperty("--event-owner-color", previewColor);
   dragPreviewNode.style.setProperty("--event-color", previewColor);
-  dragPreviewNode.dataset.previewTimeRange = formatEventRange(selection.startHour, selection.endHour);
-  const titleText = "(No title)";
-  const timeRange = formatEventRange(selection.startHour, selection.endHour);
-  const compactLine = [titleText, formatEventClock(selection.startHour)].filter(Boolean).join(", ");
+  dragPreviewNode.dataset.previewTimeRange = formatEventRange(startHour, endHour);
+  dragPreviewNode.dataset.previewKind = composer ? "composer" : "drag";
+  const titleText = String(title || "").trim() || "(No title)";
+  const timeRange = formatEventRange(startHour, endHour);
+  const compactLine = [titleText, formatEventClock(startHour)].filter(Boolean).join(", ");
   const timeLine = durationClass === "event-15" ? compactLine : timeRange;
   dragPreviewNode.innerHTML = `
     <div class="drag-create-preview-copy">
@@ -5119,6 +5299,19 @@ function ensureDragPreview() {
   if (!dragPreviewNode.isConnected) {
     eventsLayer.appendChild(dragPreviewNode);
   }
+  return dragPreviewNode;
+}
+
+function ensureDragPreview() {
+  if (!dragCreateState) return;
+  const selection = dragSelection();
+  if (!selection) return;
+  upsertCalendarEventPreview({
+    dayIndex: dragCreateState.dayIndex,
+    startHour: selection.startHour,
+    endHour: selection.endHour,
+    inviteeParticipantIds: defaultInviteeIds()
+  });
 }
 
 function scheduleDragPreviewUpdate() {
@@ -5136,6 +5329,132 @@ function clearDragPreview() {
   }
   dragPreviewNode?.remove();
   dragPreviewNode = null;
+}
+
+function eventComposerPreviewDraft() {
+  if (!eventComposerPreviewActive || !eventModal?.open || editingEventId || eventAllDayInput?.checked) {
+    return null;
+  }
+  const targetDate = dayStartFromDateKey(eventDateInput.value);
+  const startMinute = timeInputValueToMinutes(eventStartInput.value);
+  const endMinute = timeInputValueToMinutes(eventEndInput.value);
+  if (startMinute === null || endMinute === null) return null;
+
+  const start = dateTimeFromDateKeyAndMinutes(eventDateInput.value, startMinute);
+  const endDateKey = eventEndDateInput?.value || eventDateInput.value;
+  const end = dateTimeFromDateKeyAndMinutes(endDateKey, endMinute);
+  if (end <= start && endMinute === 0 && endDateKey === eventDateInput.value) {
+    end.setDate(end.getDate() + 1);
+  }
+  if (end <= start) return null;
+
+  const visibleStartHour = clampVisibleHour(startMinute / 60);
+  const endsOnStartDate = sameDate(start, end);
+  const visibleEndHour = clampVisibleHour(endsOnStartDate ? endMinute / 60 : calendarEndHour);
+  if (visibleEndHour <= visibleStartHour) return null;
+
+  return {
+    targetDate,
+    startHour: visibleStartHour,
+    endHour: visibleEndHour,
+    title: eventTitleInput.value,
+    inviteeParticipantIds: [...inviteePicker.querySelectorAll("input[type='checkbox']:checked")]
+      .map((input) => input.value)
+  };
+}
+
+function plannerDayIndexForDate(targetDate) {
+  if (currentView === "day") {
+    return sameDate(startOfDay(currentFocusDate), targetDate) ? 0 : -1;
+  }
+  if (currentView !== "week") return -1;
+  return currentWeekDays().findIndex((day) => sameDate(day.date, targetDate));
+}
+
+function ensureEventComposerDateVisible(targetDate) {
+  if (plannerDayIndexForDate(targetDate) >= 0) return false;
+  if (currentView !== "day" && currentView !== "week") currentView = "week";
+  currentFocusDate = startOfDay(targetDate);
+  syncMiniCalendarToFocus();
+  animateCalendarTransition(render);
+  void loadCalendarRangeWithMotion()
+    .then((loaded) => {
+      if (!loaded || !eventComposerPreviewActive) return;
+      render();
+      scheduleEventComposerPreviewUpdate();
+    })
+    .catch((error) => {
+      calendarStatus.textContent = error.message || "The calendar could not refresh.";
+    });
+  return true;
+}
+
+function syncEventComposerPreview({ reveal = false, navigate = false } = {}) {
+  if (!eventComposerPreviewActive) return null;
+  const draft = eventComposerPreviewDraft();
+  if (!draft) {
+    clearDragPreview();
+    eventModalAnchorRect = null;
+    eventModal.classList.remove("anchored-composer");
+    delete eventModal.dataset.anchorSide;
+    eventModal.style.removeProperty("--composer-left");
+    eventModal.style.removeProperty("--composer-top");
+    eventModal.style.removeProperty("--composer-transform-origin");
+    return null;
+  }
+
+  if (navigate) ensureEventComposerDateVisible(draft.targetDate);
+  const dayIndex = plannerDayIndexForDate(draft.targetDate);
+  if (dayIndex < 0) {
+    clearDragPreview();
+    return null;
+  }
+  if (reveal) {
+    revealCalendarComposerSelection(draft.targetDate, draft.startHour, draft.endHour);
+  }
+  const preview = upsertCalendarEventPreview({
+    ...draft,
+    dayIndex,
+    composer: true
+  });
+  if (!preview) return null;
+
+  const previewRect = preview.getBoundingClientRect();
+  eventModalAnchorRect = {
+    left: previewRect.left,
+    top: previewRect.top,
+    width: previewRect.width,
+    height: previewRect.height
+  };
+  eventModal.classList.add("anchored-composer");
+  positionEventModal();
+  return preview;
+}
+
+function scheduleEventComposerPreviewUpdate({ reveal = false, navigate = false } = {}) {
+  if (!eventComposerPreviewActive) return;
+  eventComposerPreviewShouldReveal = eventComposerPreviewShouldReveal || reveal;
+  eventComposerPreviewShouldNavigate = eventComposerPreviewShouldNavigate || navigate;
+  if (eventComposerPreviewFrame) return;
+  eventComposerPreviewFrame = window.requestAnimationFrame(() => {
+    eventComposerPreviewFrame = 0;
+    const shouldReveal = eventComposerPreviewShouldReveal;
+    const shouldNavigate = eventComposerPreviewShouldNavigate;
+    eventComposerPreviewShouldReveal = false;
+    eventComposerPreviewShouldNavigate = false;
+    syncEventComposerPreview({ reveal: shouldReveal, navigate: shouldNavigate });
+  });
+}
+
+function deactivateEventComposerPreview() {
+  eventComposerPreviewActive = false;
+  eventComposerPreviewShouldReveal = false;
+  eventComposerPreviewShouldNavigate = false;
+  if (eventComposerPreviewFrame) {
+    window.cancelAnimationFrame(eventComposerPreviewFrame);
+    eventComposerPreviewFrame = 0;
+  }
+  clearDragPreview();
 }
 
 function openDraggedEventComposer(anchorRect) {
@@ -6119,6 +6438,8 @@ function renderPlanner(days) {
     dateButton?.addEventListener("click", async () => {
       await goToDateInWeek(day.date);
     });
+    const weatherSymbol = createWeatherSymbol(day.date, "planner");
+    if (weatherSymbol) header.appendChild(weatherSymbol);
     calendarGrid.appendChild(header);
   }
 
@@ -6177,6 +6498,8 @@ function renderPlanner(days) {
 
   if (dragCreateState && dragCreateState.active) {
     ensureDragPreview();
+  } else if (eventComposerPreviewActive) {
+    scheduleEventComposerPreviewUpdate();
   }
 }
 
@@ -6232,13 +6555,15 @@ function renderMonth() {
       await openWeek();
     });
     cell.appendChild(dateButton);
+    const weatherSymbol = createWeatherSymbol(date, "month");
+    if (weatherSymbol) cell.appendChild(weatherSymbol);
     cell.addEventListener("click", openWeek);
 
     const visibleLimit = Math.max(1, events.length > maxRows ? maxRows - 1 : maxRows);
     for (const eventBlock of events.slice(0, visibleLimit)) {
       const chip = document.createElement("button");
       chip.type = "button";
-      chip.className = "event-chip";
+      chip.className = `event-chip ${eventBlock.isGroupEvent ? "is-group-event" : ""}`.trim();
       chip.style.setProperty("--event-color", eventBlock.participantColor || participantPalette[0].value);
       chip.textContent = monthEventChipLabel(eventBlock);
       chip.title = `${formatTime(eventBlock.startHour)} - ${formatTime(eventBlock.endHour)} ${eventBlock.title}`;
@@ -6330,22 +6655,20 @@ function renderCalendar() {
   const days = currentWeekDays();
   if (currentView === "month") {
     renderMonth();
-    return;
-  }
-  if (currentView === "year") {
+  } else if (currentView === "year") {
     renderYear();
-    return;
-  }
-  if (currentView === "day") {
+  } else if (currentView === "day") {
     renderPlanner([{
       key: dayNames[currentFocusDate.getDay()].key,
       short: dayNames[currentFocusDate.getDay()].short,
       day: currentFocusDate.getDay(),
       date: startOfDay(currentFocusDate)
     }]);
-    return;
+  } else {
+    renderPlanner(days);
   }
-  renderPlanner(days);
+  syncWeatherAttribution();
+  if (currentView !== "year") void ensureWeatherForecast();
 }
 
 function render() {
@@ -6419,6 +6742,7 @@ function resetRoomScopedState({ clearRoom = false } = {}) {
     topbarIdentity.innerHTML = "";
     participantStrip.innerHTML = "";
     calendarGrid.innerHTML = "";
+    if (weatherAttribution) weatherAttribution.hidden = true;
   }
 }
 
@@ -7511,6 +7835,8 @@ function openEventModal(mode = "create", options = {}) {
   setEventFormSaving(false);
   eventModalAnchorRect = options.anchorRect || null;
   eventModal.classList.toggle("anchored-composer", Boolean(eventModalAnchorRect));
+  eventComposerPreviewActive = mode === "create";
+  if (!eventComposerPreviewActive) clearDragPreview();
   if (eventInviteDropdown) eventInviteDropdown.open = false;
 
   if (mode === "edit" && activeEvent()) {
@@ -7570,7 +7896,11 @@ function openEventModal(mode = "create", options = {}) {
   eventModal.showModal();
   eventModalInitialState = eventFormStateSnapshot();
   requestAnimationFrame(() => {
-    positionEventModal();
+    if (eventComposerPreviewActive) {
+      syncEventComposerPreview({ reveal: true, navigate: true });
+    } else {
+      positionEventModal();
+    }
   });
   pendingEventPrefill = null;
 }
@@ -7581,6 +7911,7 @@ function closeEventModal() {
     discardEventDraftDialog.close();
     discardEventDraftReturnFocus = null;
   }
+  deactivateEventComposerPreview();
   stopDragCreate();
   closeEventTimePicker();
   closeAllLocationAutocompletes({ immediate: true, resetSession: true });
@@ -7961,7 +8292,9 @@ googleEventSyncToggle?.addEventListener("change", async () => {
   }
 });
 refreshButton.addEventListener("click", refreshRoomData);
-addEventButton.addEventListener("click", () => openEventModal("create"));
+addEventButton.addEventListener("click", () => {
+  void openCalendarEventComposerAt({ date: dateKey(currentFocusDate) });
+});
 copyInviteButton.addEventListener("click", copyInviteLink);
 copyInviteButtonEmpty.addEventListener("click", async () => {
   await copyInviteLink();
@@ -8187,6 +8520,31 @@ eventGoogleSyncRow?.addEventListener("keydown", (event) => {
 });
 eventInviteDropdown?.addEventListener("toggle", () => {
   requestAnimationFrame(positionEventModal);
+});
+const eventComposerPreviewInput = (target) => (
+  target === eventTitleInput ||
+  target === eventDateInput ||
+  target === eventEndDateInput ||
+  target === eventStartInput ||
+  target === eventEndInput ||
+  target === eventAllDayInput ||
+  Boolean(target?.closest?.("#inviteePicker input[type='checkbox']"))
+);
+eventForm.addEventListener("input", (event) => {
+  if (!eventComposerPreviewInput(event.target)) return;
+  scheduleEventComposerPreviewUpdate();
+});
+eventForm.addEventListener("change", (event) => {
+  if (!eventComposerPreviewInput(event.target)) return;
+  const changesRange = event.target === eventDateInput ||
+    event.target === eventEndDateInput ||
+    event.target === eventStartInput ||
+    event.target === eventEndInput ||
+    event.target === eventAllDayInput;
+  scheduleEventComposerPreviewUpdate({
+    reveal: changesRange,
+    navigate: event.target === eventDateInput
+  });
 });
 eventAllDayInput?.addEventListener("change", () => {
   setAllDayMode(eventAllDayInput.checked);
