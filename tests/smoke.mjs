@@ -268,18 +268,21 @@ try {
   assert.match(home.text, /CommonGround/);
   assert.match(home.text, /href="\/styles\.css\?v=20260804-hourly-weather"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260804-hourly-weather"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260804-copy-room-link"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-hourly-weather"'
+      'src="/app.js?v=20260804-copy-room-link"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
+  assert.match(home.text, /id="copyInviteButton"[^>]*title="Copy link to join room"[^>]*aria-label="Copy link to join room"/);
+  assert.match(home.text, /id="copyInviteButtonEmpty"[\s\S]*?<span>Copy link<\/span>/);
+  assert.doesNotMatch(home.text, /Copy invite message|Copy invite link/);
   assert.match(
     home.text,
     /id="weatherAttribution" translate="no" hidden>Source: Includes weather data from Google<\/span>/,
@@ -1306,8 +1309,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function renderCalendarGoogleControl\(\)[\s\S]*?const googleAvailable = appConfig\?\.googleReady === true;[\s\S]*?let label = "Connect Google Calendar";[\s\S]*?label = "Google Calendar unavailable";[\s\S]*?label = "Reconnect Google Calendar";[\s\S]*?"Link copied" : "Copy invite link"[\s\S]*?dataset\.googleAction = connected \? "invite" : \(googleAvailable \? "authorize" : "unavailable"\);/,
-    "The persistent primary CTA must switch cleanly between connect, reconnect, and invite states"
+    /function renderCalendarGoogleControl\(\)[\s\S]*?const googleAvailable = appConfig\?\.googleReady === true;[\s\S]*?let label = "Connect Google Calendar";[\s\S]*?label = "Google Calendar unavailable";[\s\S]*?label = "Reconnect Google Calendar";[\s\S]*?"Link copied" : "Copy link"[\s\S]*?dataset\.googleAction = connected \? "copy" : \(googleAvailable \? "authorize" : "unavailable"\);/,
+    "The persistent primary CTA must switch cleanly between connect, reconnect, and room-link states"
   );
   assert.match(
     eventComposerScript.text,
@@ -1331,13 +1334,23 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /async function copyRoomInviteLinkFromTopbar\(\) \{[\s\S]*?await copyTextToClipboard\(roomInviteLink\(\)\);[\s\S]*?copiedTopbarInviteRoomCode = roomCodeSnapshot;[\s\S]*?renderCalendarGoogleControl\(\);/,
+    /async function copyRoomLinkFromTopbar\(\) \{[\s\S]*?await copyTextToClipboard\(roomInviteLink\(\)\);[\s\S]*?copiedTopbarRoomCode = roomCodeSnapshot;[\s\S]*?renderCalendarGoogleControl\(\);/,
     "The connected CTA must copy the exact room link and expose immediate feedback"
   );
   assert.match(
     eventComposerScript.text,
-    /calendarGoogleButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?dataset\.googleAction === "invite" && isGoogleConnected\(\)[\s\S]*?copyRoomInviteLinkFromTopbar\(\);[\s\S]*?dataset\.googleAction !== "authorize"[\s\S]*?window\.location\.href = googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true \}\);/,
-    "The top-bar CTA must copy an invite when connected and start secure OAuth otherwise"
+    /async function copyRoomLink\(\) \{[\s\S]*?await copyTextToClipboard\(roomInviteLink\(\)\);[\s\S]*?calendarStatus\.textContent = "Room link copied\.";/,
+    "Every room copy control must copy only the exact join URL"
+  );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /function roomInviteMessage\(|Invite message copied\.|Copy this invite link/,
+    "The served app must not retain the old multi-line invite-message copy path"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /calendarGoogleButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?dataset\.googleAction === "copy" && isGoogleConnected\(\)[\s\S]*?copyRoomLinkFromTopbar\(\);[\s\S]*?dataset\.googleAction !== "authorize"[\s\S]*?window\.location\.href = googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true \}\);/,
+    "The top-bar CTA must copy the room link when connected and start secure OAuth otherwise"
   );
   assert.match(
     eventComposerScript.text,
@@ -2434,6 +2447,11 @@ try {
     eventComposerScript.text,
     /function dismissOutsideFloatingSurfaces\(target\)[\s\S]*?function handleOutsideFloatingSurfacePointer\(event\)[\s\S]*?event\.stopImmediatePropagation\(\)/,
     "Outside clicks must dismiss an open surface before they can activate an underlying non-editable control"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function dismissOutsideFloatingSurfaces\(target\)[\s\S]*?weatherHourlyPopoverIsOpen\(\) \|\| weatherHourlyTrigger[\s\S]*?!weatherHourlyPopover\?\.contains\(target\)[\s\S]*?closeWeatherHourlyPopover\(\);[\s\S]*?dismissed = true;/,
+    "Clicking away from hourly weather must close it through the shared consumed-click guard"
   );
   assert.match(
     eventComposerScript.text,
