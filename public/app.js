@@ -44,6 +44,14 @@ const calendarStatus = document.querySelector("#calendarStatus");
 const googleConnectionIndicator = document.querySelector("#googleConnectionIndicator");
 const calendarConnectionNotice = document.querySelector("#calendarConnectionNotice");
 const weatherAttribution = document.querySelector("#weatherAttribution");
+const weatherHighLowTooltip = document.querySelector("#weatherHighLowTooltip");
+const weatherHighLowTooltipText = document.querySelector("#weatherHighLowTooltipText");
+const weatherHourlyPopover = document.querySelector("#weatherHourlyPopover");
+const weatherHourlyTitle = document.querySelector("#weatherHourlyTitle");
+const weatherHourlySummary = document.querySelector("#weatherHourlySummary");
+const weatherHourlyList = document.querySelector("#weatherHourlyList");
+const weatherHourlyStatus = document.querySelector("#weatherHourlyStatus");
+const closeWeatherHourlyButton = document.querySelector("#closeWeatherHourlyButton");
 const calendarPeriodLabel = document.querySelector("#calendarPeriodLabel");
 const prevPeriodButton = document.querySelector("#prevPeriodButton");
 const nextPeriodButton = document.querySelector("#nextPeriodButton");
@@ -189,12 +197,17 @@ let currentParticipant = null;
 let currentIsHost = false;
 let googleBusy = [];
 let weatherForecastByDate = new Map();
+let weatherHourlyByDate = new Map();
 let weatherLocationPromise = null;
 let weatherLoadPromise = null;
 let weatherForecastFetchedAt = 0;
 let weatherRetryAfter = 0;
 let weatherLocationUnavailable = false;
 let weatherGeolocationPermissionStatus = null;
+let weatherLocationKey = "";
+let weatherHourlyRequestGeneration = 0;
+let weatherHourlyTrigger = null;
+let weatherTooltipHideTimer = null;
 let currentView = "week";
 let currentFocusDate = new Date();
 let miniCalendarCursor = new Date(currentFocusDate.getFullYear(), currentFocusDate.getMonth(), 1);
@@ -750,33 +763,293 @@ function normalizedWeatherForecast(entry) {
     icon,
     description: String(entry?.description || "Weather forecast").trim().slice(0, 120) || "Weather forecast",
     highC: normalizedTemperature(entry?.highC),
-    lowC: normalizedTemperature(entry?.lowC)
+    lowC: normalizedTemperature(entry?.lowC),
+    source: entry?.source === "history" ? "history" : "forecast"
   };
+}
+
+function normalizedHourlyWeather(entry, expectedDate) {
+  const date = String(entry?.date || "");
+  const hour = Number(entry?.hour);
+  const icon = String(entry?.icon || "");
+  if (
+    date !== expectedDate ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+    !Number.isInteger(hour) ||
+    hour < 0 ||
+    hour > 23 ||
+    !weatherIconNames.has(icon)
+  ) {
+    return null;
+  }
+  const temperature = entry?.temperatureC === null || entry?.temperatureC === undefined
+    ? null
+    : Number(entry.temperatureC);
+  return {
+    date,
+    hour,
+    icon,
+    description: String(entry?.description || "Weather").trim().slice(0, 120) || "Weather",
+    temperatureC: Number.isFinite(temperature) ? Math.round(temperature * 10) / 10 : null,
+    isDaytime: entry?.isDaytime === true
+  };
+}
+
+function formatWeatherTemperature(value) {
+  return Number.isFinite(value) ? `${Math.round(value)}\u00b0` : "\u2014";
+}
+
+function formatWeatherHour(hour) {
+  const normalized = ((Number(hour) % 24) + 24) % 24;
+  const period = normalized >= 12 ? "pm" : "am";
+  return `${normalized % 12 || 12}${period}`;
 }
 
 function weatherForecastLabel(forecast) {
   const details = [];
   if (Number.isFinite(forecast?.highC)) details.push(`high ${forecast.highC}\u00b0C`);
   if (Number.isFinite(forecast?.lowC)) details.push(`low ${forecast.lowC}\u00b0C`);
-  return [forecast?.description || "Weather forecast", ...details].join(", ");
+  const prefix = forecast?.source === "history" ? "Observed" : "Forecast";
+  return [`${prefix}: ${forecast?.description || "weather"}`, ...details].join(", ");
+}
+
+function weatherHighLowLabel(forecast) {
+  const high = Number.isFinite(forecast?.highC) ? `${Math.round(forecast.highC)}\u00b0` : "\u2014";
+  const low = Number.isFinite(forecast?.lowC) ? `${Math.round(forecast.lowC)}\u00b0` : "\u2014";
+  return `${forecast?.source === "history" ? "Observed" : "High"} ${high}  \u00b7  Low ${low}`;
+}
+
+function hideWeatherHighLowTooltip({ immediate = false } = {}) {
+  if (!weatherHighLowTooltip) return;
+  window.clearTimeout(weatherTooltipHideTimer);
+  const hide = () => {
+    weatherHighLowTooltip.setAttribute("aria-hidden", "true");
+  };
+  if (immediate) {
+    hide();
+    return;
+  }
+  weatherTooltipHideTimer = window.setTimeout(hide, 45);
+}
+
+function showWeatherHighLowTooltip(trigger, forecast) {
+  if (!weatherHighLowTooltip || !weatherHighLowTooltipText || !trigger?.isConnected) return;
+  window.clearTimeout(weatherTooltipHideTimer);
+  weatherHighLowTooltipText.textContent = weatherHighLowLabel(forecast);
+  weatherHighLowTooltip.setAttribute("aria-hidden", "false");
+  const rect = trigger.getBoundingClientRect();
+  const tooltipRect = weatherHighLowTooltip.getBoundingClientRect();
+  const viewportPadding = 8;
+  const left = Math.min(
+    window.innerWidth - tooltipRect.width - viewportPadding,
+    Math.max(viewportPadding, rect.left + (rect.width - tooltipRect.width) / 2)
+  );
+  const preferredTop = rect.bottom + 8;
+  const top = preferredTop + tooltipRect.height <= window.innerHeight - viewportPadding
+    ? preferredTop
+    : Math.max(viewportPadding, rect.top - tooltipRect.height - 8);
+  weatherHighLowTooltip.style.transform = `translate3d(${Math.round(left)}px, ${Math.round(top)}px, 0) scale(1)`;
+}
+
+function weatherHourlyPopoverIsOpen() {
+  if (!weatherHourlyPopover) return false;
+  try {
+    return weatherHourlyPopover.matches(":popover-open");
+  } catch {
+    return weatherHourlyPopover.dataset.fallbackOpen === "true";
+  }
+}
+
+function showWeatherHourlyPopover() {
+  if (!weatherHourlyPopover || weatherHourlyPopoverIsOpen()) return;
+  if (typeof weatherHourlyPopover.showPopover === "function") {
+    weatherHourlyPopover.showPopover();
+  } else {
+    weatherHourlyPopover.dataset.fallbackOpen = "true";
+    weatherHourlyPopover.hidden = false;
+  }
+}
+
+function positionWeatherHourlyPopover(trigger) {
+  if (!weatherHourlyPopover || !trigger?.isConnected) return;
+  const rect = trigger.getBoundingClientRect();
+  const popoverWidth = weatherHourlyPopover.offsetWidth || Math.min(352, window.innerWidth - 16);
+  const popoverHeight = weatherHourlyPopover.offsetHeight || Math.min(480, window.innerHeight - 16);
+  const gap = 10;
+  const viewportPadding = 8;
+  let left = rect.right + gap;
+  if (left + popoverWidth > window.innerWidth - viewportPadding) {
+    left = rect.left - popoverWidth - gap;
+  }
+  if (left < viewportPadding) {
+    left = Math.max(viewportPadding, Math.min(rect.left, window.innerWidth - popoverWidth - viewportPadding));
+  }
+  const top = Math.max(
+    viewportPadding,
+    Math.min(rect.top - 12, window.innerHeight - popoverHeight - viewportPadding)
+  );
+  weatherHourlyPopover.style.setProperty("--weather-popover-x", `${Math.round(left)}px`);
+  weatherHourlyPopover.style.setProperty("--weather-popover-y", `${Math.round(top)}px`);
+}
+
+function closeWeatherHourlyPopover({ restoreFocus = false } = {}) {
+  weatherHourlyRequestGeneration += 1;
+  const trigger = weatherHourlyTrigger;
+  weatherHourlyTrigger = null;
+  trigger?.setAttribute("aria-expanded", "false");
+  if (weatherHourlyPopover && weatherHourlyPopoverIsOpen()) {
+    if (typeof weatherHourlyPopover.hidePopover === "function") {
+      weatherHourlyPopover.hidePopover();
+    } else {
+      delete weatherHourlyPopover.dataset.fallbackOpen;
+      weatherHourlyPopover.hidden = true;
+    }
+  }
+  if (restoreFocus && trigger?.isConnected) trigger.focus({ preventScroll: true });
+}
+
+function renderWeatherHourlyForecast(date, data) {
+  if (!weatherHourlyList || !weatherHourlyStatus || !weatherHourlySummary) return;
+  const forecast = weatherForecastByDate.get(date);
+  const hours = Array.isArray(data?.hours) ? data.hours : [];
+  weatherHourlySummary.textContent = weatherHighLowLabel(forecast);
+  weatherHourlyList.replaceChildren();
+
+  if (!hours.length) {
+    const selectedDate = parseDateKey(date);
+    const isPast = selectedDate < startOfDay(new Date());
+    weatherHourlyStatus.textContent = isPast
+      ? "Hourly history is available for only the previous 24 hours."
+      : "An hourly forecast is not available for this date yet.";
+    weatherHourlyStatus.hidden = false;
+    return;
+  }
+
+  weatherHourlyStatus.hidden = true;
+  const fragment = document.createDocumentFragment();
+  for (const hour of hours) {
+    const row = document.createElement("div");
+    row.className = "weather-hour-row";
+
+    const time = document.createElement("time");
+    time.className = "weather-hour-time";
+    time.dateTime = `${hour.date}T${String(hour.hour).padStart(2, "0")}:00`;
+    time.textContent = formatWeatherHour(hour.hour);
+
+    const glyph = document.createElement("span");
+    glyph.className = `weather-symbol weather-icon-${hour.icon}`;
+    glyph.setAttribute("aria-hidden", "true");
+
+    const description = document.createElement("span");
+    description.className = "weather-hour-description";
+    description.textContent = hour.description;
+
+    const temperature = document.createElement("strong");
+    temperature.className = "weather-hour-temperature";
+    temperature.textContent = formatWeatherTemperature(hour.temperatureC);
+    temperature.setAttribute("aria-label", Number.isFinite(hour.temperatureC)
+      ? `${hour.temperatureC} degrees Celsius`
+      : "Temperature unavailable");
+
+    row.append(time, glyph, description, temperature);
+    fragment.appendChild(row);
+  }
+  weatherHourlyList.appendChild(fragment);
+}
+
+async function openWeatherHourlyForecast(trigger, date, forecast) {
+  if (!weatherHourlyPopover || !currentRoom?.code) return;
+  hideWeatherHighLowTooltip({ immediate: true });
+  if (weatherHourlyTrigger && weatherHourlyTrigger !== trigger) {
+    weatherHourlyTrigger.setAttribute("aria-expanded", "false");
+  }
+  weatherHourlyTrigger = trigger;
+  trigger.setAttribute("aria-expanded", "true");
+  weatherHourlyTitle.textContent = formatFullDate(parseDateKey(date));
+  weatherHourlySummary.textContent = weatherHighLowLabel(forecast);
+  weatherHourlyList.replaceChildren();
+  weatherHourlyStatus.hidden = false;
+  weatherHourlyStatus.textContent = "Loading hourly forecast\u2026";
+  showWeatherHourlyPopover();
+  positionWeatherHourlyPopover(trigger);
+
+  const cached = weatherHourlyByDate.get(date);
+  if (cached) {
+    renderWeatherHourlyForecast(date, cached);
+    positionWeatherHourlyPopover(trigger);
+    return;
+  }
+
+  const generation = ++weatherHourlyRequestGeneration;
+  const requestRoomCode = currentRoom.code;
+  try {
+    const coordinates = await requestWeatherLocation();
+    const nextLocationKey = `${coordinates.latitude},${coordinates.longitude}`;
+    if (weatherLocationKey && weatherLocationKey !== nextLocationKey) weatherHourlyByDate = new Map();
+    weatherLocationKey = nextLocationKey;
+    const data = await fetchJson(`/api/rooms/${requestRoomCode}/weather/hourly`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...coordinates, date })
+    });
+    if (
+      generation !== weatherHourlyRequestGeneration ||
+      currentRoom?.code !== requestRoomCode ||
+      weatherHourlyTrigger !== trigger
+    ) return;
+    const hours = [];
+    for (const rawHour of Array.isArray(data.hours) ? data.hours : []) {
+      const hour = normalizedHourlyWeather(rawHour, date);
+      if (hour) hours.push(hour);
+    }
+    const normalized = {
+      source: ["history", "mixed"].includes(data.source) ? data.source : "forecast",
+      hours: hours.sort((left, right) => left.hour - right.hour)
+    };
+    weatherHourlyByDate.set(date, normalized);
+    renderWeatherHourlyForecast(date, normalized);
+    positionWeatherHourlyPopover(trigger);
+  } catch {
+    if (generation !== weatherHourlyRequestGeneration || weatherHourlyTrigger !== trigger) return;
+    weatherHourlyList.replaceChildren();
+    weatherHourlyStatus.hidden = false;
+    weatherHourlyStatus.textContent = "Hourly weather is unavailable right now. Try again shortly.";
+  }
 }
 
 function createWeatherSymbol(date, placement) {
   const forecast = weatherForecastByDate.get(dateKey(date));
   if (!forecast) return null;
-  const symbol = document.createElement("span");
-  symbol.className = [
-    "weather-symbol",
+  const key = dateKey(date);
+  const trigger = document.createElement("button");
+  trigger.type = "button";
+  trigger.className = [
+    "weather-trigger",
     `weather-symbol--${placement}`,
-    `weather-icon-${forecast.icon}`,
     forecast.icon === "thermometer-sun" ? "is-hot" : "",
     forecast.icon === "thermometer-snowflake" ? "is-freezing" : ""
   ].filter(Boolean).join(" ");
   const label = weatherForecastLabel(forecast);
-  symbol.setAttribute("role", "img");
-  symbol.setAttribute("aria-label", label);
-  symbol.title = label;
-  return symbol;
+  trigger.dataset.weatherDate = key;
+  trigger.setAttribute("aria-label", `${label}. Open hourly weather.`);
+  trigger.setAttribute("aria-describedby", "weatherHighLowTooltip");
+  trigger.setAttribute("aria-haspopup", "dialog");
+  trigger.setAttribute("aria-controls", "weatherHourlyPopover");
+  trigger.setAttribute("aria-expanded", "false");
+  const symbol = document.createElement("span");
+  symbol.className = `weather-symbol weather-icon-${forecast.icon}`;
+  symbol.setAttribute("aria-hidden", "true");
+  trigger.appendChild(symbol);
+  trigger.addEventListener("pointerenter", () => showWeatherHighLowTooltip(trigger, forecast));
+  trigger.addEventListener("pointerleave", () => hideWeatherHighLowTooltip());
+  trigger.addEventListener("focus", () => showWeatherHighLowTooltip(trigger, forecast));
+  trigger.addEventListener("blur", () => hideWeatherHighLowTooltip());
+  trigger.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    void openWeatherHourlyForecast(trigger, key, forecast);
+  });
+  return trigger;
 }
 
 function syncWeatherAttribution() {
@@ -790,10 +1063,14 @@ function roundedWeatherCoordinate(value) {
 }
 
 function clearWeatherForecast({ rerender = false } = {}) {
-  const hadWeather = weatherForecastByDate.size > 0 || weatherForecastFetchedAt > 0;
+  const hadWeather = weatherForecastByDate.size > 0 || weatherHourlyByDate.size > 0 || weatherForecastFetchedAt > 0;
+  closeWeatherHourlyPopover();
+  hideWeatherHighLowTooltip({ immediate: true });
   weatherForecastByDate = new Map();
+  weatherHourlyByDate = new Map();
   weatherForecastFetchedAt = 0;
   weatherRetryAfter = 0;
+  weatherLocationKey = "";
   if (rerender && hadWeather && currentView !== "year") {
     renderCalendar();
     return;
@@ -878,6 +1155,9 @@ async function ensureWeatherForecast() {
   weatherLoadPromise = (async () => {
     try {
       const coordinates = await requestWeatherLocation();
+      const nextLocationKey = `${coordinates.latitude},${coordinates.longitude}`;
+      if (weatherLocationKey && weatherLocationKey !== nextLocationKey) weatherHourlyByDate = new Map();
+      weatherLocationKey = nextLocationKey;
       const data = await fetchJson(`/api/rooms/${requestRoomCode}/weather/forecast`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -4559,6 +4839,24 @@ function eventBlocksForDate(date) {
 }
 
 function eventCardMetrics(duration) {
+  const rowHeight = parseFloat(getComputedStyle(document.documentElemens · ${event.responseSummary?.maybe || 0} maybe · ${event.responseSummary?.no || 0} no`,
+      isInvitee: isInvitee && !isCreator,
+      isInvitedViewer: Boolean(event.isInvited),
+      continuesBefore: start < dayStart,
+      continuesAfter: end > dayEnd,
+      showDetails,
+      allDay,
+      timezone: event.timezone || "UTC",
+      eventStart: event.start,
+      eventEnd: event.end,
+      originalEvent: event,
+      isEditable: isOwnerEditable
+    });
+  }
+  return items;
+}
+
+function eventCardMetrics(duration) {
   const rowHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--row-height")) || 58;
   const blockGap = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--calendar-block-gap")) || 6;
   const renderedHeight = Math.max(10, duration * rowHeight - blockGap);
@@ -6756,6 +7054,8 @@ function renderYear() {
 }
 
 function renderCalendar() {
+  closeWeatherHourlyPopover();
+  hideWeatherHighLowTooltip({ immediate: true });
   const days = currentWeekDays();
   if (currentView === "month") {
     renderMonth();
@@ -8737,23 +9037,4 @@ createRoomModal?.addEventListener("close", () => {
   }
 });
 
-eventModal.addEventListener("cancel", (event) => {
-  event.preventDefault();
-  if (activeEventTimePicker) {
-    closeEventTimePicker({ restoreFocus: true });
-    return;
-  }
-  attemptCloseEventModal();
-});
-
-discardEventDraftDialog?.addEventListener("cancel", (event) => {
-  event.preventDefault();
-  closeDiscardEventDraftDialog();
-});
-
-updateFullscreenControl();
-document.addEventListener("pointerdown", handleOutsideFloatingSurfacePointer, true);
-document.addEventListener("click", handleOutsideFloatingSurfaceClick, true);
-initializeEmojiPickers();
-void observeWeatherLocationPermission();
-boot();
+eventModa
