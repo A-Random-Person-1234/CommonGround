@@ -12522,10 +12522,18 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
 
 /* The existing independent name and colour controls read as one profile unit. */
 #roomPage .topbar-identity {
+  --identity-control-height: 34px;
+  --identity-avatar-size: 30px;
+  --identity-color-control-size: 30px;
+  --identity-swatch-size: 12px;
   position: relative;
   display: flex;
-  gap: 3px;
-  padding-left: 36px;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  height: var(--identity-control-height);
+  padding-left: calc(var(--identity-avatar-size) + 4px);
   border: 0;
   background: transparent;
 }
@@ -12537,8 +12545,8 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   top: 50%;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: var(--identity-avatar-size);
+  height: var(--identity-avatar-size);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.07);
@@ -12549,23 +12557,48 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   pointer-events: none;
 }
 
-#roomPage .topbar-identity > .identity-name-button {
+#roomPage .topbar-identity > .identity-name-button,
+#roomPage .topbar-identity > input.inline-name-input {
+  align-self: center;
   min-width: 0;
   max-width: 112px;
-  padding: 0 7px;
+  height: calc(var(--identity-control-height) - 2px);
+  min-height: calc(var(--identity-control-height) - 2px);
+  padding: 0 8px;
   border: 0;
   background: transparent;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 #roomPage .topbar-identity > .identity-name-button:hover {
   background: rgba(255, 255, 255, 0.05);
 }
 
-#roomPage .topbar-color-trigger {
-  width: 30px;
-  min-width: 30px;
-  height: 30px;
-  min-height: 30px;
+#roomPage .topbar-identity > .topbar-identity-menu {
+  display: grid;
+  place-items: center;
+  flex: 0 0 var(--identity-color-control-size);
+  width: var(--identity-color-control-size);
+  min-width: var(--identity-color-control-size);
+  height: var(--identity-color-control-size);
+}
+
+#roomPage .topbar-identity > .topbar-identity-menu > .topbar-color-trigger {
+  width: var(--identity-color-control-size);
+  min-width: var(--identity-color-control-size);
+  height: var(--identity-color-control-size);
+  min-height: var(--identity-color-control-size);
+}
+
+#roomPage .topbar-identity > .topbar-identity-menu > .topbar-color-trigger > .current-color-dot {
+  width: var(--identity-swatch-size);
+  height: var(--identity-swatch-size);
+  box-shadow:
+    inset 0 0 0 1px rgba(15, 23, 42, 0.12),
+    0 0 0 2px color-mix(in srgb, var(--swatch-color) 18%, transparent);
 }
 
 /* Flat sidebar hierarchy with one unified room-code control. */
@@ -12722,6 +12755,10 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   }
 
   #roomPage .topbar-identity > * {
+    display: none;
+  }
+
+  #roomPage .topbar-identity > .topbar-identity-menu {
     display: none;
   }
 
