@@ -35,7 +35,7 @@ const emojiKeywordDictionaryPath = path.join(__dirname, "node_modules", "emojili
 const emojiKeywordDictionary = fs.readFileSync(emojiKeywordDictionaryPath);
 const emojiKeywordDictionaryEtag = `"${crypto.createHash("sha256").update(emojiKeywordDictionary).digest("base64url")}"`;
 const roomCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const defaultRoomEmoji = "ðŸ“…";
+const defaultRoomEmoji = "📅";
 const oauthStateLifetimeMs = 10 * 60 * 1000;
 const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000;
 const sessionRotationAliasLifetimeMs = 60 * 1000;
@@ -2675,7 +2675,7 @@ function googleCalendarEventDescription(room, event) {
     `CommonGround room: ${room.name} (${room.code})`,
     `${publicBaseUrl}/room/${room.code}`,
     "",
-    `Responses: ${counts.yes} yes Â· ${counts.maybe} maybe Â· ${counts.no} no`
+    `Responses: ${counts.yes} yes · ${counts.maybe} maybe · ${counts.no} no`
   ].filter((line) => line !== null).join("\n");
 }
 
@@ -2729,7 +2729,7 @@ function outlookCalendarEventDescription(room, event) {
     `CommonGround room: ${room.name} (${room.code})`,
     `${publicBaseUrl}/room/${room.code}`,
     "",
-    `Responses: ${counts.yes} yes Â· ${counts.maybe} maybe Â· ${counts.no} no`
+    `Responses: ${counts.yes} yes · ${counts.maybe} maybe · ${counts.no} no`
   ].filter((line) => line !== null).join("\n");
 }
 
@@ -5683,4 +5683,3 @@ server.listen(port, host, () => {
   console.log(`CommonGround running at http://localhost:${port}`);
   console.log(`Google redirect URI: ${redirectUri}`);
 });
-
