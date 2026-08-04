@@ -43,7 +43,6 @@ const hostPill = document.querySelector("#hostPill");
 const calendarStatus = document.querySelector("#calendarStatus");
 const googleConnectionIndicator = document.querySelector("#googleConnectionIndicator");
 const calendarConnectionNotice = document.querySelector("#calendarConnectionNotice");
-const weatherAttribution = document.querySelector("#weatherAttribution");
 const weatherHighLowTooltip = document.querySelector("#weatherHighLowTooltip");
 const weatherHighLowTooltipText = document.querySelector("#weatherHighLowTooltipText");
 const weatherHourlyPopover = document.querySelector("#weatherHourlyPopover");
@@ -1058,11 +1057,6 @@ function createWeatherSymbol(date, placement) {
   return trigger;
 }
 
-function syncWeatherAttribution() {
-  if (!weatherAttribution) return;
-  weatherAttribution.hidden = currentView === "year" || !calendarGrid.querySelector(".weather-symbol");
-}
-
 closeWeatherHourlyButton?.addEventListener("click", () => {
   closeWeatherHourlyPopover({ restoreFocus: true });
 });
@@ -1099,7 +1093,6 @@ function clearWeatherForecast({ rerender = false } = {}) {
     renderCalendar();
     return;
   }
-  syncWeatherAttribution();
 }
 
 function markWeatherLocationUnavailable() {
@@ -7077,7 +7070,6 @@ function renderCalendar() {
   } else {
     renderPlanner(days);
   }
-  syncWeatherAttribution();
   if (currentView !== "year") void ensureWeatherForecast();
 }
 
@@ -7160,7 +7152,6 @@ function resetRoomScopedState({ clearRoom = false } = {}) {
     topbarIdentity.innerHTML = "";
     participantStrip.innerHTML = "";
     calendarGrid.innerHTML = "";
-    if (weatherAttribution) weatherAttribution.hidden = true;
   }
 }
 
