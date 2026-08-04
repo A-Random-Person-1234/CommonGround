@@ -8,7 +8,7 @@ This directory is the complete deployable application. Run and deploy from this 
 
 - Node.js 22 or newer (the server uses the built-in `node:sqlite` module)
 - Google OAuth credentials for Google Calendar connection
-- A server-only Google Maps Platform key with Places API (New) enabled for address suggestions
+- A server-only Google Maps Platform key with Places API (New) and Weather API enabled
 - Microsoft OAuth credentials only if Outlook connection is enabled
 
 ## Run locally
@@ -77,7 +77,13 @@ Do not commit OAuth secrets. Configure them in the hosting provider's secret/env
 
 The location fields in the event composer, event detail editor, and Command Centre use Google Places API (New) address suggestions. CommonGround sends searches through the room-scoped server endpoint `/api/rooms/:code/places/autocomplete`; the browser never receives the Maps API key. Manual location entry remains available if Places is not configured or temporarily unavailable.
 
-Create a separate Maps Platform key for CommonGround, enable only **Places API (New)** for that key, set quota and billing alerts, and store the key as the `GOOGLE_MAPS_API_KEY` secret in Render. Never put the key in `public/`, a URL, a client-side script, or GitHub. Rotate a key immediately if it has been pasted into chat, logs, or another non-secret channel.
+Create a separate Maps Platform key for CommonGround, enable only **Places API (New)** and **Weather API** for that key, set quota and billing alerts, and store the key as the `GOOGLE_MAPS_API_KEY` secret in Render. Never put the key in `public/`, a URL, a client-side script, or GitHub. Rotate a key immediately if it has been pasted into chat, logs, or another non-secret channel.
+
+## Local weather
+
+Day, week, and month calendar views can show local daily weather symbols. After the user grants browser location permission, CommonGround rounds latitude and longitude to two decimal places before sending them to its authenticated room endpoint. The server calls Google Weather using the protected Maps Platform key, returns only a sanitized forecast, and keeps a short in-memory cache. Coordinates are never written to room data or SQLite.
+
+Google Weather returns at most ten daily forecasts beginning with the current day. CommonGround therefore leaves past dates and dates outside that forecast horizon blank instead of fabricating weather. Year view never displays weather.
 
 ## OAuth redirect setup
 
@@ -122,6 +128,7 @@ For a prototype, attach a persistent disk and point `DATA_DIR` or `DATABASE_PATH
 
 ```text
 server.js
+weather-forecast.js
 command-centre-date-time.js
 command-centre-parser.js
 command-centre-scheduling.js
@@ -133,6 +140,7 @@ render.yaml
 public/index.html
 public/styles.css
 public/app.js
+public/icons/weather/*.svg
 public/command-centre.js
 public/privacy.html
 public/terms.html
