@@ -8542,10 +8542,43 @@ function downloadIcs() {
   window.location.href = `/api/rooms/${currentRoom.code}/events/${selectedEventId}/ics`;
 }
 
+function applyTheme(theme, { persist = false } = {}) {
+  let appliedTheme;
+
+  if (window.CommonGroundTheme?.apply) {
+    appliedTheme = window.CommonGroundTheme.apply(theme, { persist });
+  } else {
+    appliedTheme = theme === "light" ? "light" : "dark";
+    document.documentElement.dataset.theme = appliedTheme;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute(
+      "content",
+      appliedTheme === "dark" ? "#101c31" : "#f7f3ee"
+    );
+    if (persist) {
+      try {
+        localStorage.setItem("cg-theme", appliedTheme);
+      } catch {
+        // The visible theme can still change when storage is unavailable.
+      }
+    }
+  }
+
+  if (themeToggle) themeToggle.checked = appliedTheme === "dark";
+  return appliedTheme;
+}
+
 function maybeRestoreTheme() {
-  const storedTheme = localStorage.getItem("cg-theme") || "dark";
-  document.documentElement.dataset.theme = storedTheme;
-  themeToggle.checked = storedTheme === "dark";
+  let storedTheme = "dark";
+  if (window.CommonGroundTheme?.read) {
+    storedTheme = window.CommonGroundTheme.read();
+  } else {
+    try {
+      storedTheme = localStorage.getItem("cg-theme") || "dark";
+    } catch {
+      // Keep the default when storage is unavailable.
+    }
+  }
+  applyTheme(storedTheme);
 }
 
 async function renameRoomByValue(name) {
@@ -8760,11 +8793,10 @@ customRoomCodeInput?.addEventListener("blur", async () => {
   await saveRoomCode();
 });
 roomLockToggle?.addEventListener("change", saveRoomLockState);
-themeToggle.addEventListener("change", () => {
+themeToggle?.addEventListener("change", () => {
   const theme = themeToggle.checked ? "dark" : "light";
   document.documentElement.classList.add("is-theme-switching");
-  document.documentElement.dataset.theme = theme;
-  localStorage.setItem("cg-theme", theme);
+  applyTheme(theme, { persist: true });
   window.setTimeout(() => {
     document.documentElement.classList.remove("is-theme-switching");
   }, motionDelay(motionStandardMs + 40));

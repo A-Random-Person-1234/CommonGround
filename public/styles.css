@@ -6927,6 +6927,373 @@ button.free-block:not(:disabled):active {
   }
 }
 
+/* ========================================================================
+   Light-theme overlay surfaces
+
+   These components intentionally keep their original dark presentation as
+   the default. Only the top-layer panels are recoloured here; the calendar
+   application shell remains independent from these overrides.
+   ======================================================================== */
+
+:root[data-theme="light"] .command-centre-dialog::backdrop {
+  background: rgba(47, 37, 29, 0.28);
+}
+
+:root[data-theme="light"] .command-centre-panel {
+  border-color: rgba(61, 45, 34, 0.14);
+  background: rgba(255, 253, 249, 0.98);
+  box-shadow: 0 24px 72px rgba(55, 38, 24, 0.2);
+  color: var(--text);
+}
+
+:root[data-theme="light"] .command-centre-search-row {
+  border-bottom-color: rgba(61, 45, 34, 0.1);
+}
+
+:root[data-theme="light"] .command-centre-completion,
+:root[data-theme="light"] .command-centre-completion-suffix {
+  color: rgba(33, 26, 21, 0.34);
+}
+
+:root[data-theme="light"] #commandCentreInput {
+  color: var(--text);
+}
+
+:root[data-theme="light"] #commandCentreInput::placeholder {
+  color: rgba(33, 26, 21, 0.4);
+}
+
+:root[data-theme="light"] .command-centre-close {
+  color: rgba(33, 26, 21, 0.58);
+}
+
+:root[data-theme="light"] .command-centre-close:hover {
+  background: rgba(61, 45, 34, 0.07);
+  color: var(--text);
+}
+
+:root[data-theme="light"] .command-centre-body {
+  scrollbar-color: rgba(61, 45, 34, 0.2) transparent;
+}
+
+:root[data-theme="light"] .command-centre-intro > p,
+:root[data-theme="light"] .command-state-card p,
+:root[data-theme="light"] .command-preview-card > p,
+:root[data-theme="light"] .command-loading-row {
+  color: rgba(33, 26, 21, 0.56);
+}
+
+:root[data-theme="light"] .command-example-list button,
+:root[data-theme="light"] .command-option,
+:root[data-theme="light"] .command-slot,
+:root[data-theme="light"] .command-event-candidate {
+  color: rgba(33, 26, 21, 0.8);
+}
+
+:root[data-theme="light"] .command-example-list button::after,
+:root[data-theme="light"] .command-centre-body .command-prediction-option > span:last-child {
+  color: rgba(33, 26, 21, 0.32);
+}
+
+:root[data-theme="light"] .command-example-list button:hover,
+:root[data-theme="light"] .command-example-list button:focus-visible,
+:root[data-theme="light"] .command-option:hover,
+:root[data-theme="light"] .command-option:focus-visible,
+:root[data-theme="light"] .command-option.is-selected,
+:root[data-theme="light"] .command-slot:hover,
+:root[data-theme="light"] .command-slot:focus-visible,
+:root[data-theme="light"] .command-slot.is-selected,
+:root[data-theme="light"] .command-event-candidate:hover,
+:root[data-theme="light"] .command-event-candidate:focus-visible,
+:root[data-theme="light"] .command-event-candidate.is-selected {
+  background: rgba(61, 45, 34, 0.065);
+  color: var(--text);
+}
+
+:root[data-theme="light"] .command-state-card,
+:root[data-theme="light"] .command-preview-card,
+:root[data-theme="light"] .command-all-day,
+:root[data-theme="light"] .command-room-code-change,
+:root[data-theme="light"] .command-time-card {
+  border-color: rgba(61, 45, 34, 0.1);
+  background: rgba(61, 45, 34, 0.025);
+}
+
+:root[data-theme="light"] .command-state-card h3,
+:root[data-theme="light"] .command-preview-card h3,
+:root[data-theme="light"] .command-results-heading h3,
+:root[data-theme="light"] .command-slot-copy strong,
+:root[data-theme="light"] .command-candidate-copy strong,
+:root[data-theme="light"] .command-time-card strong {
+  color: var(--text);
+}
+
+:root[data-theme="light"] .command-loading-spinner {
+  border-color: rgba(61, 45, 34, 0.14);
+  border-top-color: var(--brand);
+}
+
+:root[data-theme="light"] .command-clarification {
+  border-color: rgba(168, 117, 72, 0.24);
+  background: rgba(179, 148, 88, 0.1);
+  color: #76502f;
+}
+
+:root[data-theme="light"] .command-schedule-separator,
+:root[data-theme="light"] .command-field > span,
+:root[data-theme="light"] .command-field > label,
+:root[data-theme="light"] .command-participant-editor > span,
+:root[data-theme="light"] .command-results-heading span,
+:root[data-theme="light"] .command-slot-copy span,
+:root[data-theme="light"] .command-candidate-copy span,
+:root[data-theme="light"] .command-time-card span {
+  color: rgba(33, 26, 21, 0.48);
+}
+
+:root[data-theme="light"] .command-field input,
+:root[data-theme="light"] .command-field textarea {
+  border-color: rgba(61, 45, 34, 0.12);
+  background: rgba(61, 45, 34, 0.035);
+  color: var(--text);
+}
+
+:root[data-theme="light"] .command-create-preview .command-field input::placeholder,
+:root[data-theme="light"] .command-create-preview .command-field textarea::placeholder {
+  color: rgba(33, 26, 21, 0.34);
+}
+
+:root[data-theme="light"] .command-all-day strong {
+  color: rgba(33, 26, 21, 0.84);
+}
+
+:root[data-theme="light"] .command-all-day small {
+  color: rgba(33, 26, 21, 0.46);
+}
+
+:root[data-theme="light"] .command-participant-chip span {
+  border-color: rgba(61, 45, 34, 0.12);
+  background: rgba(61, 45, 34, 0.035);
+  color: rgba(33, 26, 21, 0.58);
+}
+
+:root[data-theme="light"] .command-participant-chip input:checked + span {
+  color: var(--text);
+}
+
+:root[data-theme="light"] .command-actions .command-secondary-action {
+  border-color: rgba(61, 45, 34, 0.12);
+  background: rgba(61, 45, 34, 0.045);
+  color: rgba(33, 26, 21, 0.76);
+}
+
+:root[data-theme="light"] .command-centre-body .command-interpretation {
+  color: rgba(33, 26, 21, 0.42);
+}
+
+:root[data-theme="light"] .command-centre-body .command-interpretation strong,
+:root[data-theme="light"] .command-room-code-change strong {
+  color: #76502f;
+}
+
+:root[data-theme="light"] .command-centre-body .command-recovery button {
+  border-color: rgba(168, 117, 72, 0.25);
+  background: rgba(179, 148, 88, 0.1);
+  color: #76502f;
+}
+
+:root[data-theme="light"] .command-centre-body .command-recovery button:hover,
+:root[data-theme="light"] .command-centre-body .command-recovery button:focus-visible {
+  background: rgba(179, 148, 88, 0.17);
+  color: #56381f;
+}
+
+:root[data-theme="light"] .command-slot.is-selected {
+  border-color: rgba(168, 117, 72, 0.34);
+  background: rgba(179, 148, 88, 0.12);
+}
+
+:root[data-theme="light"] .command-slot > span:last-child,
+:root[data-theme="light"] .command-event-candidate > span:last-child {
+  color: #845533;
+}
+
+:root[data-theme="light"] .command-success-mark {
+  background: rgba(85, 122, 85, 0.13);
+  color: #416541;
+}
+
+:root[data-theme="light"] .emoji-picker-popover[popover] {
+  border-color: rgba(61, 45, 34, 0.14);
+  background: rgba(255, 253, 249, 0.92);
+  color: var(--text);
+  box-shadow: 0 12px 40px rgba(55, 38, 24, 0.22);
+}
+
+:root[data-theme="light"] .emoji-picker-searchbar {
+  border-bottom-color: rgba(61, 45, 34, 0.1);
+}
+
+:root[data-theme="light"] #emojiPickerSearch,
+:root[data-theme="light"] #emojiPickerSearch:hover,
+:root[data-theme="light"] #emojiPickerSearch:focus,
+:root[data-theme="light"] #emojiPickerSearch:focus-visible {
+  color: var(--text);
+}
+
+:root[data-theme="light"] #emojiPickerSearch::placeholder {
+  color: rgba(33, 26, 21, 0.4);
+}
+
+:root[data-theme="light"] .emoji-picker-grid {
+  scrollbar-color: rgba(61, 45, 34, 0.22) transparent;
+}
+
+:root[data-theme="light"] .emoji-picker-grid::-webkit-scrollbar-thumb {
+  background: rgba(61, 45, 34, 0.22);
+  background-clip: padding-box;
+}
+
+:root[data-theme="light"] .emoji-picker-cell::before {
+  background: rgba(61, 45, 34, 0.075);
+}
+
+:root[data-theme="light"] .emoji-picker-cell:focus-visible {
+  outline-color: rgba(132, 85, 51, 0.7);
+}
+
+:root[data-theme="light"] .emoji-picker-empty {
+  color: rgba(33, 26, 21, 0.56);
+}
+
+:root[data-theme="light"] .weather-high-low-tooltip {
+  border-color: rgba(61, 45, 34, 0.14);
+  background: rgba(255, 253, 249, 0.98);
+  box-shadow: 0 10px 28px rgba(55, 38, 24, 0.2);
+  color: var(--text);
+}
+
+:root[data-theme="light"] .weather-tooltip-hint {
+  color: rgba(33, 26, 21, 0.54);
+}
+
+:root[data-theme="light"] .weather-hourly-popover[popover] {
+  border-color: rgba(61, 45, 34, 0.14);
+  background: rgba(255, 253, 249, 0.98);
+  box-shadow: 0 18px 54px rgba(55, 38, 24, 0.24);
+  color: var(--text);
+}
+
+:root[data-theme="light"] .weather-hourly-header {
+  border-bottom-color: rgba(61, 45, 34, 0.1);
+}
+
+:root[data-theme="light"] .weather-hourly-eyebrow {
+  color: var(--brand);
+}
+
+:root[data-theme="light"] .weather-hourly-header h2,
+:root[data-theme="light"] .weather-hour-time,
+:root[data-theme="light"] .weather-hour-temperature {
+  color: var(--text);
+}
+
+:root[data-theme="light"] .weather-hourly-summary,
+:root[data-theme="light"] .weather-hourly-status,
+:root[data-theme="light"] .weather-hour-description {
+  color: rgba(33, 26, 21, 0.62);
+}
+
+:root[data-theme="light"] .weather-hourly-close {
+  background: rgba(61, 45, 34, 0.045);
+  color: rgba(33, 26, 21, 0.64);
+}
+
+:root[data-theme="light"] .weather-hourly-close:hover,
+:root[data-theme="light"] .weather-hourly-close:focus-visible {
+  color: var(--text);
+}
+
+:root[data-theme="light"] .weather-hourly-list {
+  scrollbar-color: rgba(61, 45, 34, 0.22) transparent;
+}
+
+:root[data-theme="light"] .weather-hour-row {
+  border-bottom-color: rgba(61, 45, 34, 0.075);
+}
+
+:root[data-theme="light"] .weather-hourly-attribution {
+  border-top-color: rgba(61, 45, 34, 0.1);
+  color: rgba(33, 26, 21, 0.54);
+}
+
+:root[data-theme="light"] .common-ground-date-picker[popover] {
+  border-color: rgba(61, 45, 34, 0.14);
+  background: rgba(255, 253, 249, 0.99);
+  color: var(--text);
+  box-shadow:
+    0 18px 48px rgba(55, 38, 24, 0.22),
+    0 2px 8px rgba(55, 38, 24, 0.12);
+  scrollbar-color: rgba(61, 45, 34, 0.22) transparent;
+}
+
+:root[data-theme="light"] .common-ground-date-picker[popover]::-webkit-scrollbar-thumb {
+  background: rgba(61, 45, 34, 0.22);
+}
+
+:root[data-theme="light"] .common-ground-date-picker-header h2 {
+  color: var(--text);
+}
+
+:root[data-theme="light"] .common-ground-date-picker-navigation button {
+  color: rgba(33, 26, 21, 0.62);
+}
+
+:root[data-theme="light"] .common-ground-date-picker-navigation button:hover:not(:disabled) {
+  background: rgba(61, 45, 34, 0.07);
+  color: var(--text);
+}
+
+:root[data-theme="light"] .common-ground-date-picker-weekdays span {
+  color: rgba(33, 26, 21, 0.46);
+}
+
+:root[data-theme="light"] .common-ground-date-picker-day {
+  color: rgba(33, 26, 21, 0.84);
+}
+
+:root[data-theme="light"] .common-ground-date-picker-day:hover:not(:disabled),
+:root[data-theme="light"] .common-ground-date-picker-day:focus-visible:not(:disabled) {
+  background: rgba(61, 45, 34, 0.075);
+  color: var(--text);
+}
+
+:root[data-theme="light"] .common-ground-date-picker-day.is-outside-month {
+  color: rgba(33, 26, 21, 0.3);
+}
+
+:root[data-theme="light"] .common-ground-date-picker-day.is-today:not(.is-selected) {
+  color: var(--brand-strong);
+}
+
+:root[data-theme="light"] .common-ground-date-picker-day.is-selected,
+:root[data-theme="light"] .common-ground-date-picker-day.is-selected:hover,
+:root[data-theme="light"] .common-ground-date-picker-day.is-selected:focus-visible {
+  color: #17140f;
+}
+
+:root[data-theme="light"] .common-ground-date-picker-day:disabled {
+  color: rgba(33, 26, 21, 0.16);
+}
+
+:root[data-theme="light"] .modal::backdrop,
+:root[data-theme="light"] #discardEventDraftDialog::backdrop {
+  background: rgba(47, 37, 29, 0.3);
+}
+
+:root[data-theme="light"] .modal.anchored-composer::backdrop {
+  background: rgba(47, 37, 29, 0.1);
+}
+
 @keyframes command-centre-panel-out {
   from {
     transform: translate3d(0, 0, 0) scale(1);
@@ -10493,13 +10860,42 @@ button.identity-name-button:not(:disabled):active,
 #roomPage.calendar-app-shell {
   --shell-nav-height: 56px;
   --shell-sidebar-width: 256px;
-  --shell-panel: #1e1e1e;
-  --shell-panel-raised: #252525;
-  --shell-canvas: #121212;
-  --shell-line: rgba(255, 255, 255, 0.075);
-  --shell-grid-line: rgba(255, 255, 255, 0.055);
-  --shell-text: #e8eaed;
-  --shell-muted: #9aa0a6;
+  --shell-panel: var(--panel);
+  --shell-panel-raised: var(--panel-light);
+  --shell-canvas: var(--calendar-bg);
+  --shell-line: var(--border);
+  --shell-grid-line: var(--calendar-line);
+  --shell-text: var(--text);
+  --shell-muted: var(--text-muted);
+  --shell-control-bg: color-mix(in srgb, var(--shell-text) 4%, transparent);
+  --shell-control-bg-soft: color-mix(in srgb, var(--shell-text) 2.5%, transparent);
+  --shell-control-bg-quiet: color-mix(in srgb, var(--shell-text) 3.5%, transparent);
+  --shell-control-bg-field: color-mix(in srgb, var(--shell-text) 4.5%, transparent);
+  --shell-control-bg-identity: color-mix(in srgb, var(--shell-text) 5%, transparent);
+  --shell-control-bg-selected: color-mix(in srgb, var(--shell-text) 5.5%, transparent);
+  --shell-control-bg-medium: color-mix(in srgb, var(--shell-text) 6%, transparent);
+  --shell-control-bg-hover: color-mix(in srgb, var(--shell-text) 7%, transparent);
+  --shell-control-bg-hover-strong: color-mix(in srgb, var(--shell-text) 8%, transparent);
+  --shell-control-bg-active: color-mix(in srgb, var(--shell-text) 9%, transparent);
+  --shell-control-border: color-mix(in srgb, var(--shell-text) 14%, transparent);
+  --shell-control-border-medium: color-mix(in srgb, var(--shell-text) 24%, transparent);
+  --shell-control-border-strong: color-mix(in srgb, var(--shell-text) 34%, transparent);
+  --shell-subtle-text: color-mix(in srgb, var(--shell-text) 58%, transparent);
+  --shell-faint-text: color-mix(in srgb, var(--shell-text) 48%, transparent);
+  --shell-scrollbar: color-mix(in srgb, var(--shell-text) 36%, transparent);
+  --shell-scrollbar-soft: color-mix(in srgb, var(--shell-text) 32%, transparent);
+  --shell-heading-text: var(--shell-text);
+  --shell-date-text: var(--shell-text);
+  --shell-menu-surface: var(--shell-panel-raised);
+  --shell-action-surface: color-mix(in srgb, var(--shell-panel-raised) 88%, var(--shell-text) 12%);
+  --shell-action-text: var(--shell-text);
+  --shell-input-surface: color-mix(in srgb, var(--shell-panel-raised) 92%, var(--shell-canvas) 8%);
+  --shell-notice-surface: color-mix(in srgb, var(--shell-panel-raised) 92%, var(--shell-canvas) 8%);
+  --shell-notice-text: color-mix(in srgb, var(--shell-text) 68%, transparent);
+  --shell-warning-text: var(--brand-strong);
+  --shell-menu-shadow: 0 14px 36px rgba(55, 38, 24, 0.16);
+  --shell-action-shadow: 0 2px 5px rgba(55, 38, 24, 0.14);
+  --shell-notice-shadow: 0 8px 22px rgba(55, 38, 24, 0.12);
   --shell-blue: #0b57d0;
   --row-height: 60px;
   --time-width: 68px;
@@ -10518,6 +10914,45 @@ button.identity-name-button:not(:disabled):active,
   background: var(--shell-panel);
   color: var(--shell-text);
   font-family: Inter, Roboto, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+:root[data-theme="dark"] #roomPage.calendar-app-shell {
+  --shell-panel: #1e1e1e;
+  --shell-panel-raised: #252525;
+  --shell-canvas: #121212;
+  --shell-line: rgba(255, 255, 255, 0.075);
+  --shell-grid-line: #2d2d2d;
+  --shell-text: #e8eaed;
+  --shell-muted: #9aa0a6;
+  --shell-control-bg: rgba(255, 255, 255, 0.04);
+  --shell-control-bg-soft: rgba(255, 255, 255, 0.025);
+  --shell-control-bg-quiet: rgba(255, 255, 255, 0.035);
+  --shell-control-bg-field: rgba(255, 255, 255, 0.045);
+  --shell-control-bg-identity: rgba(255, 255, 255, 0.05);
+  --shell-control-bg-selected: rgba(255, 255, 255, 0.055);
+  --shell-control-bg-medium: rgba(255, 255, 255, 0.06);
+  --shell-control-bg-hover: rgba(255, 255, 255, 0.07);
+  --shell-control-bg-hover-strong: rgba(255, 255, 255, 0.08);
+  --shell-control-bg-active: rgba(255, 255, 255, 0.09);
+  --shell-control-border: rgba(255, 255, 255, 0.14);
+  --shell-control-border-medium: rgba(255, 255, 255, 0.24);
+  --shell-control-border-strong: rgba(255, 255, 255, 0.34);
+  --shell-subtle-text: rgba(232, 234, 237, 0.58);
+  --shell-faint-text: rgba(232, 234, 237, 0.48);
+  --shell-scrollbar: #66686c;
+  --shell-scrollbar-soft: #5f6368;
+  --shell-heading-text: #fff;
+  --shell-date-text: #f1f3f4;
+  --shell-menu-surface: #292929;
+  --shell-action-surface: #343538;
+  --shell-action-text: #fff;
+  --shell-input-surface: #2b2c2f;
+  --shell-notice-surface: rgba(24, 22, 18, 0.88);
+  --shell-notice-text: rgba(232, 234, 237, 0.68);
+  --shell-warning-text: #f3d393;
+  --shell-menu-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  --shell-action-shadow: 0 2px 5px rgba(0, 0, 0, 0.34);
+  --shell-notice-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
 }
 
 #roomPage.calendar-app-shell.sidebar-collapsed {
@@ -10591,7 +11026,7 @@ button.identity-name-button:not(:disabled):active,
   overflow: hidden;
   border: 1px solid var(--shell-line);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--shell-control-bg);
   color: var(--shell-text);
   box-shadow: none;
   font-size: 13px;
@@ -10606,7 +11041,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage .calendar-google-button:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--shell-control-bg-hover-strong);
 }
 
 #roomPage .calendar-google-button:focus-visible {
@@ -10635,7 +11070,7 @@ button.identity-name-button:not(:disabled):active,
 #roomPage .calendar-google-button.needs-reconnect {
   border-color: rgba(218, 165, 32, 0.42);
   background: rgba(218, 165, 32, 0.14);
-  color: #f3d393;
+  color: var(--shell-warning-text);
 }
 
 #roomPage .calendar-google-button.is-connected {
@@ -10677,7 +11112,7 @@ button.identity-name-button:not(:disabled):active,
 #roomPage .date-nav-button:hover,
 #roomPage .nav-icon-button:focus-visible,
 #roomPage .date-nav-button:focus-visible {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--shell-control-bg-hover-strong);
   color: var(--shell-text);
 }
 
@@ -10687,7 +11122,7 @@ button.identity-name-button:not(:disabled):active,
   gap: 10px;
   margin-right: 12px;
   white-space: nowrap;
-  color: #fff;
+  color: var(--shell-heading-text);
   font-size: 20px;
   font-weight: 500;
 }
@@ -10710,7 +11145,7 @@ button.identity-name-button:not(:disabled):active,
   justify-content: center;
   min-height: 38px;
   padding: 0 18px;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--shell-control-border-strong);
   border-radius: 999px;
   background: transparent;
   color: var(--shell-text);
@@ -10731,7 +11166,7 @@ button.identity-name-button:not(:disabled):active,
 
 #roomPage .calendar-today-button:hover,
 #roomPage .calendar-view-menu > summary:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--shell-control-bg-hover);
 }
 
 #roomPage .calendar-date-nav {
@@ -10748,7 +11183,7 @@ button.identity-name-button:not(:disabled):active,
   min-width: 0;
   max-width: none;
   padding: 0 6px;
-  color: #fff;
+  color: var(--shell-heading-text);
   font-size: clamp(16px, 1.25vw, 20px);
   font-weight: 500;
   letter-spacing: -0.015em;
@@ -10799,8 +11234,8 @@ button.identity-name-button:not(:disabled):active,
   padding: 6px;
   border: 1px solid var(--shell-line);
   border-radius: 12px;
-  background: #292929;
-  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.45);
+  background: var(--shell-menu-surface);
+  box-shadow: var(--shell-menu-shadow);
   transform-origin: 100% 0;
   animation: panel-enter var(--motion-standard) var(--ease-modal) both;
   will-change: transform, opacity;
@@ -10820,8 +11255,8 @@ button.identity-name-button:not(:disabled):active,
 
 #roomPage .calendar-view-menu .view-switcher button:hover,
 #roomPage .calendar-view-menu .view-switcher button.active {
-  background: rgba(255, 255, 255, 0.09);
-  color: #fff;
+  background: var(--shell-control-bg-active);
+  color: var(--shell-heading-text);
 }
 
 #roomPage .calendar-app-toggle {
@@ -10830,7 +11265,7 @@ button.identity-name-button:not(:disabled):active,
   height: 40px;
   padding: 0;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.34);
+  border: 1px solid var(--shell-control-border-strong);
   border-radius: 999px;
 }
 
@@ -10844,7 +11279,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage .calendar-app-toggle button + button {
-  border-left: 1px solid rgba(255, 255, 255, 0.24);
+  border-left: 1px solid var(--shell-control-border-medium);
 }
 
 #roomPage .calendar-app-toggle button.is-active {
@@ -10857,7 +11292,7 @@ button.identity-name-button:not(:disabled):active,
   --identity-name-min: 76px;
   --identity-name-max: 128px;
   border-color: var(--shell-line);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--shell-control-bg);
 }
 
 #roomPage .topbar-identity > .identity-name-button {
@@ -10908,7 +11343,7 @@ button.identity-name-button:not(:disabled):active,
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  scrollbar-color: #5f6368 transparent;
+  scrollbar-color: var(--shell-scrollbar-soft) transparent;
   scrollbar-width: thin;
 }
 
@@ -10926,10 +11361,10 @@ button.identity-name-button:not(:disabled):active,
   min-height: 56px;
   padding: 0 18px;
   border-radius: 16px;
-  background: #343538;
-  color: #fff;
+  background: var(--shell-action-surface);
+  color: var(--shell-action-text);
   font-size: 14px;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.34);
+  box-shadow: var(--shell-action-shadow);
 }
 
 #roomPage .sidebar-room-card {
@@ -10938,7 +11373,7 @@ button.identity-name-button:not(:disabled):active,
   padding: 12px;
   border: 1px solid var(--shell-line);
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.025);
+  background: var(--shell-control-bg-soft);
 }
 
 #roomPage .sidebar-room-heading,
@@ -11007,7 +11442,7 @@ button.identity-name-button:not(:disabled):active,
   padding: 0 9px;
   border-color: var(--shell-line);
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--shell-control-bg-field);
   color: var(--shell-muted);
   box-shadow: none;
   font-size: 11px;
@@ -11060,7 +11495,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage .sidebar-room-switcher .room-switch-tab.active {
-  background: rgba(255, 255, 255, 0.055);
+  background: var(--shell-control-bg-selected);
   box-shadow: none;
 }
 
@@ -11139,8 +11574,8 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage .mini-calendar-actions button:hover {
-  background: rgba(255, 255, 255, 0.07);
-  color: #fff;
+  background: var(--shell-control-bg-hover);
+  color: var(--shell-text);
 }
 
 #roomPage .mini-calendar-grid {
@@ -11175,11 +11610,11 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage .mini-calendar-day:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--shell-control-bg-hover-strong);
 }
 
 #roomPage .mini-calendar-day.is-outside-month {
-  color: rgba(154, 160, 166, 0.5);
+  color: color-mix(in srgb, var(--shell-muted) 50%, transparent);
 }
 
 #roomPage .mini-calendar-day.is-today {
@@ -11199,7 +11634,7 @@ button.identity-name-button:not(:disabled):active,
   min-height: 40px;
   padding: 0 12px;
   border-radius: 5px;
-  background: #2b2c2f;
+  background: var(--shell-input-surface);
   color: var(--shell-muted);
 }
 
@@ -11245,7 +11680,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage button.sidebar-section-heading:hover {
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--shell-control-bg-field);
 }
 
 #roomPage .section-chevron {
@@ -11291,7 +11726,7 @@ button.identity-name-button:not(:disabled):active,
 }
 
 #roomPage .member-calendar-row:hover {
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--shell-control-bg-field);
   transform: none;
 }
 
@@ -11375,7 +11810,7 @@ button.identity-name-button:not(:disabled):active,
 
 #roomPage .member-calendar-copy small {
   flex: 0 0 auto;
-  color: rgba(154, 160, 166, 0.72);
+  color: color-mix(in srgb, var(--shell-muted) 72%, transparent);
   font-size: 9px;
   text-transform: capitalize;
 }
@@ -11435,7 +11870,7 @@ button.identity-name-button:not(:disabled):active,
   border-radius: 18px;
   background: var(--shell-canvas);
   box-shadow: none;
-  scrollbar-color: #66686c transparent;
+  scrollbar-color: var(--shell-scrollbar) transparent;
   scrollbar-width: thin;
 }
 
@@ -11451,7 +11886,7 @@ button.identity-name-button:not(:disabled):active,
 #roomPage .calendar-wrap::-webkit-scrollbar-thumb {
   border: 3px solid transparent;
   border-radius: 999px;
-  background: #66686c;
+  background: var(--shell-scrollbar);
   background-clip: padding-box;
 }
 
@@ -11466,14 +11901,14 @@ button.identity-name-button:not(:disabled):active,
   margin: 0;
   padding: 0 12px;
   border-bottom: 1px solid var(--shell-grid-line);
-  background: #151515;
+  background: var(--shell-canvas);
 }
 
 #roomPage .calendar-toolbar .inline-status {
   max-width: 460px;
   margin-left: auto;
   overflow: hidden;
-  color: rgba(232, 234, 237, 0.58);
+  color: var(--shell-subtle-text);
   font-size: 10px;
   font-weight: 500;
   text-overflow: ellipsis;
@@ -11550,7 +11985,7 @@ button.identity-name-button:not(:disabled):active,
   min-height: 36px;
   padding: 0;
   border-radius: 50%;
-  color: #f1f3f4;
+  color: var(--shell-date-text);
   font-size: 24px;
   font-weight: 500;
 }
@@ -12352,13 +12787,9 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
    State-driven room shell: Google connection hierarchy
    ========================================================================== */
 
-#roomPage.calendar-app-shell {
-  --shell-grid-line: #2d2d2d;
-}
-
 #roomPage .calendar-app-nav {
   border-top: 0;
-  border-bottom: 1px solid #2d2d2d;
+  border-bottom: 1px solid var(--shell-grid-line);
 }
 
 #roomPage .calendar-nav-primary {
@@ -12379,15 +12810,15 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
 /* Ask CommonGround remains available without competing with the primary CTA. */
 #roomPage .command-centre-trigger {
   min-height: 38px;
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: var(--shell-control-border);
   border-radius: 10px;
   background: transparent;
-  color: rgba(232, 234, 237, 0.78);
+  color: color-mix(in srgb, var(--shell-text) 78%, transparent);
   font-weight: 600;
 }
 
 #roomPage .command-centre-trigger:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--shell-control-bg-medium);
   color: var(--shell-text);
 }
 
@@ -12424,14 +12855,14 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
 #roomPage .calendar-google-button.needs-reconnect {
   border: 1px solid rgba(218, 165, 32, 0.42);
   background: rgba(218, 165, 32, 0.14);
-  color: #f3d393;
+  color: var(--shell-warning-text);
   box-shadow: none;
 }
 
 #roomPage .calendar-google-button.is-unavailable {
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.045);
-  color: rgba(232, 234, 237, 0.48);
+  border: 1px solid var(--shell-control-border);
+  background: var(--shell-control-bg);
+  color: var(--shell-faint-text);
   box-shadow: none;
 }
 
@@ -12448,7 +12879,7 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   min-height: 28px;
   padding: 0 5px;
   border-radius: 8px;
-  color: rgba(232, 234, 237, 0.58);
+  color: var(--shell-subtle-text);
   font-size: 10px;
   font-weight: 600;
   white-space: nowrap;
@@ -12478,9 +12909,9 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
 }
 
 #roomPage .calendar-view-menu > summary {
-  border-color: rgba(255, 255, 255, 0.14);
+  border-color: var(--shell-control-border);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--shell-control-bg-quiet);
 }
 
 #roomPage .calendar-utility-actions {
@@ -12514,9 +12945,9 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   place-items: center;
   width: var(--identity-avatar-size);
   height: var(--identity-avatar-size);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--shell-control-border);
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--shell-control-bg-hover);
   color: var(--shell-text);
   font-size: 12px;
   font-weight: 750;
@@ -12541,7 +12972,7 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
 }
 
 #roomPage .topbar-identity > .identity-name-button:hover {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--shell-control-bg-identity);
 }
 
 #roomPage .topbar-identity > .topbar-identity-menu {
@@ -12585,7 +13016,7 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
 
 #roomPage .sidebar-room-card:hover,
 #roomPage .sidebar-room-card:focus-within {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--shell-control-bg);
 }
 
 #roomPage .sidebar-room-code-row {
@@ -12593,7 +13024,7 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   overflow: hidden;
   border: 1px solid var(--shell-line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--shell-control-bg-quiet);
 }
 
 #roomPage .sidebar-room-code-row .room-code,
@@ -12609,7 +13040,7 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
 
 #roomPage .sidebar-room-code-row .room-code:hover,
 #roomPage .sidebar-room-code-row .room-copy-inline:hover {
-  background: rgba(255, 255, 255, 0.055);
+  background: var(--shell-control-bg-selected);
 }
 
 /* The legacy invite strip no longer participates in layout in either state. */
@@ -12651,9 +13082,9 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   padding: 7px 10px;
   border: 1px solid rgba(179, 148, 88, 0.2);
   border-radius: 9px;
-  background: rgba(24, 22, 18, 0.88);
-  color: rgba(232, 234, 237, 0.68);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.2);
+  background: var(--shell-notice-surface);
+  color: var(--shell-notice-text);
+  box-shadow: var(--shell-notice-shadow);
   font-size: 11px;
   font-weight: 550;
   line-height: 1.35;
@@ -12741,9 +13172,9 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
     height: 30px;
     min-height: 30px;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: 1px solid var(--shell-control-border);
     border-radius: 50%;
-    background: rgba(255, 255, 255, 0.07);
+    background: var(--shell-control-bg-hover);
     font-size: 0;
   }
 
@@ -12821,10 +13252,10 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
     height: 34px;
     min-height: 34px;
     padding: 0;
-    border: 1px solid rgba(255, 255, 255, 0.14);
+    border: 1px solid var(--shell-control-border);
     border-radius: 50%;
     background: transparent;
-    color: rgba(232, 234, 237, 0.78);
+    color: color-mix(in srgb, var(--shell-text) 78%, transparent);
     box-shadow: none;
   }
 

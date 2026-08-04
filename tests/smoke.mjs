@@ -266,16 +266,16 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260804-weather-attribution-panel"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260804-full-light-mode"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260804-locked-join-requests"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260804-full-light-mode"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-locked-join-requests"'
+      'src="/app.js?v=20260804-full-light-mode"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
@@ -647,6 +647,26 @@ try {
     "The shared date-picker asset must be served as JavaScript"
   );
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
+  assert.match(
+    home.text,
+    /window\.CommonGroundTheme = Object\.freeze\(\{ apply, read \}\);[\s\S]*?apply\(read\(\)\);/,
+    "The saved theme must be applied before the app stylesheet paints"
+  );
+  assert.match(
+    home.text,
+    /document\.querySelector\('meta\[name="theme-color"\]'\)\?\.setAttribute\("content", themeColors\[theme\]\)/,
+    "The browser chrome color must follow the active theme"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function applyTheme\(theme, \{ persist = false \} = \{\}\)[\s\S]*?window\.CommonGroundTheme\?\.apply[\s\S]*?themeToggle\.checked = appliedTheme === "dark"/,
+    "Runtime theme changes must use the same document, storage, and toggle controller"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /themeToggle\?\.addEventListener\("change", \(\) => \{[\s\S]*?applyTheme\(theme, \{ persist: true \}\)/,
+    "Changing the Settings toggle must persist and apply the full-app theme"
+  );
   const commandActionsScript = await publicSession.request("/command-centre-actions.js", { accept: "text/javascript" });
   const commandCentreScript = await publicSession.request("/command-centre.js", { accept: "text/javascript" });
   const commandPredictorScript = await publicSession.request("/command-centre-predictor.js", {
@@ -2139,7 +2159,7 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.command-centre-trigger\s*\{[^}]*border-color:\s*rgba\(255, 255, 255, 0\.14\);[^}]*background:\s*transparent;[^}]*color:\s*rgba\(232, 234, 237, 0\.78\);/s,
+    /#roomPage \.command-centre-trigger\s*\{[^}]*border-color:\s*var\(--shell-control-border\);[^}]*background:\s*transparent;[^}]*color:\s*color-mix\(in srgb, var\(--shell-text\) 78%, transparent\);/s,
     "Ask CommonGround must remain a clear but secondary outlined action"
   );
   assert.match(
@@ -2186,8 +2206,18 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage\.calendar-app-shell\s*\{[^}]*--shell-grid-line:\s*#2d2d2d;/s,
-    "The room shell must use one consistent subtle calendar grid-line color"
+    /#roomPage\.calendar-app-shell\s*\{[^}]*--shell-panel:\s*var\(--panel\);[^}]*--shell-panel-raised:\s*var\(--panel-light\);[^}]*--shell-canvas:\s*var\(--calendar-bg\);[^}]*--shell-line:\s*var\(--border\);[^}]*--shell-grid-line:\s*var\(--calendar-line\);[^}]*--shell-text:\s*var\(--text\);[^}]*--shell-muted:\s*var\(--text-muted\);/s,
+    "The calendar shell must inherit the active global theme instead of pinning itself to dark colors"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:root\[data-theme="dark"\] #roomPage\.calendar-app-shell\s*\{[^}]*--shell-panel:\s*#1e1e1e;[^}]*--shell-canvas:\s*#121212;[^}]*--shell-grid-line:\s*#2d2d2d;[^}]*--shell-text:\s*#e8eaed;/s,
+    "Dark mode must retain the established calendar shell palette"
+  );
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /(?<!data-theme="dark"\] )#roomPage\.calendar-app-shell\s*\{[^}]*--shell-grid-line:\s*#2d2d2d;/s,
+    "The dark grid-line value must never override light mode unconditionally"
   );
   assert.match(
     eventComposerStyles.text,
@@ -2213,6 +2243,26 @@ try {
     eventComposerStyles.text,
     /:root\[data-theme="dark"\]\s*\{[^}]*--calendar-bg:\s*#121212;[^}]*--calendar-line:\s*rgba\(255, 255, 255, 0\.05\);/s,
     "Dark calendar canvases must use the flat #121212 surface and crisp grid line token"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:root\[data-theme="light"\] \.command-centre-panel\s*\{[^}]*background:\s*rgba\(255, 253, 249, 0\.98\);[^}]*color:\s*var\(--text\);/s,
+    "The Command Centre must use a readable light surface when light mode is active"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:root\[data-theme="light"\] \.emoji-picker-popover\[popover\]\s*\{[^}]*background:\s*rgba\(255, 253, 249, 0\.92\);[^}]*color:\s*var\(--text\);/s,
+    "The emoji picker must follow light mode without changing its dark presentation"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:root\[data-theme="light"\] \.weather-hourly-popover\[popover\]\s*\{[^}]*background:\s*rgba\(255, 253, 249, 0\.98\);[^}]*color:\s*var\(--text\);/s,
+    "The expanded weather forecast must follow the active theme"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:root\[data-theme="light"\] \.common-ground-date-picker\[popover\]\s*\{[^}]*background:\s*rgba\(255, 253, 249, 0\.99\);[^}]*color:\s*var\(--text\);/s,
+    "The shared date picker must follow the active theme everywhere it is used"
   );
   assert.match(
     eventComposerStyles.text,

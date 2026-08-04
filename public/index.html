@@ -3,17 +3,43 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#101c31" />
     <script>
-      try {
-        document.documentElement.dataset.theme = localStorage.getItem("cg-theme") || "dark";
-      } catch {
-        document.documentElement.dataset.theme = "dark";
-      }
+      (() => {
+        const storageKey = "cg-theme";
+        const themeColors = Object.freeze({
+          dark: "#101c31",
+          light: "#f7f3ee"
+        });
+        const normalize = (value) => value === "light" ? "light" : "dark";
+        const read = () => {
+          try {
+            return normalize(localStorage.getItem(storageKey));
+          } catch {
+            return "dark";
+          }
+        };
+        const apply = (value, { persist = false } = {}) => {
+          const theme = normalize(value);
+          document.documentElement.dataset.theme = theme;
+          document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColors[theme]);
+          if (persist) {
+            try {
+              localStorage.setItem(storageKey, theme);
+            } catch {
+              // The visible theme can still change when storage is unavailable.
+            }
+          }
+          return theme;
+        };
+
+        window.CommonGroundTheme = Object.freeze({ apply, read });
+        apply(read());
+      })();
     </script>
     <script src="/site-guard.js?v=20260724-contextmenu" defer></script>
     <title>CommonGround | Shared calendar rooms</title>
     <meta name="description" content="CommonGround helps groups compare calendar availability and find a time that works." />
-    <meta name="theme-color" content="#101c31" />
     <meta property="og:title" content="CommonGround | Shared calendar rooms" />
     <meta property="og:description" content="Compare availability and find the overlap without the group chat chaos." />
     <meta property="og:image" content="https://commonground-3qij.onrender.com/icons/CommonGroundAppIcon.png?v=20260724-appicon-new" />
@@ -24,7 +50,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20260724-appicon-new" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20260724-appicon-new" />
     <link rel="manifest" href="/site.webmanifest?v=20260724-appicon-new" />
-    <link rel="stylesheet" href="/styles.css?v=20260804-weather-attribution-panel" />
+    <link rel="stylesheet" href="/styles.css?v=20260804-full-light-mode" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -815,7 +841,7 @@
     </section>
 
     <script src="/date-picker.js?v=20260726-shared-date-picker"></script>
-    <script src="/app.js?v=20260804-locked-join-requests"></script>
+    <script src="/app.js?v=20260804-full-light-mode"></script>
     <script src="/command-centre-actions.js?v=20260726-assistant-upgrade"></script>
     <script src="/command-centre.js?v=20260726-assistant-input-reset"></script>
   </body>
