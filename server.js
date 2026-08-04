@@ -559,6 +559,7 @@ function normalizeUserRecord(user = {}) {
       google: {
         tokens: googleTokens,
         scopes,
+        needsReconnect: Boolean(user.auth?.google?.needsReconnect),
         connectedAt: user.auth?.google?.connectedAt || user.connectedAt || (googleConnected ? user.createdAt || nowIso() : null),
         updatedAt: user.auth?.google?.updatedAt || user.updatedAt || nowIso()
       },
@@ -1185,7 +1186,10 @@ async function refreshAccessToken(tokens) {
 
   const payload = await response.json();
   if (!response.ok) {
-    throw new Error(payload.error_description || payload.error || "Token refresh failed.");
+    const error = new Error(payload.error_description || payload.error || "Token refresh failed.");
+    error.status = response.status;
+    error.code = payload.error || null;
+    throw error;
   }
 
   return withTokenExpiry({
@@ -1480,6 +1484,7 @@ function setUserGoogleConnection(userId, profile, tokens) {
       google: {
         tokens: mergedTokens,
         scopes,
+        needsReconnect: false,
         connectedAt: store.users[userId]?.auth?.google?.connectedAt || nowIso(),
         updatedAt: nowIso()
       }
@@ -1609,6 +1614,8 @@ function publicUser(user) {
     preferredColor: userPreferredColor(user),
     picture: userPicture(user),
     connected: userConnected(user),
+    googleConnected: userGoogleConnected(user),
+    googleNeedsReconnect: Boolean(user.auth?.google?.needsReconnect),
     calendarWriteReady: userHasGoogleCalendarWriteAccess(user),
     outlookWriteReady: userHasMicrosoftCalendarWriteAccess(user),
     calendarEventSync: user.calendarEventSync || normalizeCalendarEventSync({}, user.googleScopes),
@@ -2857,6 +2864,13 @@ async function upsertGoogleCalendarEvent(room, event, participant) {
     let googleEvent = null;
     if (previousEntry?.googleEventId) {
       try {
+        googleEvent = await googleCalendarRequest(user.id, calendarId, previousEntry.googleEventI participant, includeAttendees);
+  const syncStartedAt = nowIso();
+
+  try {
+    let googleEvent = null;
+    if (previousEntry?.googleEventId) {
+      try {
         googleEvent = await googleCalendarRequest(user.id, calendarId, previousEntry.googleEventId, {
           method: "PATCH",
           body: payload,
@@ -3293,6 +3307,7 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
       providerErrors.push({
         provider: "google",
         status: Number(error.status || 0),
+        code: String(error.code || ""),
         message: error.message || "Could not fetch Google calendar availability."
       });
     }
@@ -3360,7 +3375,23 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
     uniqueBusy.push(entry);
   }
 
-  const authFailure = providerErrors.some((entry) => [401, 403].includes(entry.status));
+  const providerNeedsReconnect = (entry) => (
+    [401, 403].includes(entry.status) ||
+    (entry.provider === "google" && entry.status === 400 && entry.code === "invalid_grant")
+  );
+  const authFailure = providerErrors.some(providerNeedsReconnect);
+  const googleNeedsReconnect = providerErrors.some((entry) => (
+    entry.provider === "google" && providerNeedsReconnect(entry)
+  ));
+  if (userGoogleConnected(user)) {
+    updateUserRecord(user.id, {
+      auth: {
+        google: {
+          needsReconnect: googleNeedsReconnect
+        }
+      }
+    });
+  }
   const connected = hasConnectedCalendar(user);
   const status = successfulProviders.length
     ? (providerErrors.length ? "partial_error" : "connected")
@@ -3416,6 +3447,10 @@ async function fetchRoomFreeBusy(room, timeMin, timeMax, viewerParticipantId) {
   return {
     source: "calendar",
     busy,
+    googleNeedsReconnect: Boolean(
+      store.users[room.participants.find((participant) => participant.id === viewerParticipantId)?.userId]
+        ?.auth?.google?.needsReconnect
+    ),
     participants: room.participants.map((participant) => ({
       id: participant.id,
       displayName: participant.displayName,
