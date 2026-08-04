@@ -3937,8 +3937,9 @@ function setParticipantsPanelExpanded(expanded) {
 
 function renderJoinRequests() {
   if (!joinRequestQueue || !joinRequestList || !joinRequestCount) return;
-  const requests = currentIsHost ? (currentRoom?.pendingJoinRequests || []) : [];
-  joinRequestQueue.classList.toggle("hidden", !currentIsHost);
+  const showQueue = currentIsHost && Boolean(currentRoom?.accessLocked);
+  const requests = showQueue ? (currentRoom?.pendingJoinRequests || []) : [];
+  joinRequestQueue.classList.toggle("hidden", !showQueue);
   joinRequestCount.textContent = `${requests.length} pending`;
   joinRequestList.innerHTML = "";
 
@@ -7152,6 +7153,7 @@ function resetRoomScopedState({ clearRoom = false } = {}) {
     topbarIdentity.innerHTML = "";
     participantStrip.innerHTML = "";
     calendarGrid.innerHTML = "";
+    renderJoinRequests();
   }
 }
 
