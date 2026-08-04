@@ -266,7 +266,7 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260804-hourly-weather"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260804-topbar-identity"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
   assert.match(home.text, /src="\/app\.js\?v=20260804-hourly-weather"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
@@ -2355,6 +2355,31 @@ try {
     eventComposerStyles.text,
     /\.topbar-identity > input\.inline-name-input\s*\{[^}]*width:\s*clamp\([^}]*--inline-name-width/s,
     "Inline name editing must retain the name segment width"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.topbar-identity\s*\{[^}]*--identity-control-height:\s*34px[^}]*--identity-avatar-size:\s*30px[^}]*--identity-color-control-size:\s*30px[^}]*--identity-swatch-size:\s*12px[^}]*flex-wrap:\s*nowrap[^}]*align-items:\s*center[^}]*gap:\s*2px[^}]*min-width:\s*0[^}]*height:\s*var\(--identity-control-height\)/s,
+    "The desktop identity control must use one compact, aligned geometry contract"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.topbar-identity::before\s*\{[^}]*width:\s*var\(--identity-avatar-size\)[^}]*height:\s*var\(--identity-avatar-size\)[^}]*transform:\s*translateY\(-50%\)/s,
+    "The topbar avatar must stay centered on the shared identity axis"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.topbar-identity > \.topbar-identity-menu\s*\{[^}]*display:\s*grid[^}]*place-items:\s*center[^}]*flex:\s*0 0 var\(--identity-color-control-size\)[^}]*width:\s*var\(--identity-color-control-size\)[^}]*height:\s*var\(--identity-color-control-size\)/s,
+    "The colour disclosure wrapper must match and center its visible trigger"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.topbar-identity > \.topbar-identity-menu > \.topbar-color-trigger > \.current-color-dot\s*\{[^}]*width:\s*var\(--identity-swatch-size\)[^}]*height:\s*var\(--identity-swatch-size\)[^}]*0 0 0 2px color-mix/s,
+    "Only the topbar colour swatch must use the reduced visual footprint"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-width:\s*1180px\)[\s\S]*?#roomPage \.topbar-identity > \.topbar-identity-menu\s*\{[^}]*display:\s*none/s,
+    "The compact laptop identity must not retain the desktop colour disclosure"
   );
   assert.match(
     eventComposerStyles.text,
