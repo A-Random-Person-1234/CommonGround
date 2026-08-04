@@ -266,7 +266,7 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260804-room-name-topbar"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260804-geist-mono"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
   assert.match(home.text, /src="\/app\.js\?v=20260804-room-name-topbar"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
@@ -640,6 +640,25 @@ try {
   });
   assert.equal(emojiDictionaryHead.text, "");
   assert.equal(Number(emojiDictionaryHead.response.headers.get("content-length")), Buffer.byteLength(emojiDictionaryResponse.text));
+  for (const [fontPath, expectedLength] of [
+    ["/fonts/geist-mono/GeistMono-VariableFont_wght.ttf", 173204],
+    ["/fonts/geist-mono/GeistMono-Italic-VariableFont_wght.ttf", 183484]
+  ]) {
+    const fontResponse = await publicSession.request(fontPath, {
+      method: "HEAD",
+      accept: "font/ttf"
+    });
+    assert.equal(fontResponse.text, "");
+    assert.match(fontResponse.response.headers.get("content-type") || "", /^font\/ttf/);
+    assert.equal(
+      readFileSync(path.join(rootDir, "public", fontPath.replace(/^\//, ""))).byteLength,
+      expectedLength,
+      `${fontPath} must match the supplied Geist Mono asset`
+    );
+  }
+  const geistLicense = await publicSession.request("/fonts/geist-mono/OFL.txt", { accept: "text/plain" });
+  assert.match(geistLicense.response.headers.get("content-type") || "", /^text\/plain/);
+  assert.match(geistLicense.text, /SIL OPEN FONT LICENSE Version 1\.1/);
   const datePickerScript = await publicSession.request("/date-picker.js", { accept: "text/javascript" });
   assert.match(
     datePickerScript.response.headers.get("content-type") || "",
@@ -1557,6 +1576,9 @@ try {
   );
   assert.match(eventComposerScript.text, /window\.addEventListener\("message", handleGoogleAuthPopupMessage\);/);
   const oauthPopupPage = await publicSession.request("/oauth-popup.html", { accept: "text/html" });
+  assert.match(oauthPopupPage.text, /@font-face\s*\{[^}]*font-family:\s*"Geist Mono";[^}]*GeistMono-VariableFont_wght\.ttf\?v=20260804-geist-mono[^}]*font-style:\s*normal;[^}]*font-weight:\s*100 900;/s);
+  assert.match(oauthPopupPage.text, /@font-face\s*\{[^}]*font-family:\s*"Geist Mono";[^}]*GeistMono-Italic-VariableFont_wght\.ttf\?v=20260804-geist-mono[^}]*font-style:\s*italic;[^}]*font-weight:\s*100 900;/s);
+  assert.match(oauthPopupPage.text, /html,\s*body\s*\{[^}]*font-family:\s*var\(--font-ui\);[^}]*font-synthesis:\s*none;[^}]*font-variant-numeric:\s*tabular-nums lining-nums;/s);
   assert.match(oauthPopupPage.text, /<script src="\/oauth-popup\.js\?v=20260718-modal" defer><\/script>/);
   assert.match(oauthPopupPage.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(oauthPopupPage.text, /<img class="mark" src="\/icons\/icon-192\.png\?v=20260724-appicon-new" alt="" width="46" height="46" \/>/);
@@ -1894,6 +1916,42 @@ try {
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
   assert.match(
     eventComposerStyles.text,
+    /@font-face\s*\{[^}]*font-family:\s*"Geist Mono";[^}]*GeistMono-VariableFont_wght\.ttf\?v=20260804-geist-mono[^}]*font-style:\s*normal;[^}]*font-weight:\s*100 900;[^}]*font-display:\s*swap;/s,
+    "The normal Geist Mono variable font must be self-hosted across its complete weight range"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@font-face\s*\{[^}]*font-family:\s*"Geist Mono";[^}]*GeistMono-Italic-VariableFont_wght\.ttf\?v=20260804-geist-mono[^}]*font-style:\s*italic;[^}]*font-weight:\s*100 900;[^}]*font-display:\s*swap;/s,
+    "The italic Geist Mono variable font must be self-hosted across its complete weight range"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:root\s*\{[^}]*--font-ui:\s*"Geist Mono"[^;]*;[^}]*--font-sans:\s*var\(--font-ui\);/s,
+    "Every CommonGround surface must share one Geist Mono typography token"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /html\s*\{[^}]*font-family:\s*var\(--font-ui\);[^}]*font-synthesis:\s*none;[^}]*font-variant-numeric:\s*tabular-nums lining-nums;/s,
+    "Global text, including dates and times, must use Geist Mono with stable tabular numerals"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /button,\s*input,\s*textarea,\s*select,\s*option\s*\{[^}]*font:\s*inherit;/s,
+    "Native controls must inherit the same universal font"
+  );
+  const fontFamilies = [...eventComposerStyles.text.matchAll(/font-family:\s*([^;]+);/g)]
+    .map((match) => match[1].trim());
+  assert.deepEqual(
+    [...new Set(fontFamilies)].sort(),
+    [
+      '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
+      '"Geist Mono"',
+      'var(--font-ui)'
+    ].sort(),
+    "Only Geist Mono and the necessary color-emoji renderer may define font families"
+  );
+  assert.match(
+    eventComposerStyles.text,
     /#roomPage \.calendar-product-name\s*\{[^}]*max-width:\s*clamp\(112px, 18vw, 260px\)[^}]*text-overflow:\s*ellipsis[^}]*white-space:\s*nowrap[^}]*\}[\s\S]*?#roomPage \.calendar-product-name\.is-editing\s*\{[^}]*background:\s*var\(--shell-input-surface\)[^}]*box-shadow:\s*inset 0 -2px 0 var\(--brand-strong\)/s,
     "Long room names must stay contained, with a clear inline editing state in the top bar"
   );
@@ -1969,7 +2027,7 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /\.location-autocomplete-attribution\s*\{[^}]*font-family:\s*Roboto, Arial, sans-serif;[^}]*font-size:\s*12px;[^}]*font-weight:\s*400;[^}]*white-space:\s*nowrap;/s,
+    /\.location-autocomplete-attribution\s*\{[^}]*font-family:\s*var\(--font-ui\);[^}]*font-size:\s*12px;[^}]*font-weight:\s*400;[^}]*white-space:\s*nowrap;/s,
     "Displayed Places content must keep legible Google Maps attribution"
   );
   assert.match(
@@ -2058,7 +2116,7 @@ try {
     /\.time-picker-surface \.time-picker-option\.is-selected \.time-picker-clock\s*\{[^}]*color:\s*var\(--time-picker-accent\)/s,
     "The universal picker must use the CommonGround accent rather than browser blue"
   );
-  assert.match(eventComposerStyles.text, /#eventModal \.event-composer\s*\{[^}]*font-family:\s*"Avenir Next", "Segoe UI Variable", Inter/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.event-composer\s*\{[^}]*font-family:\s*var\(--font-ui\);/s);
   assert.match(eventComposerStyles.text, /#eventModal \.composer-time-grid input\s*\{[^}]*font-size:\s*15px[^}]*font-weight:\s*650[^}]*font-variant-numeric:\s*tabular-nums/s);
   assert.match(
     eventComposerStyles.text,
@@ -2899,7 +2957,7 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /\.weather-hourly-attribution\s*\{[^}]*border-top: 1px solid rgba\(255, 255, 255, 0\.06\)[^}]*font-family: Roboto, Arial, sans-serif[^}]*font-size: 12px[^}]*font-weight: 400/s,
+    /\.weather-hourly-attribution\s*\{[^}]*border-top: 1px solid rgba\(255, 255, 255, 0\.06\)[^}]*font-family: var\(--font-ui\)[^}]*font-size: 12px[^}]*font-weight: 400/s,
     "Google Weather attribution must remain legible inside the expanded hourly panel"
   );
   for (const iconAsset of expectedIconAssets) {
@@ -2954,6 +3012,7 @@ try {
     assert.match(legalPage.text, /<link rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png\?v=20260724-appicon-new" \/>/);
     assert.match(legalPage.text, /<img class="mark app-brand-icon" src="\/icons\/icon-192\.png\?v=20260724-appicon-new" alt="" width="46" height="46" \/>/);
     assert.match(legalPage.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
+    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260804-geist-mono" \/>/);
   }
   assert.match(privacyPage.text, /rounds your device latitude and longitude to roughly one kilometre/);
   assert.match(privacyPage.text, /not added to your room, shown to room members, or written to CommonGround's persistent database/);

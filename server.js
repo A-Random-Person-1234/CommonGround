@@ -1260,6 +1260,8 @@ function serveStatic(req, res) {
     ext === ".svg" ? "image/svg+xml" :
     ext === ".png" ? "image/png" :
     ext === ".ico" ? "image/x-icon" :
+    ext === ".ttf" ? "font/ttf" :
+    ext === ".txt" ? "text/plain; charset=utf-8" :
     ext === ".webmanifest" ? "application/manifest+json" :
     ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
     "text/html";
