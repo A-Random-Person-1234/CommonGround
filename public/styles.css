@@ -13125,6 +13125,43 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   line-height: 1;
 }
 
+#roomPage .calendar-product {
+  min-width: 0;
+}
+
+#roomPage .calendar-product-name {
+  display: block;
+  min-width: 0;
+  max-width: clamp(112px, 18vw, 260px);
+  padding: 4px 5px;
+  overflow: hidden;
+  border-radius: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#roomPage .calendar-product-name[data-can-rename="true"] {
+  cursor: text;
+}
+
+#roomPage .calendar-product-name[data-can-rename="true"]:hover,
+#roomPage .calendar-product-name[data-can-rename="true"]:focus-visible {
+  background: var(--shell-control-bg-hover);
+}
+
+#roomPage .calendar-product-name:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--brand-strong) 74%, transparent);
+  outline-offset: 1px;
+}
+
+#roomPage .calendar-product-name.is-editing {
+  overflow: visible;
+  background: var(--shell-input-surface);
+  box-shadow: inset 0 -2px 0 var(--brand-strong);
+  outline: none;
+  text-overflow: clip;
+}
+
 @media (max-width: 1180px) {
   #roomPage .calendar-product-name,
   #roomPage #commandCentreShortcutHint {

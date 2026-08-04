@@ -38,6 +38,7 @@ const notificationStack = document.querySelector("#notificationStack");
 const homeStatus = document.querySelector("#homeStatus");
 const entryChoiceLead = document.querySelector("#entryChoiceLead");
 const roomName = document.querySelector("#roomName");
+const topbarRoomName = document.querySelector("#topbarRoomName");
 const roomCode = document.querySelector("#roomCode");
 const hostPill = document.querySelector("#hostPill");
 const calendarStatus = document.querySelector("#calendarStatus");
@@ -511,6 +512,7 @@ async function refreshCalendarAfterImmediateRender() {
 let displayNameSaveTimer = null;
 let roomNameSaveTimer = null;
 let inlineRoomRenameActive = false;
+let inlineRoomRenameTarget = null;
 let hiddenParticipantIds = new Set();
 let pendingEntryRoomCode = null;
 let pendingEntryMode = null;
@@ -4057,8 +4059,7 @@ function renderCalendarGoogleControl() {
 }
 
 function renderRoomMeta() {
-  roomName.textContent = currentRoom?.name || "Room";
-  roomName.contentEditable = "false";
+  syncRoomNameSurfaces();
   if (copiedRoomCodeValue && copiedRoomCodeValue !== currentRoom?.code) {
     copiedRoomCodeValue = "";
     if (roomCodeCopyTimer) {
@@ -8602,25 +8603,53 @@ async function renameRoomByValue(name) {
   }
 }
 
-function startInlineRoomRename() {
-  if (!currentIsHost || inlineRoomRenameActive) return;
+function syncRoomNameSurfaces(name = currentRoom?.name || "Room") {
+  const displayName = String(name || "").trim() || "Room";
+  for (const target of [roomName, topbarRoomName]) {
+    if (!target) continue;
+    target.textContent = displayName;
+    target.contentEditable = "false";
+    target.classList.remove("is-editing");
+  }
+
+  if (topbarRoomName) {
+    const canRename = Boolean(currentIsHost);
+    topbarRoomName.dataset.canRename = String(canRename);
+    topbarRoomName.tabIndex = canRename ? 0 : -1;
+    topbarRoomName.title = canRename ? "Double-click to rename room" : displayName;
+    topbarRoomName.setAttribute(
+      "aria-label",
+      canRename ? `${displayName}. Double-click to rename room.` : displayName
+    );
+  }
+}
+
+function startInlineRoomRename(target = roomName) {
+  if (!currentIsHost || inlineRoomRenameActive || !target) return;
   inlineRoomRenameActive = true;
-  roomName.contentEditable = "true";
-  roomName.focus();
-  document.getSelection()?.selectAllChildren(roomName);
+  inlineRoomRenameTarget = target;
+  target.contentEditable = "true";
+  target.classList.add("is-editing");
+  target.focus();
+  document.getSelection()?.selectAllChildren(target);
 }
 
 async function finishInlineRoomRename(commit = true) {
-  if (!inlineRoomRenameActive) return;
+  const target = inlineRoomRenameTarget;
+  if (!inlineRoomRenameActive || !target) return;
   inlineRoomRenameActive = false;
-  const nextName = roomName.textContent.trim();
-  roomName.contentEditable = "false";
-  if (!commit) {
-    roomName.textContent = currentRoom?.name || "Room";
+  inlineRoomRenameTarget = null;
+  const nextName = target.textContent.trim();
+  target.contentEditable = "false";
+  target.classList.remove("is-editing");
+  target.blur();
+  if (!commit || !nextName) {
+    syncRoomNameSurfaces();
     return;
   }
   renameRoomInput.value = nextName;
   await renameRoomByValue(nextName);
+  syncRoomNameSurfaces();
 }
 
 async function bootHome() {
@@ -8893,22 +8922,38 @@ window.addEventListener("resize", () => {
 calendarGrid.addEventListener("pointerdown", startDragCreate, true);
 calendarGrid.addEventListener("click", suppressCalendarClickCapture, true);
 setParticipantsPanelExpanded(!window.matchMedia("(max-width: 760px)").matches);
-roomName.addEventListener("dblclick", () => {
-  startInlineRoomRename();
-});
-roomName.addEventListener("keydown", async (event) => {
-  if (!inlineRoomRenameActive) return;
-  if (event.key === "Enter") {
+function bindRoomNameEditor(target) {
+  if (!target) return;
+  target.addEventListener("dblclick", (event) => {
     event.preventDefault();
-    await finishInlineRoomRename(true);
-  } else if (event.key === "Escape") {
-    event.preventDefault();
-    await finishInlineRoomRename(false);
-  }
-});
-roomName.addEventListener("blur", async () => {
-  await finishInlineRoomRename(true);
-});
+    startInlineRoomRename(target);
+  });
+  target.addEventListener("keydown", async (event) => {
+    if (!inlineRoomRenameActive) {
+      if (currentIsHost && (event.key === "Enter" || event.key === "F2")) {
+        event.preventDefault();
+        startInlineRoomRename(target);
+      }
+      return;
+    }
+    if (inlineRoomRenameTarget !== target) return;
+    if (event.key === "Enter") {
+      event.preventDefault();
+      await finishInlineRoomRename(true);
+    } else if (event.key === "Escape") {
+      event.preventDefault();
+      await finishInlineRoomRename(false);
+    }
+  });
+  target.addEventListener("blur", async () => {
+    if (inlineRoomRenameTarget === target) {
+      await finishInlineRoomRename(true);
+    }
+  });
+}
+
+bindRoomNameEditor(roomName);
+bindRoomNameEditor(topbarRoomName);
 closeDetailButton.addEventListener("click", clearDetailPanel);
 initializeEventTimePickers();
 initializeLocationAutocomplete(eventLocationInput);
