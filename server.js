@@ -17,6 +17,7 @@ import {
   addDateKeyDays,
   dateKeyInZone
 } from "./command-centre-date-time.js";
+import { sanitizeGoogleDailyForecast } from "./weather-forecast.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -44,6 +45,9 @@ const outboundRequestTimeoutMs = Number.isFinite(configuredOutboundRequestTimeou
   : 15_000;
 const googleMapsApiKey = String(process.env.GOOGLE_MAPS_API_KEY || "").trim();
 const googlePlacesAutocompleteUrl = "https://places.googleapis.com/v1/places:autocomplete";
+const googleWeatherDailyForecastUrl = "https://weather.googleapis.com/v1/forecast/days:lookup";
+const weatherForecastCacheTtlMs = 25 * 60 * 1000;
+const weatherForecastCache = new Map();
 const isProduction = process.env.NODE_ENV === "production" || publicBaseUrl.startsWith("https://");
 const textLimits = Object.freeze({
   roomName: 80,
@@ -194,7 +198,7 @@ function applySecurityHeaders(res) {
   res.setHeader("X-Content-Type-Options", "nosniff");
   res.setHeader("X-Frame-Options", "DENY");
   res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(self), payment=()");
   res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
   if (isProduction) {
     res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
@@ -332,6 +336,79 @@ async function fetchGooglePlaceSuggestions(input, sessionToken = "") {
     throw httpError(response.status === 429 ? 503 : 502, "Address suggestions are temporarily unavailable.");
   }
   return sanitizeGooglePlaceSuggestions(payload);
+}
+
+function normalizedWeatherCoordinate(value, label, minimum, maximum) {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw.length > 24 || !/^-?(?:\d+(?:\.\d+)?|\.\d+)$/.test(raw)) {
+    throw httpError(400, `${label} must be a valid coordinate.`);
+  }
+  const coordinate = Number(raw);
+  if (!Number.isFinite(coordinate) || coordinate < minimum || coordinate > maximum) {
+    throw httpError(400, `${label} must be between ${minimum} and ${maximum}.`);
+  }
+  const rounded = Math.round(coordinate * 100) / 100;
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+function pruneWeatherForecastCache(now = Date.now()) {
+  for (const [key, entry] of weatherForecastCache.entries()) {
+    if (entry.expiresAt <= now) weatherForecastCache.delete(key);
+  }
+  if (weatherForecastCache.size <= 500) return;
+  const oldestKeys = [...weatherForecastCache.entries()]
+    .sort((left, right) => left[1].expiresAt - right[1].expiresAt)
+    .slice(0, weatherForecastCache.size - 500)
+    .map(([key]) => key);
+  for (const key of oldestKeys) weatherForecastCache.delete(key);
+}
+
+async function fetchGoogleDailyForecast(latitude, longitude) {
+  if (!googleMapsApiKey) {
+    throw httpError(503, "Weather forecasts are not configured.");
+  }
+
+  const cacheKey = `${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+  const now = Date.now();
+  const cached = weatherForecastCache.get(cacheKey);
+  if (cached?.expiresAt > now) return cached.forecast;
+  pruneWeatherForecastCache(now);
+
+  const requestUrl = new URL(googleWeatherDailyForecastUrl);
+  requestUrl.searchParams.set("key", googleMapsApiKey);
+  requestUrl.searchParams.set("location.latitude", String(latitude));
+  requestUrl.searchParams.set("location.longitude", String(longitude));
+  requestUrl.searchParams.set("days", "10");
+  requestUrl.searchParams.set("pageSize", "10");
+  requestUrl.searchParams.set("unitsSystem", "METRIC");
+  requestUrl.searchParams.set("languageCode", "en");
+
+  let response;
+  try {
+    response = await fetchWithTimeout(requestUrl, {
+      headers: { Accept: "application/json" }
+    });
+  } catch {
+    throw httpError(503, "Weather forecasts are temporarily unavailable.");
+  }
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    // Provider error bodies and malformed data are intentionally not relayed.
+  }
+  if (!response.ok) {
+    console.error(`Google Weather daily forecast failed with status ${response.status}.`);
+    throw httpError(response.status === 429 ? 503 : 502, "Weather forecasts are temporarily unavailable.");
+  }
+
+  const forecast = sanitizeGoogleDailyForecast(payload);
+  weatherForecastCache.set(cacheKey, {
+    expiresAt: now + weatherForecastCacheTtlMs,
+    forecast
+  });
+  return forecast;
 }
 
 const googleCalendarEventsScope = "https://www.googleapis.com/auth/calendar.events";
@@ -4046,6 +4123,7 @@ const server = http.createServer(async (req, res) => {
   const roomParticipantDeleteMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/participants\/([^/]+)$/);
   const roomFreeBusyMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/freebusy$/);
   const roomPlacesAutocompleteMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/places\/autocomplete$/);
+  const roomWeatherForecastMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/weather\/forecast$/);
   const roomCommandParseMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/parse$/);
   const roomCommandAvailabilityMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/availability$/);
   const roomCommandCreateMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/create-event$/);
@@ -4125,6 +4203,7 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, {
         googleReady: Boolean(loadGoogleCredentials()),
         placesReady: Boolean(googleMapsApiKey),
+        weatherReady: Boolean(googleMapsApiKey),
         outlookReady: Boolean(loadMicrosoftCredentials()),
         redirectUri,
         microsoftRedirectUri
@@ -4179,6 +4258,27 @@ const server = http.createServer(async (req, res) => {
       const sessionToken = rawSessionToken;
       const suggestions = await fetchGooglePlaceSuggestions(input, sessionToken);
       sendJson(res, 200, { suggestions });
+      return;
+    }
+
+    if (roomWeatherForecastMatch) {
+      if (req.method !== "POST") {
+        sendMethodNotAllowed(res, ["POST"]);
+        return;
+      }
+      if (!enforceRateLimit(req, res, "weather-forecast", 30, 10 * 60 * 1000)) return;
+      if (!/^application\/json(?:\s*;|$)/i.test(String(req.headers["content-type"] || ""))) {
+        sendJson(res, 415, { error: "Use application/json for weather forecasts." });
+        return;
+      }
+      const auth = requireExistingRoomParticipant(req, res, roomWeatherForecastMatch[1]);
+      if (!auth) return;
+      const body = await readJsonBody(req, { maxBytes: 4_096 });
+      const latitude = normalizedWeatherCoordinate(body.latitude, "Latitude", -90, 90);
+      const longitude = normalizedWeatherCoordinate(body.longitude, "Longitude", -180, 180);
+      const forecast = await fetchGoogleDailyForecast(latitude, longitude);
+      res.setHeader("Cache-Control", "private, no-store");
+      sendJson(res, 200, { forecast });
       return;
     }
 
