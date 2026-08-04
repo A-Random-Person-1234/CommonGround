@@ -744,8 +744,13 @@ try {
   );
   assert.match(
     serverSource,
-    /roomWeatherForecastMatch[\s\S]*?req\.method !== "POST"[\s\S]*?enforceRateLimit\(req, res, "weather-forecast"[\s\S]*?requireExistingRoomParticipant[\s\S]*?readJsonBody\(req, \{ maxBytes: 4_096 \}\)[\s\S]*?normalizedWeatherCoordinate[\s\S]*?fetchGoogleDailyForecast/,
+    /roomWeatherForecastMatch[\s\S]*?req\.method !== "POST"[\s\S]*?requireExistingRoomParticipant[\s\S]*?enforceRateLimit\([\s\S]*?"weather-forecast"[\s\S]*?12[\s\S]*?auth\.participant\.id[\s\S]*?readJsonBody\(req, \{ maxBytes: 4_096 \}\)[\s\S]*?normalizedWeatherCoordinate[\s\S]*?fetchGoogleDailyForecast/,
     "Weather must be room-scoped, rate-limited, authenticated, body-bounded, and coordinate-validated"
+  );
+  assert.match(
+    serverSource,
+    /weatherForecastCache\.set\(cacheKey, entry\)[\s\S]*?setTimeout\(\(\) => \{[\s\S]*?weatherForecastCache\.get\(cacheKey\) === entry[\s\S]*?weatherForecastCache\.delete\(cacheKey\)[\s\S]*?weatherForecastCacheTtlMs[\s\S]*?cleanupTimer\.unref\?\.\(\)/,
+    "Rounded location cache entries must be actively deleted after the disclosed TTL"
   );
   assert.match(
     serverSource,
@@ -766,6 +771,16 @@ try {
     eventComposerScript.text,
     /function roundedWeatherCoordinate\(value\) \{[\s\S]*?Math\.round\(Number\(value\) \* 100\) \/ 100/,
     "Coordinates must be rounded in the browser before leaving the device"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /weatherLocationPromise = new Promise[\s\S]*?\.finally\(\(\) => \{[\s\S]*?weatherLocationPromise = null/,
+    "Location may only be cached while a lookup is in flight"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /navigator\.permissions\.query\(\{ name: "geolocation" \}\)[\s\S]*?permissionStatus\.state === "denied"[\s\S]*?markWeatherLocationUnavailable/,
+    "Revoking geolocation permission must clear weather and stop later transmissions"
   );
   assert.match(
     eventComposerScript.text,
