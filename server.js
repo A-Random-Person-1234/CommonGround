@@ -17,7 +17,11 @@ import {
   addDateKeyDays,
   dateKeyInZone
 } from "./command-centre-date-time.js";
-import { sanitizeGoogleDailyForecast } from "./weather-forecast.js";
+import {
+  sanitizeGoogleDailyForecast,
+  sanitizeGoogleHourlyWeather,
+  summarizeHourlyWeather
+} from "./weather-forecast.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const port = Number(process.env.PORT || 3000);
@@ -46,6 +50,8 @@ const outboundRequestTimeoutMs = Number.isFinite(configuredOutboundRequestTimeou
 const googleMapsApiKey = String(process.env.GOOGLE_MAPS_API_KEY || "").trim();
 const googlePlacesAutocompleteUrl = "https://places.googleapis.com/v1/places:autocomplete";
 const googleWeatherDailyForecastUrl = "https://weather.googleapis.com/v1/forecast/days:lookup";
+const googleWeatherHourlyForecastUrl = "https://weather.googleapis.com/v1/forecast/hours:lookup";
+const googleWeatherHourlyHistoryUrl = "https://weather.googleapis.com/v1/history/hours:lookup";
 const weatherForecastCacheTtlMs = 25 * 60 * 1000;
 const weatherForecastCache = new Map();
 const isProduction = process.env.NODE_ENV === "production" || publicBaseUrl.startsWith("https://");
@@ -417,6 +423,170 @@ async function fetchGoogleDailyForecast(latitude, longitude) {
   }, weatherForecastCacheTtlMs);
   cleanupTimer.unref?.();
   return forecast;
+}
+
+function cacheWeatherEntry(cacheKey, entry) {
+  weatherForecastCache.set(cacheKey, entry);
+  const delay = Math.max(1, entry.expiresAt - Date.now());
+  const cleanupTimer = setTimeout(() => {
+    if (weatherForecastCache.get(cacheKey) === entry) {
+      weatherForecastCache.delete(cacheKey);
+    }
+  }, delay);
+  cleanupTimer.unref?.();
+  return entry;
+}
+
+async function fetchGoogleHourlyWeatherPage(endpoint, latitude, longitude, {
+  hours,
+  pageToken = ""
+} = {}) {
+  if (!googleMapsApiKey) {
+    throw httpError(503, "Weather forecasts are not configured.");
+  }
+  const requestUrl = new URL(endpoint);
+  requestUrl.searchParams.set("key", googleMapsApiKey);
+  requestUrl.searchParams.set("location.latitude", String(latitude));
+  requestUrl.searchParams.set("location.longitude", String(longitude));
+  requestUrl.searchParams.set("hours", String(hours));
+  requestUrl.searchParams.set("pageSize", "24");
+  requestUrl.searchParams.set("unitsSystem", "METRIC");
+  requestUrl.searchParams.set("languageCode", "en");
+  if (pageToken) requestUrl.searchParams.set("pageToken", pageToken);
+
+  let response;
+  try {
+    response = await fetchWithTimeout(requestUrl, {
+      headers: { Accept: "application/json" }
+    });
+  } catch {
+    throw httpError(503, "Hourly weather is temporarily unavailable.");
+  }
+
+  let payload = {};
+  try {
+    payload = await response.json();
+  } catch {
+    // Provider error bodies and malformed data are intentionally not relayed.
+  }
+  if (!response.ok) {
+    console.error(`Google Weather hourly request failed with status ${response.status}.`);
+    throw httpError(response.status === 429 ? 503 : 502, "Hourly weather is temporarily unavailable.");
+  }
+  return {
+    hours: sanitizeGoogleHourlyWeather(payload),
+    nextPageToken: String(payload?.nextPageToken || "").slice(0, 2_048)
+  };
+}
+
+function mergeSanitizedWeatherHours(...groups) {
+  const byHour = new Map();
+  for (const hour of groups.flat()) {
+    if (!hour?.date || !Number.isInteger(hour?.hour)) continue;
+    byHour.set(`${hour.date}-${String(hour.hour).padStart(2, "0")}`, hour);
+  }
+  return [...byHour.values()].sort((left, right) => (
+    left.date.localeCompare(right.date) || left.hour - right.hour
+  ));
+}
+
+async function fetchGoogleRecentWeatherHistory(latitude, longitude) {
+  const cacheKey = `history:${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+  const now = Date.now();
+  const cached = weatherForecastCache.get(cacheKey);
+  if (cached?.expiresAt > now) return cached.hours;
+  pruneWeatherForecastCache(now);
+  const page = await fetchGoogleHourlyWeatherPage(
+    googleWeatherHourlyHistoryUrl,
+    latitude,
+    longitude,
+    { hours: 24 }
+  );
+  const entry = {
+    expiresAt: Date.now() + weatherForecastCacheTtlMs,
+    hours: page.hours
+  };
+  cacheWeatherEntry(cacheKey, entry);
+  return entry.hours;
+}
+
+async function fetchGoogleHourlyForecastForDate(latitude, longitude, targetDate) {
+  const cacheKey = `hourly:${latitude.toFixed(2)},${longitude.toFixed(2)}`;
+  const now = Date.now();
+  let entry = weatherForecastCache.get(cacheKey);
+  if (!entry || entry.expiresAt <= now) {
+    pruneWeatherForecastCache(now);
+    entry = {
+      expiresAt: now + weatherForecastCacheTtlMs,
+      hours: [],
+      nextPageToken: "",
+      started: false,
+      complete: false,
+      loadPromise: null
+    };
+    cacheWeatherEntry(cacheKey, entry);
+  }
+
+  const loadUntilTarget = async () => {
+    while (!entry.complete) {
+      const page = await fetchGoogleHourlyWeatherPage(
+        googleWeatherHourlyForecastUrl,
+        latitude,
+        longitude,
+        { hours: 240, pageToken: entry.started ? entry.nextPageToken : "" }
+      );
+      entry.started = true;
+      entry.hours = mergeSanitizedWeatherHours(entry.hours, page.hours);
+      entry.nextPageToken = page.nextPageToken;
+      entry.complete = !page.nextPageToken;
+
+      const dates = entry.hours.map((hour) => hour.date);
+      const earliestDate = dates[0] || "";
+      const latestDate = dates.at(-1) || "";
+      if (!latestDate || targetDate < earliestDate || latestDate > targetDate) break;
+      if (!entry.nextPageToken) break;
+    }
+    return entry.hours.filter((hour) => hour.date === targetDate);
+  };
+
+  if (!entry.loadPromise) {
+    entry.loadPromise = loadUntilTarget().finally(() => {
+      entry.loadPromise = null;
+    });
+  }
+  await entry.loadPromise;
+  return entry.hours.filter((hour) => hour.date === targetDate);
+}
+
+async function fetchGoogleHourlyWeatherForDate(latitude, longitude, targetDate) {
+  const history = await fetchGoogleRecentWeatherHistory(latitude, longitude);
+  const historyDates = [...new Set(history.map((hour) => hour.date))].sort();
+  const latestHistoryDate = historyDates.at(-1) || "";
+  const historyForDate = history.filter((hour) => hour.date === targetDate);
+
+  if (historyForDate.length && targetDate < latestHistoryDate) {
+    return { date: targetDate, source: "history", hours: historyForDate };
+  }
+
+  const forecastForDate = await fetchGoogleHourlyForecastForDate(latitude, longitude, targetDate);
+  const combined = mergeSanitizedWeatherHours(historyForDate, forecastForDate);
+  const source = historyForDate.length && forecastForDate.length
+    ? "mixed"
+    : (historyForDate.length ? "history" : "forecast");
+  return { date: targetDate, source, hours: combined };
+}
+
+async function fetchGoogleDailyWeatherWithRecentHistory(latitude, longitude) {
+  const [dailyForecast, recentHistory] = await Promise.all([
+    fetchGoogleDailyForecast(latitude, longitude),
+    fetchGoogleRecentWeatherHistory(latitude, longitude)
+  ]);
+  const byDate = new Map(
+    summarizeHourlyWeather(recentHistory, { source: "history" })
+      .map((entry) => [entry.date, entry])
+  );
+  for (const entry of dailyForecast) byDate.set(entry.date, entry);
+  return [...byDate.values()].sort((left, right) => left.date.localeCompare(right.date));
 }
 
 const googleCalendarEventsScope = "https://www.googleapis.com/auth/calendar.events";
@@ -2864,13 +3034,6 @@ async function upsertGoogleCalendarEvent(room, event, participant) {
     let googleEvent = null;
     if (previousEntry?.googleEventId) {
       try {
-        googleEvent = await googleCalendarRequest(user.id, calendarId, previousEntry.googleEventI participant, includeAttendees);
-  const syncStartedAt = nowIso();
-
-  try {
-    let googleEvent = null;
-    if (previousEntry?.googleEventId) {
-      try {
         googleEvent = await googleCalendarRequest(user.id, calendarId, previousEntry.googleEventId, {
           method: "PATCH",
           body: payload,
@@ -4167,6 +4330,7 @@ const server = http.createServer(async (req, res) => {
   const roomFreeBusyMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/freebusy$/);
   const roomPlacesAutocompleteMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/places\/autocomplete$/);
   const roomWeatherForecastMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/weather\/forecast$/);
+  const roomWeatherHourlyMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/weather\/hourly$/);
   const roomCommandParseMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/parse$/);
   const roomCommandAvailabilityMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/availability$/);
   const roomCommandCreateMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/command-centre\/create-event$/);
@@ -4326,9 +4490,42 @@ const server = http.createServer(async (req, res) => {
       const body = await readJsonBody(req, { maxBytes: 4_096 });
       const latitude = normalizedWeatherCoordinate(body.latitude, "Latitude", -90, 90);
       const longitude = normalizedWeatherCoordinate(body.longitude, "Longitude", -180, 180);
-      const forecast = await fetchGoogleDailyForecast(latitude, longitude);
+      const forecast = await fetchGoogleDailyWeatherWithRecentHistory(latitude, longitude);
       res.setHeader("Cache-Control", "private, no-store");
       sendJson(res, 200, { forecast });
+      return;
+    }
+
+    if (roomWeatherHourlyMatch) {
+      if (req.method !== "POST") {
+        sendMethodNotAllowed(res, ["POST"]);
+        return;
+      }
+      if (!/^application\/json(?:\s*;|$)/i.test(String(req.headers["content-type"] || ""))) {
+        sendJson(res, 415, { error: "Use application/json for hourly weather." });
+        return;
+      }
+      const auth = requireExistingRoomParticipant(req, res, roomWeatherHourlyMatch[1]);
+      if (!auth) return;
+      if (!enforceRateLimit(
+        req,
+        res,
+        "weather-hourly",
+        24,
+        10 * 60 * 1000,
+        auth.participant.id
+      )) return;
+      const body = await readJsonBody(req, { maxBytes: 4_096 });
+      const latitude = normalizedWeatherCoordinate(body.latitude, "Latitude", -90, 90);
+      const longitude = normalizedWeatherCoordinate(body.longitude, "Longitude", -180, 180);
+      const date = String(body.date || "").trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || dateKeyInZone(`${date}T12:00:00.000Z`, "UTC") !== date) {
+        sendJson(res, 400, { error: "Date must use a valid YYYY-MM-DD value." });
+        return;
+      }
+      const hourlyWeather = await fetchGoogleHourlyWeatherForDate(latitude, longitude, date);
+      res.setHeader("Cache-Control", "private, no-store");
+      sendJson(res, 200, hourlyWeather);
       return;
     }
 
