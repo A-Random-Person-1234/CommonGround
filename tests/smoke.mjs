@@ -275,7 +275,7 @@ try {
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-hourly-weather"'
+      'src="/app.js?v=20260804-weather-clickoff"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
@@ -2434,6 +2434,11 @@ try {
     eventComposerScript.text,
     /function dismissOutsideFloatingSurfaces\(target\)[\s\S]*?function handleOutsideFloatingSurfacePointer\(event\)[\s\S]*?event\.stopImmediatePropagation\(\)/,
     "Outside clicks must dismiss an open surface before they can activate an underlying non-editable control"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function dismissOutsideFloatingSurfaces\(target\)[\s\S]*?weatherHourlyPopoverIsOpen\(\) \|\| weatherHourlyTrigger[\s\S]*?!weatherHourlyPopover\?\.contains\(target\)[\s\S]*?closeWeatherHourlyPopover\(\);[\s\S]*?dismissed = true;/,
+    "Clicking away from hourly weather must close it through the shared consumed-click guard"
   );
   assert.match(
     eventComposerScript.text,
