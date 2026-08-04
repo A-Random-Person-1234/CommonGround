@@ -24,7 +24,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20260724-appicon-new" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20260724-appicon-new" />
     <link rel="manifest" href="/site.webmanifest?v=20260724-appicon-new" />
-    <link rel="stylesheet" href="/styles.css?v=20260726-assistant-upgrade" />
+    <link rel="stylesheet" href="/styles.css?v=20260804-weather" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -366,6 +366,7 @@
         <main class="calendar-stage">
           <div class="calendar-wrap">
             <div class="calendar-toolbar">
+              <span class="weather-attribution" id="weatherAttribution" translate="no" hidden>Source: Includes weather data from Google</span>
               <div class="inline-status" id="calendarStatus">Loading room…</div>
             </div>
             <div class="empty-room hidden" id="emptyRoomState">
@@ -800,7 +801,7 @@
     </div>
 
     <script src="/date-picker.js?v=20260726-shared-date-picker"></script>
-    <script src="/app.js?v=20260726-discard-event-draft"></script>
+    <script src="/app.js?v=20260804-weather"></script>
     <script src="/command-centre-actions.js?v=20260726-assistant-upgrade"></script>
     <script src="/command-centre.js?v=20260726-assistant-input-reset"></script>
   </body>
