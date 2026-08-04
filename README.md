@@ -81,9 +81,9 @@ Create a separate Maps Platform key for CommonGround, enable only **Places API (
 
 ## Local weather
 
-Day, week, and month calendar views can show local daily weather symbols. After the user grants browser location permission, CommonGround rounds latitude and longitude to two decimal places before sending them to its authenticated room endpoint. The server calls Google Weather using the protected Maps Platform key, returns only a sanitized forecast, and keeps a short in-memory cache. Coordinates are never written to room data or SQLite.
+Day, week, and month calendar views can show local daily weather symbols. Hovering or focusing an icon shows that day's high and low; selecting it opens a compact hour-by-hour panel with condition icons and temperatures. After the user grants browser location permission, CommonGround rounds latitude and longitude to two decimal places before sending them to authenticated room endpoints. The server calls Google Weather using the protected Maps Platform key, returns only sanitized weather fields, and keeps a short in-memory cache. Coordinates and hourly results are never written to room data or SQLite.
 
-Google Weather returns at most ten daily forecasts beginning with the current day. CommonGround therefore leaves past dates and dates outside that forecast horizon blank instead of fabricating weather. Year view never displays weather.
+Google Weather returns at most ten daily forecasts beginning with the current day and exposes hourly history only for the previous 24 hours. CommonGround can therefore show recent observed weather for part of the previous day, but it leaves older dates and dates outside the forecast horizon blank instead of fabricating history. Year view never displays weather.
 
 ## OAuth redirect setup
 
