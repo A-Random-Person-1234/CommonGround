@@ -4974,6 +4974,15 @@ function dismissOutsideFloatingSurfaces(target) {
   let dismissed = false;
   const datePickerTarget = window.commonGroundDatePicker?.containsTarget(target) === true;
 
+  if (
+    (weatherHourlyPopoverIsOpen() || weatherHourlyTrigger) &&
+    !weatherHourlyPopover?.contains(target)
+  ) {
+    closeWeatherHourlyPopover();
+    hideWeatherHighLowTooltip({ immediate: true });
+    dismissed = true;
+  }
+
   if (activeEventTimePicker && !activeEventTimePicker.field.contains(target)) {
     closeEventTimePicker({ commit: true });
     dismissed = true;
