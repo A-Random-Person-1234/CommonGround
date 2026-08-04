@@ -268,14 +268,14 @@ try {
   assert.match(home.text, /CommonGround/);
   assert.match(home.text, /href="\/styles\.css\?v=20260804-weather-attribution-panel"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260804-weather-attribution-panel"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260804-locked-join-requests"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-weather-attribution-panel"'
+      'src="/app.js?v=20260804-locked-join-requests"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
@@ -1254,6 +1254,21 @@ try {
     "Command updates must reject unknown fields and non-boolean switches"
   );
   assert.doesNotMatch(eventComposerScript.text, /\broomStatus\b/);
+  assert.match(
+    home.text,
+    /<div class="request-queue hidden" id="joinRequestQueue">/,
+    "The join-request queue must be hidden before authoritative room state loads"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function renderJoinRequests\(\) \{[\s\S]*?const showQueue = currentIsHost && Boolean\(currentRoom\?\.accessLocked\);[\s\S]*?const requests = showQueue \? \(currentRoom\?\.pendingJoinRequests \|\| \[\]\) : \[\];[\s\S]*?joinRequestQueue\.classList\.toggle\("hidden", !showQueue\);/,
+    "The join-request queue must render only for the host of a locked room"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function resetRoomScopedState\(\{ clearRoom = false \} = \{\}\)[\s\S]*?if \(clearRoom\) \{[\s\S]*?currentRoom = null;[\s\S]*?currentIsHost = false;[\s\S]*?renderJoinRequests\(\);/,
+    "Clearing or switching rooms must immediately hide stale join requests"
+  );
   assert.match(eventComposerScript.text, /const emojiKeywordDictionaryUrl = "https:\/\/unpkg\.com\/emojilib@3\.0\.11\/dist\/emoji-en-US\.json";/);
   assert.match(eventComposerScript.text, /const emojiKeywordDictionaryFallbackUrl = "\/assets\/emojilib\/3\.0\.11\/emoji-en-US\.json";/);
   assert.match(eventComposerScript.text, /const frequentRoomEmojis = Object\.freeze\(\[[\s\S]*?"🙏"[\s\S]*?\]\);/);
