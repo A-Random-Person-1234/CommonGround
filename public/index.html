@@ -794,8 +794,29 @@
       <p class="sr-only" id="emojiPickerStatus" role="status" aria-live="polite"></p>
     </div>
 
+    <div class="weather-high-low-tooltip" id="weatherHighLowTooltip" role="tooltip" aria-hidden="true">
+      <span id="weatherHighLowTooltipText">Daily high and low</span>
+      <span class="weather-tooltip-hint">Click for hourly</span>
+    </div>
+
+    <section class="weather-hourly-popover" id="weatherHourlyPopover" popover="auto" role="dialog" aria-modal="false" aria-labelledby="weatherHourlyTitle">
+      <header class="weather-hourly-header">
+        <div>
+          <p class="weather-hourly-eyebrow">Hourly weather</p>
+          <h2 id="weatherHourlyTitle">Weather</h2>
+          <p class="weather-hourly-summary" id="weatherHourlySummary"></p>
+        </div>
+        <button class="weather-hourly-close" id="closeWeatherHourlyButton" type="button" aria-label="Close hourly weather">
+          <span class="ui-icon ui-icon-x" aria-hidden="true"></span>
+        </button>
+      </header>
+      <div class="weather-hourly-list" id="weatherHourlyList" aria-label="Hourly forecast"></div>
+      <p class="weather-hourly-status" id="weatherHourlyStatus" role="status" aria-live="polite">Loading hourly forecast&hellip;</p>
+      <footer class="weather-hourly-attribution" translate="no">Source: Includes weather data from Google</footer>
+    </section>
+
     <script src="/date-picker.js?v=20260726-shared-date-picker"></script>
-    <script src="/app.js?v=20260804-connection-ui"></script>
+    <script src="/app.js?v=20260804-hourly-weather"></script>
     <script src="/command-centre-actions.js?v=20260726-assistant-upgrade"></script>
     <script src="/command-centre.js?v=20260726-assistant-input-reset"></script>
   </body>
