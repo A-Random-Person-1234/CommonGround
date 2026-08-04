@@ -268,18 +268,21 @@ try {
   assert.match(home.text, /CommonGround/);
   assert.match(home.text, /href="\/styles\.css\?v=20260804-topbar-identity"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260804-hourly-weather"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260804-copy-room-link"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-weather-clickoff"'
+      'src="/app.js?v=20260804-copy-room-link"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
+  assert.match(home.text, /id="copyInviteButton"[^>]*title="Copy link to join room"[^>]*aria-label="Copy link to join room"/);
+  assert.match(home.text, /id="copyInviteButtonEmpty"[\s\S]*?<span>Copy link<\/span>/);
+  assert.doesNotMatch(home.text, /Copy invite message|Copy invite link/);
   assert.match(
     home.text,
     /id="weatherAttribution" translate="no" hidden>Source: Includes weather data from Google<\/span>/,
@@ -384,7 +387,7 @@ try {
   assert.match(eventModalMarkup, /<span class="oauth-spinner" aria-hidden="true"><\/span>/);
   assert.match(eventModalMarkup, /id="eventFormFeedback" role="status" aria-live="polite"/);
   assert.match(eventModalMarkup, /<div class="composer-field-row composer-input-row location-autocomplete-host">/);
-  const discardEventDraftStart = home.text.indexOf('<dialog\n      class="modal discard-event-draft-dialog"');
+  const discardEventDraftStart = home.text.search(/<dialog\r?\n      class="modal discard-event-draft-dialog"/);
   const discardEventDraftEnd = home.text.indexOf("</dialog>", discardEventDraftStart);
   assert.ok(
     discardEventDraftStart > eventModalEnd && discardEventDraftEnd > discardEventDraftStart,
@@ -1306,8 +1309,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function renderCalendarGoogleControl\(\)[\s\S]*?const googleAvailable = appConfig\?\.googleReady === true;[\s\S]*?let label = "Connect Google Calendar";[\s\S]*?label = "Google Calendar unavailable";[\s\S]*?label = "Reconnect Google Calendar";[\s\S]*?"Link copied" : "Copy invite link"[\s\S]*?dataset\.googleAction = connected \? "invite" : \(googleAvailable \? "authorize" : "unavailable"\);/,
-    "The persistent primary CTA must switch cleanly between connect, reconnect, and invite states"
+    /function renderCalendarGoogleControl\(\)[\s\S]*?const googleAvailable = appConfig\?\.googleReady === true;[\s\S]*?let label = "Connect Google Calendar";[\s\S]*?label = "Google Calendar unavailable";[\s\S]*?label = "Reconnect Google Calendar";[\s\S]*?"Link copied" : "Copy link"[\s\S]*?dataset\.googleAction = connected \? "copy" : \(googleAvailable \? "authorize" : "unavailable"\);/,
+    "The persistent primary CTA must switch cleanly between connect, reconnect, and room-link states"
   );
   assert.match(
     eventComposerScript.text,
@@ -1331,13 +1334,23 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /async function copyRoomInviteLinkFromTopbar\(\) \{[\s\S]*?await copyTextToClipboard\(roomInviteLink\(\)\);[\s\S]*?copiedTopbarInviteRoomCode = roomCodeSnapshot;[\s\S]*?renderCalendarGoogleControl\(\);/,
+    /async function copyRoomLinkFromTopbar\(\) \{[\s\S]*?await copyTextToClipboard\(roomInviteLink\(\)\);[\s\S]*?copiedTopbarRoomCode = roomCodeSnapshot;[\s\S]*?renderCalendarGoogleControl\(\);/,
     "The connected CTA must copy the exact room link and expose immediate feedback"
   );
   assert.match(
     eventComposerScript.text,
-    /calendarGoogleButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?dataset\.googleAction === "invite" && isGoogleConnected\(\)[\s\S]*?copyRoomInviteLinkFromTopbar\(\);[\s\S]*?dataset\.googleAction !== "authorize"[\s\S]*?window\.location\.href = googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true \}\);/,
-    "The top-bar CTA must copy an invite when connected and start secure OAuth otherwise"
+    /async function copyRoomLink\(\) \{[\s\S]*?await copyTextToClipboard\(roomInviteLink\(\)\);[\s\S]*?calendarStatus\.textContent = "Room link copied\.";/,
+    "Every room copy control must copy only the exact join URL"
+  );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /function roomInviteMessage\(|Invite message copied\.|Copy this invite link/,
+    "The served app must not retain the old multi-line invite-message copy path"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /calendarGoogleButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?dataset\.googleAction === "copy" && isGoogleConnected\(\)[\s\S]*?copyRoomLinkFromTopbar\(\);[\s\S]*?dataset\.googleAction !== "authorize"[\s\S]*?window\.location\.href = googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true \}\);/,
+    "The top-bar CTA must copy the room link when connected and start secure OAuth otherwise"
   );
   assert.match(
     eventComposerScript.text,
