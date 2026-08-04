@@ -266,16 +266,16 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260804-full-light-mode"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260804-room-name-topbar"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260804-full-light-mode"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260804-room-name-topbar"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-full-light-mode"'
+      'src="/app.js?v=20260804-room-name-topbar"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
@@ -313,8 +313,8 @@ try {
   );
   assert.match(
     home.text,
-    /<div class="calendar-product" aria-label="CommonGround calendar">[\s\S]*?<img class="calendar-product-mark app-brand-icon"[\s\S]*?<span class="calendar-product-name">CommonGround<\/span>/,
-    "The calendar shell must use the CommonGround product lockup"
+    /<div class="calendar-product" aria-label="Room calendar">[\s\S]*?<img class="calendar-product-mark app-brand-icon"[\s\S]*?<span class="calendar-product-name" id="topbarRoomName" tabindex="-1">Room<\/span>/,
+    "The calendar shell must keep the CommonGround logo while reserving its text label for the live room name"
   );
   assert.doesNotMatch(home.text, /Free\/busy only\. No private event titles, locations, or descriptions\./);
   assert.doesNotMatch(home.text, /class="privacy-note"/);
@@ -647,6 +647,16 @@ try {
     "The shared date-picker asset must be served as JavaScript"
   );
   const eventComposerScript = await publicSession.request("/app.js", { accept: "text/javascript" });
+  assert.match(
+    eventComposerScript.text,
+    /const topbarRoomName = document\.querySelector\("#topbarRoomName"\);[\s\S]*?function syncRoomNameSurfaces\(name = currentRoom\?\.name \|\| "Room"\)[\s\S]*?\[roomName, topbarRoomName\][\s\S]*?topbarRoomName\.dataset\.canRename = String\(canRename\)/,
+    "The top-left calendar title must always render the active room name and expose host-only rename affordance"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function bindRoomNameEditor\(target\)[\s\S]*?target\.addEventListener\("dblclick"[\s\S]*?startInlineRoomRename\(target\)[\s\S]*?bindRoomNameEditor\(topbarRoomName\)/,
+    "The topbar room name must support the same double-click rename flow as the sidebar room name"
+  );
   assert.match(
     home.text,
     /window\.CommonGroundTheme = Object\.freeze\(\{ apply, read \}\);[\s\S]*?apply\(read\(\)\);/,
@@ -1882,6 +1892,11 @@ try {
     "Resize cancellation must be able to restore the original start and duration"
   );
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-product-name\s*\{[^}]*max-width:\s*clamp\(112px, 18vw, 260px\)[^}]*text-overflow:\s*ellipsis[^}]*white-space:\s*nowrap[^}]*\}[\s\S]*?#roomPage \.calendar-product-name\.is-editing\s*\{[^}]*background:\s*var\(--shell-input-surface\)[^}]*box-shadow:\s*inset 0 -2px 0 var\(--brand-strong\)/s,
+    "Long room names must stay contained, with a clear inline editing state in the top bar"
+  );
   assert.match(
     eventComposerStyles.text,
     /\.event-card\.is-group-event,\s*\.event-card\.is-group-event\.invitee\s*\{(?=[^}]*rgba\(218, 165, 32, 0\.05\))(?=[^}]*rgba\(218, 165, 32, 0\.02\))(?=[^}]*border:\s*1px solid rgba\(218, 165, 32, 0\.3\))(?=[^}]*border-radius:\s*8px)(?=[^}]*0 0 16px rgba\(218, 165, 32, 0\.12\))(?=[^}]*inset 0 0 24px rgba\(218, 165, 32, 0\.08\))(?=[^}]*mix-blend-mode:\s*normal)[^}]*\}/s,
