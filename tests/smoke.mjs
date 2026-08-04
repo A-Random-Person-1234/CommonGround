@@ -263,16 +263,16 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260804-weather"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260804-connection-ui"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260804-weather"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260804-connection-ui"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-weather"'
+      'src="/app.js?v=20260804-connection-ui"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
@@ -503,8 +503,23 @@ try {
   );
   assert.match(
     home.text,
-    /<button class="calendar-google-button needs-connection button-with-icon" id="calendarGoogleButton" type="button" title="Connect Google Calendar" aria-label="Connect Google Calendar">/,
-    "The calendar top bar must expose an explicit Google Calendar connection entry point"
+    /<section class="room-page calendar-app-shell hidden" id="roomPage" data-google-connected="false" data-google-ready="false">[\s\S]*?<button class="calendar-google-button needs-connection button-with-icon" id="calendarGoogleButton" type="button" title="Connect Google Calendar" aria-label="Connect Google Calendar" aria-busy="true" disabled>[\s\S]*?<span>Connect Google Calendar<\/span>/,
+    "The calendar top bar must start with a safe, explicit Google Calendar connection state"
+  );
+  assert.match(
+    home.text,
+    /id="googleConnectionIndicator" role="status" aria-label="Google Calendar connected">[\s\S]*?Google connected/,
+    "The connected state must expose a compact sync-status indicator"
+  );
+  assert.match(
+    home.text,
+    /id="calendarConnectionNotice" role="note">[\s\S]*?Connect your Google Calendar to see overlapping availability\./,
+    "Disconnected rooms must explain why the availability grid is empty"
+  );
+  assert.match(
+    home.text,
+    /id="calendarStatus" role="status" aria-live="polite">/,
+    "Calendar updates must retain a non-visual live status region"
   );
   assert.match(
     home.text,
@@ -513,8 +528,13 @@ try {
   );
   assertInOrder(
     home.text,
-    ['id="commandCentreButton"', 'id="calendarGoogleButton"', 'id="refreshButton"', 'id="fullscreenButton"', 'id="settingsButton"', 'id="calendarViewMenu"'],
-    "Ask CommonGround, Google, reload, fullscreen, Settings, and the view menu must retain their toolbar order"
+    ['id="commandCentreButton"', 'id="calendarGoogleButton"', 'id="googleConnectionIndicator"', 'id="calendarViewMenu"', 'id="refreshButton"', 'id="fullscreenButton"', 'id="settingsButton"', 'id="topbarIdentity"'],
+    "Top-bar actions must follow the Ask, primary CTA, sync status, view, utilities, and profile hierarchy"
+  );
+  assert.doesNotMatch(
+    home.text,
+    /calendar-app-toggle/,
+    "The refactored top bar must not retain the disconnected legacy calendar/tasks toggle"
   );
   assert.match(
     home.text,
@@ -548,7 +568,7 @@ try {
   );
   assert.match(
     home.text,
-    /<section class="room-page calendar-app-shell hidden" id="roomPage">\s*<header class="room-topbar calendar-app-nav">/,
+    /<section class="room-page calendar-app-shell hidden" id="roomPage" data-google-connected="false" data-google-ready="false">\s*<header class="room-topbar calendar-app-nav">/,
     "The room page must expose the persistent calendar application shell with its top navigation as a direct child"
   );
   assert.match(
@@ -1222,14 +1242,53 @@ try {
   assert.match(eventComposerScript.text, /function setEventFormSaving\(saving\)/);
   assert.match(eventComposerScript.text, /setEventFormFeedback\(error\.message/);
   assert.match(
-    eventComposerScript.text,
-    /function renderCalendarGoogleControl\(\)[\s\S]*?let label = "Connect Google";[\s\S]*?label = "Reconnect Google";[\s\S]*?label = "Enable Google sync";[\s\S]*?label = "Google synced";[\s\S]*?dataset\.googleAction = state === "is-connected" \? "manage" : "authorize";/,
-    "The persistent Google control must clearly reflect connection, permission, reconnect, and ready states"
+    serverSource,
+    /function publicUser\(user\) \{[\s\S]*?googleConnected: userGoogleConnected\(user\),[\s\S]*?googleNeedsReconnect: Boolean\(user\.auth\?\.google\?\.needsReconnect\),/,
+    "The public session payload must distinguish a Google connection from other calendar providers"
+  );
+  assert.match(
+    serverSource,
+    /const providerNeedsReconnect = \(entry\)[\s\S]*?\[401, 403\]\.includes\(entry\.status\)[\s\S]*?entry\.status === 400 && entry\.code === "invalid_grant"[\s\S]*?const googleNeedsReconnect = providerErrors\.some[\s\S]*?needsReconnect: googleNeedsReconnect/,
+    "Google health must remain provider-specific when another connected provider still succeeds"
+  );
+  assert.match(
+    serverSource,
+    /async function refreshAccessToken\(tokens\)[\s\S]*?error\.status = response\.status;[\s\S]*?error\.code = payload\.error \|\| null;[\s\S]*?throw error;/,
+    "Revoked Google refresh credentials must preserve invalid_grant details for reconnect handling"
   );
   assert.match(
     eventComposerScript.text,
-    /function renderCalendarGoogleControl\(\)[\s\S]*?classList\.toggle\("hidden", state === "is-connected"\);/,
-    "The Google action control must disappear once fully connected while remaining available for action states"
+    /function currentGoogleNeedsReconnect\(\)[\s\S]*?sessionInfo\?\.user\?\.googleNeedsReconnect === true[\s\S]*?function isGoogleConnected\(\) \{[\s\S]*?sessionInfo\?\.user\?\.googleConnected === true[\s\S]*?currentParticipantConnected\(\)[\s\S]*?!currentGoogleNeedsReconnect\(\)/,
+    "The UI state must require a live Google identity and room participant connection"
+  );
+  const googleConnectionStateSource = eventComposerScript.text.slice(
+    eventComposerScript.text.indexOf("function isGoogleConnected()"),
+    eventComposerScript.text.indexOf("function calendarWriteReady()")
+  );
+  assert.doesNotMatch(
+    googleConnectionStateSource,
+    /calendarWriteReady/,
+    "Read-only Google availability must still count as connected UI state"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function renderCalendarGoogleControl\(\)[\s\S]*?const googleAvailable = appConfig\?\.googleReady === true;[\s\S]*?let label = "Connect Google Calendar";[\s\S]*?label = "Google Calendar unavailable";[\s\S]*?label = "Reconnect Google Calendar";[\s\S]*?"Link copied" : "Copy invite link"[\s\S]*?dataset\.googleAction = connected \? "invite" : \(googleAvailable \? "authorize" : "unavailable"\);/,
+    "The persistent primary CTA must switch cleanly between connect, reconnect, and invite states"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function renderCalendarGoogleControl\(\)[\s\S]*?roomPage\.dataset\.googleReady = String\(ready\);[\s\S]*?roomPage\.dataset\.googleConnected = String\(connected\);[\s\S]*?googleConnectionIndicator\?\.classList\.toggle\("hidden", !connected\);[\s\S]*?calendarConnectionNotice\?\.classList\.toggle\("hidden", connected \|\| !ready\);[\s\S]*?setPanelVisibility\(emptyRoomState, false\);/,
+    "Connection state must drive the shell, indicator, contextual notice, and removal of the legacy invite strip"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /connectionNoticeText\.textContent = googleAvailable[\s\S]*?Connect your Google Calendar to see overlapping availability\.[\s\S]*?Google Calendar connection is currently unavailable\./,
+    "An unavailable OAuth backend must not present an impossible connection instruction"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function loadFreeBusy\(\)[\s\S]*?typeof data\.googleNeedsReconnect === "boolean"[\s\S]*?sessionInfo\.user\.googleNeedsReconnect = data\.googleNeedsReconnect;/,
+    "A provider-specific reconnect result must update the CTA in the same refresh cycle"
   );
   assert.match(
     eventComposerScript.text,
@@ -1238,13 +1297,13 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /calendarGoogleButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?const shouldAuthorize =[\s\S]*?!calendarWriteReady\(\);[\s\S]*?window\.location\.href = googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true \}\);[\s\S]*?setPanelVisibility\(hostPopover, true\);[\s\S]*?syncSettingsCard\?\.scrollIntoView/,
-    "The top-bar control must request full calendar sync when needed and open sync settings once connected"
+    /async function copyRoomInviteLinkFromTopbar\(\) \{[\s\S]*?await copyTextToClipboard\(roomInviteLink\(\)\);[\s\S]*?copiedTopbarInviteRoomCode = roomCodeSnapshot;[\s\S]*?renderCalendarGoogleControl\(\);/,
+    "The connected CTA must copy the exact room link and expose immediate feedback"
   );
   assert.match(
     eventComposerScript.text,
-    /!settingsButton\.contains\(event\.target\) &&\s*!calendarGoogleButton\?\.contains\(event\.target\) &&/,
-    "Opening connected Google settings from the top bar must not be cancelled by the document click handler"
+    /calendarGoogleButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?dataset\.googleAction === "invite" && isGoogleConnected\(\)[\s\S]*?copyRoomInviteLinkFromTopbar\(\);[\s\S]*?dataset\.googleAction !== "authorize"[\s\S]*?window\.location\.href = googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true \}\);/,
+    "The top-bar CTA must copy an invite when connected and start secure OAuth otherwise"
   );
   assert.match(
     eventComposerScript.text,
@@ -2008,18 +2067,18 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.calendar-google-button\s*\{[^}]*min-height:\s*38px;[^}]*border-radius:\s*999px;[^}]*will-change:\s*transform, opacity;/s,
-    "The Google Calendar action must be a compact, tactile top-bar control"
+    /#roomPage \.calendar-google-button,\s*#roomPage \.calendar-google-button\.needs-connection,[\s\S]*?#roomPage \.calendar-google-button\.is-connected\s*\{[^}]*min-height:\s*40px;[^}]*border-radius:\s*10px;[^}]*background:\s*linear-gradient\(135deg, #c4a05a, #9a7538\);[^}]*color:\s*#17140f;/s,
+    "The state-driven primary CTA must use CommonGround's premium gold hierarchy"
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.calendar-google-button\.needs-connection,\s*#roomPage \.calendar-google-button\.needs-permission\s*\{[^}]*background:\s*linear-gradient\(135deg, #b98454, #8a5a35\);[^}]*color:\s*#fff9f1;/s,
-    "Disconnected and missing-permission states must use CommonGround's established gold primary treatment"
+    /#roomPage \.command-centre-trigger\s*\{[^}]*border-color:\s*rgba\(255, 255, 255, 0\.14\);[^}]*background:\s*transparent;[^}]*color:\s*rgba\(232, 234, 237, 0\.78\);/s,
+    "Ask CommonGround must remain a clear but secondary outlined action"
   );
   assert.match(
     eventComposerStyles.text,
-    /@media \(max-width: 980px\)\s*\{[\s\S]*?#roomPage \.calendar-google-button\s*\{[^}]*width:\s*34px;[^}]*height:\s*34px;[^}]*border-radius:\s*50%;[^}]*\}[\s\S]*?#roomPage \.calendar-google-button > span:last-child\s*\{[^}]*display:\s*none;/s,
-    "Narrow layouts must retain Google connection as a labelled icon button"
+    /@media \(max-width: 980px\)\s*\{[\s\S]*?#roomPage \.calendar-google-button > span:last-child\s*\{[^}]*display:\s*inline;/s,
+    "Laptop layouts must retain the primary CTA label while space remains available"
   );
   assert.match(
     eventComposerStyles.text,
@@ -2040,8 +2099,33 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.calendar-period-label\s*\{[^}]*flex:\s*1 1 0;[^}]*max-width:\s*none;[^}]*font-size:\s*clamp\(16px, 1\.25vw, 20px\);/s,
-    "The period label must size itself from the actual available navigation space"
+    /#roomPage \.calendar-period-label\s*\{[^}]*flex:\s*0 1 auto;[^}]*max-width:\s*clamp\(132px, 20vw, 280px\);/s,
+    "The period label must remain bounded so right-side actions never overflow"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage\.calendar-app-shell\s*\{[^}]*--shell-grid-line:\s*#2d2d2d;/s,
+    "The room shell must use one consistent subtle calendar grid-line color"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.participants-card\s*\{[^}]*gap:\s*16px;[^}]*\}[\s\S]*?#roomPage \.sidebar-room-card\s*\{[^}]*padding:\s*12px;[^}]*border:\s*0;[^}]*background:\s*transparent;/s,
+    "The sidebar must use spacing and flat surfaces instead of nested card borders"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.sidebar-room-code-row\s*\{[^}]*gap:\s*0;[^}]*overflow:\s*hidden;[^}]*border-radius:\s*8px;[\s\S]*?#roomPage \.sidebar-room-code-row \.room-copy-inline\s*\{[^}]*border-left:\s*1px solid var\(--shell-line\);/s,
+    "Room code and copy actions must read as one cohesive control"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.empty-room\s*\{[^}]*display:\s*none !important;[^}]*\}[\s\S]*?#roomPage \.calendar-connection-notice\s*\{[^}]*position:\s*absolute;[^}]*pointer-events:\s*none;/s,
+    "The legacy invite strip must be removed while the disconnected notice overlays without stealing clicks"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-width: 760px\)\s*\{[\s\S]*?#roomPage \.calendar-nav-actions > #commandCentreButton\s*\{[^}]*position:\s*static;[\s\S]*?#roomPage \.calendar-google-button[^}]*width:\s*34px;[\s\S]*?#roomPage\[data-google-connected="true"\] \.calendar-google-button::after/s,
+    "Phone layouts must keep both key actions anchored in the top bar and preserve a visible connected cue"
   );
   assert.match(
     eventComposerStyles.text,
