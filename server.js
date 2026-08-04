@@ -35,7 +35,7 @@ const emojiKeywordDictionaryPath = path.join(__dirname, "node_modules", "emojili
 const emojiKeywordDictionary = fs.readFileSync(emojiKeywordDictionaryPath);
 const emojiKeywordDictionaryEtag = `"${crypto.createHash("sha256").update(emojiKeywordDictionary).digest("base64url")}"`;
 const roomCodeAlphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const defaultRoomEmoji = "📅";
+const defaultRoomEmoji = "ðŸ“…";
 const oauthStateLifetimeMs = 10 * 60 * 1000;
 const sessionLifetimeMs = 30 * 24 * 60 * 60 * 1000;
 const sessionRotationAliasLifetimeMs = 60 * 1000;
@@ -232,8 +232,9 @@ function requestClientKey(req) {
   return forwarded || req.socket?.remoteAddress || "unknown";
 }
 
-function enforceRateLimit(req, res, bucket, limit, windowMs) {
-  const key = `${bucket}:${requestClientKey(req)}`;
+function enforceRateLimit(req, res, bucket, limit, windowMs, identity = "") {
+  const normalizedIdentity = String(identity || "").replace(/[^A-Za-z0-9_-]/g, "").slice(0, 128);
+  const key = `${bucket}:${requestClientKey(req)}${normalizedIdentity ? `:${normalizedIdentity}` : ""}`;
   const now = Date.now();
   const existing = rateLimits.get(key);
   const entry = !existing || existing.resetAt <= now
@@ -404,10 +405,17 @@ async function fetchGoogleDailyForecast(latitude, longitude) {
   }
 
   const forecast = sanitizeGoogleDailyForecast(payload);
-  weatherForecastCache.set(cacheKey, {
-    expiresAt: now + weatherForecastCacheTtlMs,
+  const entry = {
+    expiresAt: Date.now() + weatherForecastCacheTtlMs,
     forecast
-  });
+  };
+  weatherForecastCache.set(cacheKey, entry);
+  const cleanupTimer = setTimeout(() => {
+    if (weatherForecastCache.get(cacheKey) === entry) {
+      weatherForecastCache.delete(cacheKey);
+    }
+  }, weatherForecastCacheTtlMs);
+  cleanupTimer.unref?.();
   return forecast;
 }
 
@@ -2667,7 +2675,7 @@ function googleCalendarEventDescription(room, event) {
     `CommonGround room: ${room.name} (${room.code})`,
     `${publicBaseUrl}/room/${room.code}`,
     "",
-    `Responses: ${counts.yes} yes · ${counts.maybe} maybe · ${counts.no} no`
+    `Responses: ${counts.yes} yes Â· ${counts.maybe} maybe Â· ${counts.no} no`
   ].filter((line) => line !== null).join("\n");
 }
 
@@ -2721,7 +2729,7 @@ function outlookCalendarEventDescription(room, event) {
     `CommonGround room: ${room.name} (${room.code})`,
     `${publicBaseUrl}/room/${room.code}`,
     "",
-    `Responses: ${counts.yes} yes · ${counts.maybe} maybe · ${counts.no} no`
+    `Responses: ${counts.yes} yes Â· ${counts.maybe} maybe Â· ${counts.no} no`
   ].filter((line) => line !== null).join("\n");
 }
 
@@ -4266,13 +4274,20 @@ const server = http.createServer(async (req, res) => {
         sendMethodNotAllowed(res, ["POST"]);
         return;
       }
-      if (!enforceRateLimit(req, res, "weather-forecast", 30, 10 * 60 * 1000)) return;
       if (!/^application\/json(?:\s*;|$)/i.test(String(req.headers["content-type"] || ""))) {
         sendJson(res, 415, { error: "Use application/json for weather forecasts." });
         return;
       }
       const auth = requireExistingRoomParticipant(req, res, roomWeatherForecastMatch[1]);
       if (!auth) return;
+      if (!enforceRateLimit(
+        req,
+        res,
+        "weather-forecast",
+        12,
+        10 * 60 * 1000,
+        auth.participant.id
+      )) return;
       const body = await readJsonBody(req, { maxBytes: 4_096 });
       const latitude = normalizedWeatherCoordinate(body.latitude, "Latitude", -90, 90);
       const longitude = normalizedWeatherCoordinate(body.longitude, "Longitude", -180, 180);
@@ -5668,3 +5683,4 @@ server.listen(port, host, () => {
   console.log(`CommonGround running at http://localhost:${port}`);
   console.log(`Google redirect URI: ${redirectUri}`);
 });
+
