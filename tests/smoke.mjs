@@ -266,16 +266,16 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260804-topbar-identity"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260804-weather-attribution-panel"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260804-copy-room-link"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260804-weather-attribution-panel"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
   assertInOrder(
     home.text,
     [
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-copy-room-link"'
+      'src="/app.js?v=20260804-weather-attribution-panel"'
     ],
     "The shared date-picker controller must load before the app controller"
   );
@@ -283,10 +283,15 @@ try {
   assert.match(home.text, /id="copyInviteButton"[^>]*title="Copy link to join room"[^>]*aria-label="Copy link to join room"/);
   assert.match(home.text, /id="copyInviteButtonEmpty"[\s\S]*?<span>Copy link<\/span>/);
   assert.doesNotMatch(home.text, /Copy invite message|Copy invite link/);
-  assert.match(
+  assert.doesNotMatch(
     home.text,
-    /id="weatherAttribution" translate="no" hidden>Source: Includes weather data from Google<\/span>/,
-    "Displayed forecasts must have the required Google Weather attribution nearby"
+    /id="weatherAttribution"|class="weather-attribution"/,
+    "The collapsed calendar must not render a separate weather attribution label"
+  );
+  assert.equal(
+    (home.text.match(/Source: Includes weather data from Google/g) || []).length,
+    1,
+    "Google Weather attribution must appear exactly once, inside the expanded panel"
   );
   assert.match(home.text, /id="weatherHighLowTooltip"[^>]*role="tooltip"[^>]*aria-hidden="true"/);
   assert.match(
@@ -2814,8 +2819,8 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.weather-attribution\s*\{[^}]*color: rgba\(232, 234, 237, 0\.52\)[^}]*font-size: 12px/s,
-    "Google Weather attribution must remain legible in the calendar toolbar"
+    /\.weather-hourly-attribution\s*\{[^}]*border-top: 1px solid rgba\(255, 255, 255, 0\.06\)[^}]*font-family: Roboto, Arial, sans-serif[^}]*font-size: 12px[^}]*font-weight: 400/s,
+    "Google Weather attribution must remain legible inside the expanded hourly panel"
   );
   for (const iconAsset of expectedIconAssets) {
     const icon = await publicSession.request(`/icons/${iconAsset}`, { accept: "image/svg+xml" });

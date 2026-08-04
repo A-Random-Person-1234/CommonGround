@@ -1422,24 +1422,6 @@ a:focus-visible {
   text-overflow: ellipsis;
 }
 
-.weather-attribution {
-  flex: 0 1 auto;
-  min-width: 0;
-  margin-right: auto;
-  overflow: hidden;
-  color: var(--muted);
-  font-family: Roboto, Arial, sans-serif;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.weather-attribution[hidden] {
-  display: none;
-}
-
 .calendar-date-nav {
   display: inline-flex;
   align-items: center;
@@ -11497,13 +11479,6 @@ button.identity-name-button:not(:disabled):active,
   text-overflow: ellipsis;
 }
 
-#roomPage .weather-attribution {
-  max-width: min(280px, 48vw);
-  color: rgba(232, 234, 237, 0.52);
-  font-size: 12px;
-  font-weight: 500;
-}
-
 #roomPage .empty-room {
   margin: 8px 12px;
   border-color: rgba(138, 180, 248, 0.24);
@@ -12348,14 +12323,6 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
 }
 
 @media (max-width: 520px) {
-  #roomPage .weather-attribution {
-    max-width: 100%;
-  }
-
-  #roomPage .weather-attribution:not([hidden]) + .inline-status {
-    display: none;
-  }
-
   .weather-symbol--planner .weather-symbol {
     width: 14px;
     height: 14px;
