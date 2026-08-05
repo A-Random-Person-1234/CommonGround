@@ -22,6 +22,15 @@
 
 - `npm run check`: passed.
 - `npm test`: passed, including weather, Command Centre unit/integration, API mutation safety, and whole-product smoke checks.
+
+## Primary-calendar overlap and free-block removal — 2026-08-05
+
+- Reference: the supplied stacked-event screenshot, with a full-width long event beneath wide inset shorter events.
+- Verified locally in week view at 1280 × 720 with an 8-hour base event and two shorter conflicts.
+- The base event retained the full day-column width; overlapping cards retained 95.5% of the column with a 4.5% inset and neutral separation shadow.
+- No `.free-block` or `.free-glow-block` elements were present after initial render or live event updates.
+- Google calendar discovery and free/busy requests were limited to the account's primary calendar.
+- Final result: passed.
 - `git diff --check`: passed.
 - Browser QA covered desktop landing/onboarding, calendar creation, month/year navigation, utility overflow, settings focus, toast feedback, and both theme surfaces.
 
