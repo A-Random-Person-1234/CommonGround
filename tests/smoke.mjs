@@ -322,19 +322,19 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260805-whole-product-3"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260805-primary-calendar-overlap"/);
   assert.match(home.text, /src="\/theme-bootstrap\.js\?v=20260804-persisted-theme"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260805-whole-product-2"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260805-primary-calendar-overlap"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260805-whole-product"/);
   assertInOrder(
     home.text,
     [
       'src="/theme-bootstrap.js?v=20260804-persisted-theme"',
-      'href="/styles.css?v=20260805-whole-product-3"',
+      'href="/styles.css?v=20260805-primary-calendar-overlap"',
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260805-whole-product-2"'
+      'src="/app.js?v=20260805-primary-calendar-overlap"'
     ],
     "The CSP-safe theme bootstrap must precede CSS, and the date picker must precede the app controller"
   );
@@ -2099,7 +2099,7 @@ try {
     "A short clash must sit in a separate lane above the full-width long event"
   );
   assertLaneGeometry(2, 0, 0, 1, "Two-event anchor");
-  assertLaneGeometry(2, 1, 0.5, 0.5, "Two-event foreground card");
+  assertLaneGeometry(2, 1, 0.045, 0.955, "Two-event foreground card");
 
   const denseClashLayout = overlapHelpers.layoutEventLanes([
     { id: "long", laneKind: "event", startHour: 9, endHour: 17 },
@@ -2115,8 +2115,8 @@ try {
     ],
     "Simultaneous foreground clashes must receive separate readable lanes"
   );
-  assertLaneGeometry(3, 1, 1 / 3, 1 / 3, "First three-event foreground card");
-  assertLaneGeometry(3, 2, 2 / 3, 1 / 3, "Second three-event foreground card");
+  assertLaneGeometry(3, 1, 0.045, 0.955, "First three-event foreground card");
+  assertLaneGeometry(3, 2, 0.12, 0.88, "Second three-event foreground card");
 
   const sourceNeutralSnapshot = (items) => overlapHelpers.layoutEventLanes(items)
     .map(({ id, laneIndex, laneCount, overlapRole }) => ({ id, laneIndex, laneCount, overlapRole }));
@@ -2151,13 +2151,13 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function calendarLaneGeometry\(laneCount = 1, laneIndex = 0\)[\s\S]*?leftFraction: 0,[\s\S]*?widthFraction: 1[\s\S]*?const widthFraction = 1 \/ safeLaneCount;[\s\S]*?const leftFraction = widthFraction \* safeLaneIndex;[\s\S]*?1 - leftFraction - widthFraction/,
-    "Foreground clashes must shift into distinct equal lanes so the full-width anchor copy remains readable on the left"
+    /function calendarLaneGeometry\(laneCount = 1, laneIndex = 0\)[\s\S]*?leftFraction: 0,[\s\S]*?widthFraction: 1[\s\S]*?const overlayLaneCount = safeLaneCount - 1;[\s\S]*?0\.045 \+ \(0\.075 \* progress\)[\s\S]*?Math\.max\(0\.82, 1 - leftFraction\)/,
+    "Foreground clashes must cascade with a small inset while retaining at least eighty-two percent of the day column"
   );
   assert.match(
     eventComposerScript.text,
-    /function applyCalendarLanePosition\([\s\S]*?clusterLaneCount = laneCount[\s\S]*?calendarLaneGeometry\(laneCount, laneIndex\)[\s\S]*?safeClusterLaneCount[\s\S]*?dayIndex \+ lane\.leftFraction[\s\S]*?lane\.widthFraction[\s\S]*?--event-stack-order[\s\S]*?--event-readable-lane-width/,
-    "Synced and manual cards must share geometry while reserving anchor copy space for the cluster's deepest clash"
+    /function applyCalendarLanePosition\([\s\S]*?clusterLaneCount = laneCount[\s\S]*?calendarLaneGeometry\(laneCount, laneIndex\)[\s\S]*?dayIndex \+ lane\.leftFraction[\s\S]*?lane\.widthFraction[\s\S]*?--event-stack-order[\s\S]*?--event-cluster-lane-count/,
+    "Synced and manual cards must share the same full-width cascade geometry"
   );
   assert.match(
     eventComposerScript.text,
@@ -2201,8 +2201,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function refreshLiveFreeBlocksForResize\([\s\S]*?if \(!freeBlocksEnabled\(\)\) \{[\s\S]*?calendarGrid\.querySelectorAll\("\.free-block"\)\.forEach\(\(block\) => block\.remove\(\)\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?occupiedSegmentsForDate\([\s\S]*?freeSegmentsForDate\([\s\S]*?configureFreeGlowBlock\(/,
-    "Live Free blocks must reflow during owned-event resizing and clear when no members are selected"
+    /const showFreeBlocks = false;[\s\S]*?function freeBlocksEnabled\(\)[\s\S]*?showFreeBlocks && visibleParticipantIds\(\)\.size > 0[\s\S]*?if \(!freeBlocksEnabled\(\)\) \{[\s\S]*?calendarGrid\.querySelectorAll\("\.free-block"\)\.forEach\(\(block\) => block\.remove\(\)\);/,
+    "Free blocks must remain disabled and any stale rendered blocks must be removed"
   );
   assert.match(
     serverSource,
@@ -2223,6 +2223,11 @@ try {
     serverSource,
     /const canExposeGoogleEventDetails = \([\s\S]*?participant\.id === viewerParticipantId[\s\S]*?userHasGoogleCalendarWriteAccess\(user\)[\s\S]*?if \(canExposeGoogleEventDetails\)[\s\S]*?fetchGoogleCalendarEventsForRange[\s\S]*?title: providerText\(event\.summary, textLimits\.eventTitle\)[\s\S]*?location: providerText\(event\.location, textLimits\.eventLocation\)[\s\S]*?description: providerText\(event\.description, textLimits\.eventDescription\)/,
     "Only the signed-in viewer with event scope may receive sanitized native Google event details"
+  );
+  assert.match(
+    serverSource,
+    /async function fetchCalendarList\(accessToken\)[\s\S]*?\.filter\(\(calendar\) => calendar\.primary === true && !calendar\.deleted\)[\s\S]*?calendars\.slice\(0, 1\)[\s\S]*?const calendars = \(googleCalendarList\.calendars \|\| \[\]\)\.slice\(0, 1\)[\s\S]*?items: calendars\.map\(\(calendar\) => \(\{ id: calendar\.id \}\)\)/,
+    "Google availability and event detail imports must be restricted to the user's primary calendar"
   );
   assert.match(
     serverSource,
@@ -2267,7 +2272,7 @@ try {
   assert.match(
     eventComposerScript.text,
     /function scheduleEventResizeUpdate\(\)[\s\S]*?applyEventResizePreview\([\s\S]*?refreshLiveFreeBlocksForResize\(/,
-    "The event and Free-block previews must update in the same animation frame"
+    "Event resize previews may safely call the disabled Free-block cleanup in the same animation frame"
   );
   assert.match(
     eventComposerScript.text,
@@ -2277,8 +2282,13 @@ try {
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
   assert.match(
     eventComposerStyles.text,
-    /\.event-card\.event-overlap-anchor,[\s\S]*?\.busy-card\.busy-overlap-lane[\s\S]*?z-index: calc\(6 \+ var\(--event-stack-order, 0\)\);[\s\S]*?\.event-card\.event-overlap-anchor \.event-line,[\s\S]*?width: var\(--event-readable-lane-width, 50%\);[\s\S]*?\.event-card\.event-overlap-lane,[\s\S]*?border-color: rgba\(8, 8, 9, 0\.72\);[\s\S]*?0 8px 20px rgba\(0, 0, 0, 0\.36\)/,
-    "Shifted clash cards must leave the full-width anchor a readable text lane and keep a crisp separating edge"
+    /\.event-card\.event-overlap-anchor,[\s\S]*?\.busy-card\.busy-overlap-lane[\s\S]*?z-index: calc\(6 \+ var\(--event-stack-order, 0\)\);[\s\S]*?\.event-card\.event-overlap-lane,[\s\S]*?border-color: rgba\(8, 8, 9, 0\.72\);[\s\S]*?0 8px 20px rgba\(0, 0, 0, 0\.36\)[\s\S]*?font-size: 11px;[\s\S]*?font-size: 10px;/,
+    "Inset clash cards must retain almost the full column width, readable text, and a crisp separating edge"
+  );
+  assert.doesNotMatch(
+    eventComposerStyles.text,
+    /--event-readable-lane-width/,
+    "The full-width background event must not have its text artificially constrained to a narrow lane"
   );
   assert.match(
     eventComposerStyles.text,
@@ -2795,14 +2805,9 @@ try {
     "The calendar grid must be an opaque flat surface"
   );
   assert.match(
-    eventComposerStyles.text,
-    /#roomPage \.free-block,\s*#roomPage \.free-glow-block\s*\{(?=[^}]*border:\s*1px solid rgba\(218, 165, 32, 0\.3\))(?=[^}]*border-radius:\s*8px)(?=[^}]*rgba\(218, 165, 32, 0\.05\) 0%)(?=[^}]*rgba\(218, 165, 32, 0\.02\) 100%)(?=[^}]*0 0 16px rgba\(218, 165, 32, 0\.12\))(?=[^}]*inset 0 0 24px rgba\(218, 165, 32, 0\.08\))[^}]*\}/s,
-    "Active Free blocks must use the isolated, exact CommonGround gold treatment"
-  );
-  assert.match(
     eventComposerScript.text,
-    /const showFreeBlocks = true;[\s\S]*?function freeBlocksEnabled\(\)[\s\S]*?showFreeBlocks && visibleParticipantIds\(\)\.size > 0[\s\S]*?if \(freeBlocksEnabled\(\)\)[\s\S]*?freeSegmentsForDate\([\s\S]*?createFreeGlowBlock\(/,
-    "Shared availability must be active and rendered only for selected room members"
+    /const showFreeBlocks = false;[\s\S]*?function freeBlocksEnabled\(\)[\s\S]*?showFreeBlocks && visibleParticipantIds\(\)\.size > 0[\s\S]*?if \(freeBlocksEnabled\(\)\)[\s\S]*?createFreeGlowBlock\(/,
+    "Shared availability blocks must stay disabled without removing the guarded implementation"
   );
   assert.match(
     eventComposerStyles.text,
@@ -3504,7 +3509,7 @@ try {
     assert.match(legalPage.text, /<link rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png\?v=20260724-appicon-new" \/>/);
     assert.match(legalPage.text, /<img class="mark app-brand-icon" src="\/icons\/icon-192\.png\?v=20260724-appicon-new" alt="" width="46" height="46" \/>/);
     assert.match(legalPage.text, /<script src="\/theme-bootstrap\.js\?v=20260804-persisted-theme" data-sync-server="true"><\/script>/);
-    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260805-whole-product-3" \/>/);
+    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260805-primary-calendar-overlap" \/>/);
     assert.doesNotMatch(
       legalPage.text,
       /<script(?![^>]*\bsrc=)[^>]*>/i,
