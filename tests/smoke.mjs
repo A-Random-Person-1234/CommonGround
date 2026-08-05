@@ -1902,13 +1902,23 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function createSingleBusyCard\(segment, dayIndex\)[\s\S]*?configureCalendarBlockTimeLine\([\s\S]*?busy-line-compact[\s\S]*?configureCalendarBlockTimeLine\(appendLine\("busy-line-time"[\s\S]*?function createBusyStack/,
-    "Google event blocks must tag their existing compact and full time lines for live updates"
+    /function createSingleBusyCard\(segment, dayIndex\)[\s\S]*?if \(durationClass === "event-15"\)[\s\S]*?appendLine\("busy-line-compact", ownerLabel\)[\s\S]*?configureCalendarBlockTimeLine\(appendLine\("busy-line-time", timeRange\)\)[\s\S]*?function createBusyStack/,
+    "A 15-minute Google event must keep its owner and live-updating right-aligned time in separate lines"
   );
   assert.match(
     eventComposerScript.text,
-    /configureCalendarBlockTimeLine\([\s\S]*?event-line-compact[\s\S]*?configureCalendarBlockTimeLine\([\s\S]*?event-line-meta[\s\S]*?function configureFreeGlowBlock/,
-    "CommonGround event blocks must tag their existing compact and full time lines for live updates"
+    /function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?if \(durationClass === "event-15"\)[\s\S]*?appendLine\("event-line-compact", compactPrefix\)[\s\S]*?configureCalendarBlockTimeLine\(appendLine\("event-line-meta", timeRange\)\)[\s\S]*?function configureFreeGlowBlock/,
+    "A 15-minute CommonGround event must keep its owner/title and live-updating right-aligned time in separate lines"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function upsertCalendarEventPreview\([\s\S]*?event-line-compact[\s\S]*?event-line event-line-meta[\s\S]*?data-event-time-line="true"/,
+    "A 15-minute composer preview must use the same dedicated time line as saved events"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function calendarParticipantLabel\(participant\)[\s\S]*?participantId === currentParticipant\?\.id\) return "You";[\s\S]*?function createSingleBusyCard[\s\S]*?const ownerLabel = calendarParticipantLabel\(participant\);[\s\S]*?function createBusyStack[\s\S]*?const ownerLabel = calendarParticipantLabel\(participant\);/,
+    "The signed-in participant must be labelled You in single and stacked imported-event views"
   );
   assert.match(
     eventComposerScript.text,
@@ -1917,23 +1927,28 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?const ownerLabel = String\(item\.participantName \|\| "Someone"\)[\s\S]*?const compactPrefix = \[ownerLabel, titleText\][\s\S]*?appendLine\("event-line-owner", ownerLabel\)[\s\S]*?function configureFreeGlowBlock/,
-    "Persisted manual event cards must visibly render the creator in compact and full-size layouts"
+    /function calendarEventOwnerLabel\(eventBlock\)[\s\S]*?creatorId === currentParticipant\?\.id\) return "You";[\s\S]*?function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?const ownerLabel = calendarEventOwnerLabel\(item\)[\s\S]*?appendLine\("event-line-owner", ownerLabel\)/,
+    "Manual event cards must identify the viewer as You and visibly render other creators"
   );
   assert.match(
     eventComposerScript.text,
     /block\.setAttribute\("aria-label", `\$\{ownerLabel\}, \$\{item\.title \|\| "Event"\}, \$\{timeRange\}`\)/,
-    "Manual event cards must include the creator in their accessible name"
+    "Manual event cards must include the resolved creator in their accessible name"
   );
   assert.match(
     eventComposerScript.text,
-    /function upsertCalendarEventPreview\([\s\S]*?const ownerLabel = String\(currentParticipant\?\.displayName \|\| "You"\)[\s\S]*?event-line event-line-owner[\s\S]*?escapeHtml\(ownerLabel\)/,
-    "The live manual-event preview must show the current participant's escaped room name"
+    /function upsertCalendarEventPreview\([\s\S]*?const ownerLabel = "You";[\s\S]*?event-line event-line-owner[\s\S]*?escapeHtml\(ownerLabel\)/,
+    "The live manual-event preview must identify its creator as You"
   );
   assert.match(
     eventComposerScript.text,
-    /function monthEventChipLabel\(eventBlock\)[\s\S]*?eventBlock\.participantName[\s\S]*?formatTime\(eventBlock\.startHour\), ownerLabel, title/,
-    "Month-view event chips must include the creator alongside time and title"
+    /function monthEventChipLabel\(eventBlock\)[\s\S]*?calendarEventOwnerLabel\(eventBlock\)[\s\S]*?formatTime\(eventBlock\.startHour\), ownerLabel, title/,
+    "Month-view event chips must include the privacy-aware creator label"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function openBusyDetail\(group\)[\s\S]*?if \(entry\.participantId === currentParticipant\?\.id\)[\s\S]*?busyItem\.title[\s\S]*?busyItem\.location[\s\S]*?busyItem\.description/,
+    "Imported event metadata must only render inside the signed-in participant detail branch"
   );
   assert.match(
     eventComposerScript.text,
@@ -2012,13 +2027,33 @@ try {
   );
   assert.match(
     serverSource,
-    /const mirroredIntervals = syncedGoogleCalendarMirrorIntervals\(room, participant, user\.id\);[\s\S]*?const hiddenIntervals = \[[\s\S]*?\.\.\.mirroredIntervals,[\s\S]*?\.\.\.editableEvents\.map[\s\S]*?subtractGoogleMirrorIntervals\(startDate, endDate, hiddenIntervals\)/,
+    /const mirroredIntervals = syncedGoogleCalendarMirrorIntervals\(room, participant, user\.id\);[\s\S]*?const hiddenIntervals = \[[\s\S]*?\.\.\.mirroredIntervals,[\s\S]*?\.\.\.viewerEvents\.map[\s\S]*?subtractGoogleMirrorIntervals\(startDate, endDate, hiddenIntervals\)/,
     "Google free/busy must exclude CommonGround mirrors and owner-enriched events already rendered by the room"
   );
   assert.match(
     serverSource,
-    /participant\.id === viewerParticipantId[\s\S]*?userHasGoogleCalendarWriteAccess\(user\)[\s\S]*?fetchGoogleCalendarEventsForRange[\s\S]*?editable: true,[\s\S]*?googleCalendarId:[\s\S]*?googleEventId:/,
-    "Only the signed-in viewer with write scope may receive movable native Google event identity"
+    /const canExposeGoogleEventDetails = \([\s\S]*?participant\.id === viewerParticipantId[\s\S]*?userHasGoogleCalendarWriteAccess\(user\)[\s\S]*?if \(canExposeGoogleEventDetails\)[\s\S]*?fetchGoogleCalendarEventsForRange[\s\S]*?title: providerText\(event\.summary, textLimits\.eventTitle\)[\s\S]*?location: providerText\(event\.location, textLimits\.eventLocation\)[\s\S]*?description: providerText\(event\.description, textLimits\.eventDescription\)/,
+    "Only the signed-in viewer with event scope may receive sanitized native Google event details"
+  );
+  assert.match(
+    serverSource,
+    /for \(const viewerEvent of viewerEvents\)[\s\S]*?title: viewerEvent\.title,[\s\S]*?location: viewerEvent\.location,[\s\S]*?description: viewerEvent\.description,[\s\S]*?visibility: "private",[\s\S]*?editable: viewerEvent\.editable/,
+    "Owner-enriched Google items must carry private metadata and preserve per-event move eligibility"
+  );
+  assert.match(
+    serverSource,
+    /sourceId: `google-freebusy:\$\{digest\}`,[\s\S]*?title: "",[\s\S]*?location: "",[\s\S]*?description: "",[\s\S]*?visibility: "busy",[\s\S]*?editable: false/,
+    "Generic Google free/busy fragments shared with room members must remain metadata-free"
+  );
+  assert.match(
+    serverSource,
+    /async function fetchOutlookCalendarEvents\(accessToken, timeMin, timeMax, \{ includeDetails = false \} = \{\}\)[\s\S]*?includeDetails[\s\S]*?subject,location,bodyPreview[\s\S]*?: "id,start,end,showAs,isCancelled"/,
+    "Outlook metadata must not be requested unless the response is being built for its owner"
+  );
+  assert.match(
+    serverSource,
+    /const canExposeOutlookEventDetails = participant\.id === viewerParticipantId;[\s\S]*?includeDetails: canExposeOutlookEventDetails[\s\S]*?title: canExposeOutlookEventDetails[\s\S]*?providerText\(interval\.subject, textLimits\.eventTitle\)[\s\S]*?location: canExposeOutlookEventDetails[\s\S]*?providerText\(interval\.location\?\.displayName, textLimits\.eventLocation\)[\s\S]*?description: canExposeOutlookEventDetails[\s\S]*?providerText\(interval\.bodyPreview, textLimits\.eventDescription\)[\s\S]*?visibility: canExposeOutlookEventDetails \? "private" : "busy"/,
+    "Only the signed-in Outlook owner may receive sanitized title, location, and description fields"
   );
   assert.match(
     serverSource,
@@ -2567,13 +2602,13 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /\.event-card\.event-15 \.event-line-compact,\s*\.busy-card\.event-15 \.busy-line-compact\s*\{[^}]*padding-right:\s*0/s,
-    "Single-line 15-minute cards must not reserve a duplicate time column"
+    /\.event-card\.event-15 \.event-line-compact,\s*\.busy-card\.event-15 \.busy-line-compact\s*\{[^}]*padding-right:\s*calc\(var\(--inline-time-space\) \+ 6px\)/s,
+    "15-minute labels must reserve space for their independent right-aligned time"
   );
   assert.match(
     eventComposerStyles.text,
-    /@container \(max-width: 190px\)\s*\{[\s\S]*?\.event-card \.event-line:not\(\.event-line-meta\),\s*\.busy-card \.busy-line:not\(\.busy-line-time\)\s*\{[^}]*padding-right:\s*0;[^}]*\}[\s\S]*?\.event-card:not\(\.event-15\):not\(\.event-30\) \.event-line-meta,\s*\.busy-card:not\(\.event-15\):not\(\.event-30\) \.busy-line-time\s*\{[^}]*position:\s*static;[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*text-align:\s*left;[^}]*\}[\s\S]*?\.event-card\.event-30 \.event-line-meta,\s*\.busy-card\.event-30 \.busy-line-title,\s*\.busy-card\.event-30 \.busy-line-time\s*\{[^}]*display:\s*none;/s,
-    "Narrow cards must stack longer ranges and simplify short events without collisions"
+    /@container \(max-width: 190px\)\s*\{[\s\S]*?\.event-card \.event-line:not\(\.event-line-meta\),\s*\.busy-card \.busy-line:not\(\.busy-line-time\)\s*\{[^}]*padding-right:\s*0;[^}]*\}[\s\S]*?\.event-card\.event-15 \.event-line-compact,\s*\.busy-card\.event-15 \.busy-line-compact\s*\{[^}]*padding-right:\s*calc\(var\(--inline-time-space\) \+ 4px\);[^}]*\}[\s\S]*?\.event-card:not\(\.event-15\):not\(\.event-30\) \.event-line-meta,\s*\.busy-card:not\(\.event-15\):not\(\.event-30\) \.busy-line-time\s*\{[^}]*position:\s*static;[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*text-align:\s*left;[^}]*\}[\s\S]*?\.event-card\.event-30 \.event-line-meta,\s*\.busy-card\.event-30 \.busy-line-title,\s*\.busy-card\.event-30 \.busy-line-time\s*\{[^}]*display:\s*none;/s,
+    "Narrow cards must preserve 15-minute time separation while stacking longer ranges safely"
   );
   assert.match(
     eventComposerStyles.text,
