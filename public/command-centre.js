@@ -423,4 +423,2650 @@ function commandSetInterpretation(result, rawCommand = commandCentreState.lastCo
   const parsed = String(parsedCommand || "").trim();
   commandCentreState.interpretation = {
     label: commandIntentLabel(result),
-    correction: raw &&ß^õÒÚ$z{-®éÜj×Ğ¢6öç7B7F'D†÷W"Ò7F'BævWD†÷W'2‚’²7F'BævWDÖ–çWFW2‚’òc°Ğ¢6öç7BVæD†÷W"ÒVæBãÒF”VæBò#B¢VæBævWD†÷W'2‚’²VæBævWDÖ–çWFW2‚’òc°Ğ¢–b†VæD†÷W"ÃÒ7F'D†÷W"’6öçF–çVS°Ğ¢6öç7B&Æö6²ÒFö7VÖVçBæ7&VFTVÆVÖVçB‚&F—b"“°Ğ¢&Æö6²æ6Æ74æÖRÒ&6öÖÖæBÖf–Æ&–Æ—G’Ö&Æö6²#°Ğ¢&Æö6²ç7G–ÆRç6WE&÷W'G’‚"ÒÖF’Ö–æFW‚"Â7G&–ær†F”–æFW‚’“°Ğ¢&Æö6²ç7G–ÆRç6WE&÷W'G’‚"Ò×7F'B"Â7G&–ær‡7F'D†÷W"Ò6ÆVæF%7F'D†÷W"’“°Ğ¢&Æö6²ç7G–ÆRç6WE&÷W'G’‚"ÒÖGW&F–öâ"Â7G&–ær†VæD†÷W"Ò7F'D†÷W"’“°Ğ¢&Æö6²ç6WDGG&–'WFR‚&&–Ö†–FFVâ"Â'G'VR"“°Ğ¢6öç7BF—FÆRÒFö7VÖVçBæ7&VFTVÆVÖVçB‚'7G&öær"“°Ğ¢6öç7BF–ÖRÒFö7VÖVçBæ7&VFTVÆVÖVçB‚'7â"“°Ğ¢F—FÆRçFW‡D6öçFVçBÒ%6†&VBg&VRF–ÖR#°Ğ¢F–ÖRçFW‡D6öçFVçBÒf÷&ÖDWfVçE&ævR‡7F'D†÷W"ÂVæD†÷W"“°Ğ¢&Æö6²æVæB‡F—FÆRÂF–ÖR“°Ğ¢WfVçG4Æ–W"æVæD6†–ÆB†&Æö6²“°Ğ¢ĞĞ¢ĞĞ§Ó°Ğ Ğ§v–æF÷ræ6öÖÖæD6VçG&U&W6WBÒ‚’Óâ°Ğ¢6öÖÖæD6VçG&U7FFRæ†–v†Æ–v‡BÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRæf–Æ&–Æ—G’ÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRæÖ÷fT6æF–FFRÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRæ6öæfÆ–7DG&gBÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRæ6ö×÷6–ærÒfÇ6S°Ğ¢6öÖÖæD6VçG&U7FFRæææ÷Væ6VE&VF–7F–öâÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRæ7&VFUF—FÆU7VvvW7F–öâÒ"#°Ğ¢6öÖÖæD6VçG&U7FFRæ7&VFU&WVW7D–BÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRæ7&VFT6öÖÖæD¶W’Ò"#°Ğ¢6öÖÖæD6VçG&U7FFRæFVÆWFU&WVW7D–BÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRæFVÆWFT6öÖÖæD¶W’Ò"#°Ğ¢6öÖÖæD6VçG&U7FFRæFVÆWFT6æF–FFT–BÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRæ–çFW'&WFF–öâÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRæÆ7D6öÖÖæBÒ"#°Ğ¢6öÖÖæD6VçG&U7FFRæ6öçFW‡DWfVçBÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U7FFRçVæF–ætWfVçD7F–öâÒçVÆÃ°Ğ¢6öÖÖæD6VçG&T6ÆV$FV&÷Væ6R‚“°Ğ¢6öÖÖæD6VçG&T&÷'E&WVW7B‚“°Ğ¢6öÖÖæD6VçG&T6ÆV%&VF–7F–öâ‚“°Ğ¢–b†6öÖÖæD6VçG&TF–Æöræ÷Vâ’6Æ÷6T6öÖÖæD6VçG&R‡²&W7F÷&Tfö7W3¢fÇ6RÂ–ÖÖVF–FS¢G'VRÒ“°Ğ§Ó°Ğ Ğ¦6öÖÖæD6VçG&T'WGFöãòæFDWfVçDÆ—7FVæW"‚&6Æ–6²"Â‚’Óâ°Ğ¢–b†6öÖÖæD6VçG&TF–Æöræ÷Vâ’6Æ÷6T6öÖÖæD6VçG&R‚“°Ğ¢VÇ6R÷Vä6öÖÖæD6VçG&R†6öÖÖæD6VçG&T'WGFöâ“°Ğ§Ò“°Ğ Ğ¦6öÖÖæD6VçG&T6Æ÷6T'WGFöãòæFDWfVçDÆ—7FVæW"‚&6Æ–6²"Â‚’Óâ6Æ÷6T6öÖÖæD6VçG&R‚’“°Ğ Ğ¦6öÖÖæD6VçG&T–çWCòæFDWfVçDÆ—7FVæW"‚&–çWB"Â6öÖÖæD6VçG&T†æFÆT–çWB“°Ğ¦6öÖÖæD6VçG&T–çWCòæFDWfVçDÆ—7FVæW"‚&6ö×÷6—F–öç7F'B"Â‚’Óâ°Ğ¢6öÖÖæD6VçG&U7FFRæ6ö×÷6–ærÒG'VS°Ğ¢6öÖÖæD6VçG&T6ÆV$FV&÷Væ6R‚“°Ğ¢6öÖÖæD6VçG&T&÷'E&WVW7B‚“°Ğ¢6öÖÖæD6VçG&T6ÆV%&VF–7F–öâ‚“°Ğ¢6öÖÖæD6VçG&U&VæFW$–çG&ò‚“°Ğ§Ò“°Ğ¦6öÖÖæD6VçG&T–çWCòæFDWfVçDÆ—7FVæW"‚&6ö×÷6—F–öæVæB"Â‚’Óâ°Ğ¢6öÖÖæD6VçG&U7FFRæ6ö×÷6–ærÒfÇ6S°Ğ¢6öÖÖæD6VçG&T†æFÆT–çWB‚“°Ğ§Ò“°Ğ¦6öÖÖæD6VçG&T–çWCòæFDWfVçDÆ—7FVæW"‚'67&öÆÂ"Â6öÖÖæD6VçG&U7–æ46ö×ÆWF–öå67&öÆÂ“°Ğ¦6öÖÖæD6VçG&T–çWCòæFDWfVçDÆ—7FVæW"‚&6Æ–6²"Â6öÖÖæD6VçG&UWFFU&VF–7F–öâ“°Ğ¦6öÖÖæD6VçG&T–çWCòæFDWfVçDÆ—7FVæW"‚&¶W—W"Â†WfVçB’Óâ°Ğ¢–b‚²%F""Â$'&÷u&–v‡B%Òæ–æ6ÇVFW2†WfVçBæ¶W’’’6öÖÖæD6VçG&UWFFU&VF–7F–öâ‚“°Ğ§Ò“°Ğ Ğ¦6öÖÖæD6VçG&Tf÷&ÓòæFDWfVçDÆ—7FVæW"‚'7V&Ö—B"Â†WfVçB’Óâ°Ğ¢WfVçBç&WfVçDFVfVÇB‚“°Ğ¢–b†6öÖÖæD6VçG&U7FFRæ6ö×÷6–ær’&WGW&ã°Ğ¢6öç7B6VÆV7F&ÆT÷F–öç2Ò6öÖÖæD6VçG&U6VÆV7F&ÆT÷F–öç2‚“°Ğ¢6öç7B†5&VF–7F–öä÷F–öâÒ&ööÆVâ€Ğ¢6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚%¶FFÖ6öÖÖæB×&VF–7F–öâÖ6öÖÖæEÒ"Ğ¢“°Ğ¢6öç7B–çWDÖF6†W5&VæFW&VD6öÖÖæBÒ€Ğ¢6öÖÖæDæ÷&ÖÆ—¦Ufö6'VÆ'’†6öÖÖæD6VçG&T–çWBçfÇVR’ÓÓĞĞ¢6öÖÖæDæ÷&ÖÆ—¦Ufö6'VÆ'’†6öÖÖæD6VçG&U7FFRæÆ7D6öÖÖæBĞ¢“°Ğ¢–b€Ğ¢6öÖÖæD6VçG&U7FFRç†6RÓÓÒ'&W7VÇG2"b`Ğ¢6VÆV7F&ÆT÷F–öç2æÆVæwF‚b`Ğ¢††5&VF–7F–öä÷F–öâÇÂ–çWDÖF6†W5&VæFW&VD6öÖÖæBĞ¢’°Ğ¢6öÖÖæD6VçG&T7F—fFU6VÆV7FVB‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢&WVW7D6öÖÖæE'6R‡²7V&Ö—GFVC¢G'VRÒ“°Ğ§Ò“°Ğ Ğ¦6öÖÖæD6VçG&T&öG“òæFDWfVçDÆ—7FVæW"‚&6Æ–6²"Â7–æ2†WfVçB’Óâ°Ğ¢6öç7B&V6÷fW'”'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×&V6÷fW'’Ö6öÖÖæEÒ"“°Ğ¢–b‡&V6÷fW'”'WGFöâ’°Ğ¢6öÖÖæD6VçG&T–çWBçfÇVRÒ&V6÷fW'”'WGFöâæFF6WBæ6öÖÖæE&V6÷fW'”6öÖÖæC°Ğ¢6öÖÖæD6VçG&T–çWBç6WE6VÆV7F–öå&ævR†6öÖÖæD6VçG&T–çWBçfÇVRæÆVæwF‚Â6öÖÖæD6VçG&T–çWBçfÇVRæÆVæwF‚“°Ğ¢6öÖÖæD6VçG&T6ÆV%&VF–7F–öâ‚“°Ğ¢v—B&WVW7D6öÖÖæE'6R‡²7V&Ö—GFVC¢G'VRÒ“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öç7B&VF–7F–öä'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×&VF–7F–öâÖ6öÖÖæEÒ"“°Ğ¢–b‡&VF–7F–öä'WGFöâ’°Ğ¢6öÖÖæD6VçG&T–çWBçfÇVRÒ&VF–7F–öä'WGFöâæFF6WBæ6öÖÖæE&VF–7F–öä6öÖÖæC°Ğ¢6öÖÖæD6VçG&T6ÆV%&VF–7F–öâ‚“°Ğ¢v—B&WVW7D6öÖÖæE'6R‡²7V&Ö—GFVC¢G'VRÒ“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öç7BW†×ÆRÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖW†×ÆUÒ"“°Ğ¢–b†W†×ÆR’°Ğ¢6öÖÖæD6VçG&T–çWBçfÇVRÒW†×ÆRæFF6WBæ6öÖÖæDW†×ÆS°Ğ¢6öÖÖæD6VçG&T6ÆV%&VF–7F–öâ‚“°Ğ¢v—B&WVW7D6öÖÖæE'6R‡²7V&Ö—GFVC¢G'VRÒ“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6æ6VÅÒÂ¶FFÖ6öÖÖæBÖ6Æ÷6UÒ"’’°Ğ¢6Æ÷6T6öÖÖæD6VçG&R‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖVF—BÖ6öæfÆ–7EÒ"’’°Ğ¢6öç7BG&gBÒ6öÖÖæD6VçG&U7FFRæ6öæfÆ–7DG&gC°Ğ¢–b†G&gB’°Ğ¢6öÖÖæE&VæFW$7&VFU&Wf–Wr‡°Ğ¢ââæ6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÀĞ¢–çFVçC¢&7&VFUöWfVçB"ÀĞ¢F—FÆS¢G&gBçF—FÆRÀĞ¢7F'C¢G&gBç7F'BÀĞ¢VæC¢G&gBæVæBÀĞ¢'F–6—çD–G3¢G&gBæ–çf—FVU'F–6—çD–G2ÀĞ¢Æö6F–öã¢G&gBæÆö6F–öâÀĞ¢FW67&—F–öã¢G&gBæFW67&—F–öâÀĞ¢ÆÄF“¢G&gBæÆÄF’ÓÓÒG'VRÀĞ¢Ö—76–ætf–VÆG3¢µÒÀĞ¢Ö&–wV—F–W3¢µĞĞ¢Ò“°Ğ¢ĞĞ¢&WGW&ã°Ğ¢ĞĞ¢6öç7B'F–6—çD÷F–öâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×'F–6—çBÖ÷F–öåÒ"“°Ğ¢–b‡'F–6—çD÷F–öâ’°Ğ¢6öç7B&W7VÇBÒ°Ğ¢ââæ6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÀĞ¢'F–6—çD–G3¢°Ğ¢âââ†6öÖÖæD6VçG&U7FFRç'6U&W7VÇBç'F–6—çD–G2ÇÂµÒ’ÀĞ¢'F–6—çD÷F–öâæFF6WBæ6öÖÖæE'F–6—çD÷F–öàĞ¢ÒÀĞ¢Ö&–wV—F–W3¢†6öÖÖæD6VçG&U7FFRç'6U&W7VÇBæÖ&–wV—F–W2ÇÂµÒ’ç6Æ–6RƒĞ¢Ó°Ğ¢6öÖÖæD6öçF–çVU'6VE&W7VÇB‡&W7VÇBÂ²7V&Ö—GFVC¢G'VRÒ“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öç7B6Æ÷D'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×6Æ÷BÖ–æFW…Ò"“°Ğ¢–b‡6Æ÷D'WGFöâ’°Ğ¢6öç7B6Æ÷BÒ6öÖÖæD6VçG&U7FFRæf–Æ&–Æ—G“òç6Æ÷G3òå´çVÖ&W"‡6Æ÷D'WGFöâæFF6WBæ6öÖÖæE6Æ÷D–æFW‚•Ó°Ğ¢–b‚6Æ÷B’&WGW&ã°Ğ¢–b†6öÖÖæD6VçG&U7FFRç'6U&W7VÇBæ–çFVçBÓÓÒ'6†÷uöf–Æ&–Æ—G’"’°Ğ¢v—B6öÖÖæE6†÷tf–Æ&–Æ—G”öä6ÆVæF"‚“°Ğ¢ÒVÇ6R°Ğ¢6öÖÖæD7&VFTG&gDg&öÕ6Æ÷B†6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÂ6Æ÷B“°Ğ¢ĞĞ¢&WGW&ã°Ğ¢ĞĞ¢6öç7B6æF–FFT'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖWfVçBÖ6æF–FFUÒ"“°Ğ¢–b†6æF–FFT'WGFöâ’°Ğ¢6öç7B6æF–FFRÒ6öÖÖæD6VçG&U7FFRç'6U&W7VÇBæWfVçD6æF–FFW0Ğ¢æf–æB‚†VçG'’’ÓâVçG'’æ–BÓÓÒ6æF–FFT'WGFöâæFF6WBæ6öÖÖæDWfVçD6æF–FFR“°Ğ¢–b†6æF–FFR’6öÖÖæD6öçF–çVTWfVçD7F–öâ†6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÂ6æF–FFR“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öç7Bæf–vF–öä'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖæf–vFRÖ¶–æEÒ"“°Ğ¢–b†æf–vF–öä'WGFöâ’°Ğ¢v—B6öÖÖæDW†V7WFTæf–vF–öâ†æf–vF–öä'WGFöâ“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öç7Bf–Wt'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ÷Vâ×f–WuÒ"“°Ğ¢–b‡f–Wt'WGFöâ’°Ğ¢v—B6öÖÖæDW†V7WFUf–Wr‡f–Wt'WGFöâæFF6WBæ6öÖÖæD÷Våf–Wr“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6öææV7BÖvöövÆUÒ"’’°Ğ¢6öÖÖæDW†V7WFTvöövÆT6öææV7B‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öç7B&ööÔ6öFT'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×WFFR×&ööÒÖ6öFUÒ"“°Ğ¢–b‡&ööÔ6öFT'WGFöâ’°Ğ¢v—B6öÖÖæDW†V7WFU&ööÔ6öFR‡&ööÔ6öFT'WGFöâæFF6WBæ6öÖÖæEWFFU&ööÔ6öFR“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6öæf—&ÒÖ7&VFUÒ"’’°Ğ¢v—B6öÖÖæD6öæf—&Ô7&VFR‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ÷VâÖ7&VFUÒ"’’°Ğ¢v—B6öÖÖæD÷Vä7&VFT6ö×÷6W"‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6öæf—&ÒÖÖ÷fUÒ"’’°Ğ¢v—B6öÖÖæD6öæf—&ÔÖ÷fR‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6öæf—&Ò×WFFUÒ"’’°Ğ¢v—B6öÖÖæD6öæf—&ÔWfVçEWFFR‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6öæf—&ÒÖFVÆWFUÒ"’’°Ğ¢v—B6öÖÖæD6öæf—&ÔWfVçDFVÆWFR‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×6V&6‚Öf–Æ&–Æ—G•Ò"’’°Ğ¢v—B6öÖÖæDÆöDf–Æ&–Æ—G’†6öÖÖæD6VçG&U7FFRç'6U&W7VÇB“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ6öçF–çVRÖf–Æ&–Æ—G•Ò"’’°Ğ¢G'’°Ğ¢6öç7B&W7VÇBÒ6öÖÖæDf–Æ&–Æ—G•&WVW7Dg&öÔ6Æ&–f–6F–öâ†6öÖÖæD6VçG&U7FFRç'6U&W7VÇB“°Ğ¢6öÖÖæD6VçG&U7FFRç'6U&W7VÇBÒ&W7VÇC°Ğ¢v—B6öÖÖæDÆöDf–Æ&–Æ—G’‡&W7VÇB“°Ğ¢Ò6F6‚†W'&÷"’°Ğ¢6öÖÖæE6WE&Wf–WtW'&÷"†W'&÷"æÖW76vR“°Ğ¢ĞĞ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×6†÷rÖf–Æ&–Æ—G•Ò"’’°Ğ¢v—B6öÖÖæE6†÷tf–Æ&–Æ—G”öä6ÆVæF"‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×VæFòÖ7&VFUÒ"’’°Ğ¢v—BVæFôÆ7DWfVçD7&VF–öâ‚“°Ğ¢6öÖÖæD6VçG&U7FFRæ6öæfÆ–7DG&gBÒçVÆÃ°Ğ¢6öÖÖæD6VçG&U&VæFW$ÖW76vR‚$WfVçB&VÖ÷fVB"Â%F†RWfVçBæB—G26öææV7FVBÖ6ÆVæF"6÷’vW&R&VÖ÷fVBâ"Â°Ğ¢†6S¢'7V66W72"ÀĞ¢7F–öç3¢sÆ'WGFöâ6Æ73Ò&6öÖÖæB×&–Ö'’Ö7F–öâ"G—SÒ&'WGFöâ"FFÖ6öÖÖæBÖ6Æ÷6SäFöæSÂö'WGFöãâpĞ¢Ò“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öç7B&Vf–æT'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæB×&Vf–æUÒ"“°Ğ¢–b‡&Vf–æT'WGFöâ’°Ğ¢6öÖÖæE&Vf–æTf–Æ&–Æ—G’‡&Vf–æT'WGFöâæFF6WBæ6öÖÖæE&Vf–æR“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öç7B÷VäWfVçD'WGFöâÒWfVçBçF&vWBæ6Æ÷6W7B‚%¶FFÖ6öÖÖæBÖ÷VâÖWfVçEÒ"“°Ğ¢–b†÷VäWfVçD'WGFöâ’°Ğ¢v—B6öÖÖæD÷Vå&ööÔWfVçB†÷VäWfVçD'WGFöâæFF6WBæ6öÖÖæD÷VäWfVçB“°Ğ¢ĞĞ§Ò“°Ğ Ğ¦f÷"†6öç7BWfVçDæÖRöb²&–çWB"Â&6†ævR%Ò’°Ğ¢6öÖÖæD6VçG&T&öG“òæFDWfVçDÆ—7FVæW"†WfVçDæÖRÂ†WfVçB’Óâ°Ğ¢–b†WfVçBçF&vWBæÖF6†W2‚"66öÖÖæDWfVçDÆÄF’Â66öÖÖæDWfVçDFFR"’’°Ğ¢6öç7BÆÄF”–çWBÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDWfVçDÆÄF’"“°Ğ¢6öç7B6†V6¶VBÒÆÄF”–çWCòæ6†V6¶VBÓÓÒG'VS°Ğ¢6öç7BFFRÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDWfVçDFFR"“°Ğ¢6öç7BVæDFFRÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDWfVçDVæDFFR"“°Ğ¢6öç7B7F'BÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDWfVçE7F'B"“°Ğ¢6öç7BVæBÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDWfVçDVæB"“°Ğ¢6öç7B66†VGVÆRÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"æ6öÖÖæB×66†VGVÆR×&÷r"“°Ğ¢6öç7BÆÄF”VæDf–VÆBÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚%¶FFÖ6öÖÖæBÖÆÂÖF’ÖVæBÖf–VÆEÒ"“°Ğ¢6öç7BÆÄF•6W&F÷"Ò6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚%¶FFÖ6öÖÖæBÖÆÂÖF’×6W&F÷%Ò"“°Ğ¢6öç7BF–ÖU6W&F÷"Ò6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚%¶FFÖ6öÖÖæB×F–ÖR×6W&F÷%Ò"“°Ğ¢6öç7BF–ÖTf–VÆG2Ò6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷$ÆÂ‚%¶FFÖ6öÖÖæB×F–ÖRÖf–VÆEÒ"“°Ğ Ğ¢66†VGVÆSòæ6Æ74Æ—7BçFövvÆR‚&—2ÖÆÂÖF’"Â6†V6¶VB“°Ğ¢ÆÄF”VæDf–VÆCòçFövvÆTGG&–'WFR‚&†–FFVâ"Â6†V6¶VB“°Ğ¢ÆÄF•6W&F÷#òçFövvÆTGG&–'WFR‚&†–FFVâ"Â6†V6¶VB“°Ğ¢F–ÖU6W&F÷#òçFövvÆTGG&–'WFR‚&†–FFVâ"Â6†V6¶VB“°Ğ¢F–ÖTf–VÆG2æf÷$V6‚‚†f–VÆB’Óâf–VÆBçFövvÆTGG&–'WFR‚&†–FFVâ"Â6†V6¶VB’“°Ğ Ğ¢–b†VæDFFRbbFFR’°Ğ¢VæDFFRæÖ–âÒFFRçfÇVS°Ğ¢–b‚VæDFFRçfÇVRÇÂVæDFFRçfÇVRÂFFRçfÇVR’VæDFFRçfÇVRÒFFRçfÇVS°Ğ¢ĞĞ¢–b‚6†V6¶VBbb7F'BbbVæBbb‚7F'BçfÇVRÇÂ7F'BçfÇVRÓÓÒ#£"’bb‚VæBçfÇVRÇÂVæBçfÇVRÓÓÒ#£"’’°Ğ¢7F'BçfÇVRÒ#“£#°Ğ¢VæBçfÇVRÒ#£#°Ğ¢ĞĞ¢–b‡7F'BbbVæB’°Ğ¢7F'BæF—6&ÆVBÒ6†V6¶VC°Ğ¢VæBæF—6&ÆVBÒ6†V6¶VC°Ğ¢v–æF÷rä6öÖÖöäw&÷VæEF–ÖU–6¶W#òç6WDF—6&ÆVB‡66†VGVÆRÂ6†V6¶VB“°Ğ¢6öç7B7F'DF—7Æ’Ò6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDWfVçE7F'DF—7Æ’"“°Ğ¢6öç7BVæDF—7Æ’Ò6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDWfVçDVæDF—7Æ’"“°Ğ¢7F'DF—7Æ“òçFövvÆTGG&–'WFR‚&&–Ö–çfÆ–B"Â6†V6¶VBbb7F'BçfÇVR“°Ğ¢VæDF—7Æ“òçFövvÆTGG&–'WFR‚&&–Ö–çfÆ–B"Â6†V6¶VBbbVæBçfÇVR“°Ğ¢ĞĞ¢&WGW&ã°Ğ¢ĞĞ¢–b‚WfVçBçF&vWBæÖF6†W2‚"66öÖÖæDÖ÷fTFFRÂ66öÖÖæDÖ÷fU7F'BÂ66öÖÖæDÖ÷fTVæB"’’&WGW&ã°Ğ¢G'’°Ğ¢6öç7BÖ÷fRÒ6öÖÖæE&VDÖ÷fTG&gB‚“°Ğ¢6öç7B7VÖÖ'’Ò6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"66öÖÖæDÖ÷fTæWu7VÖÖ'’"“°Ğ¢–b‡7VÖÖ'’’7VÖÖ'’çFW‡D6öçFVçBÒ6öÖÖæD‡VÖå&ævR†Ö÷fRç7F'BÂÖ÷fRæVæB“°Ğ¢Ò6F6‚°Ğ¢òòF†Rfö7W6VBVF—B&VÖ–ç2f—6–&ÆRVçF–ÂÆÂF‡&VRf–VÆG2f÷&ÒfÆ–B&ævRàĞ¢ĞĞ¢Ò“°Ğ§ĞĞ Ğ¦6öÖÖæD6VçG&TF–ÆösòæFDWfVçDÆ—7FVæW"‚&6Æ–6²"Â†WfVçB’Óâ°Ğ¢–b†WfVçBçF&vWBÓÓÒ6öÖÖæD6VçG&TF–Æör’6Æ÷6T6öÖÖæD6VçG&R‚“°Ğ§Ò“°Ğ Ğ¦6öÖÖæD6VçG&TF–ÆösòæFDWfVçDÆ—7FVæW"‚&6æ6VÂ"Â†WfVçB’Óâ°Ğ¢WfVçBç&WfVçDFVfVÇB‚“°Ğ¢6Æ÷6T6öÖÖæD6VçG&R‚“°Ğ§Ò“°Ğ Ğ§v–æF÷ræFDWfVçDÆ—7FVæW"‚&¶W–F÷vâ"Â†WfVçB’Óâ°Ğ¢–b†WfVçBæ—46ö×÷6–ærÇÂ6öÖÖæD6VçG&U7FFRæ6ö×÷6–ærÇÂWfVçBæ¶W”6öFRÓÓÒ##’’&WGW&ã°Ğ¢6öç7B6öÖÖæE6†÷'F7WBÒ†WfVçBæÖWF¶W’ÇÂWfVçBæ7G&Ä¶W’’bbWfVçBæÇD¶W’bbWfVçBæ¶W’çFôÆ÷vW$66R‚’ÓÓÒ&²#°Ğ¢6öç7B6Æ6…6†÷'F7WBÒWfVçBæ¶W’ÓÓÒ"ò"bbWfVçBæÖWF¶W’bbWfVçBæ7G&Ä¶W’bbWfVçBæÇD¶W’bb6†÷VÆD–væ÷&Uf–Wu6†÷'F7WB†WfVçBçF&vWB“°Ğ¢–b†6öÖÖæE6†÷'F7WBÇÂ6Æ6…6†÷'F7WB’°Ğ¢–b‚7W'&VçE&ööÓòæ6öFRÇÂ&ööÕvRæ6Æ74Æ—7Bæ6öçF–ç2‚&†–FFVâ"’’&WGW&ã°Ğ¢WfVçBç&WfVçDFVfVÇB‚“°Ğ¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°Ğ¢–b†6öÖÖæD6VçG&TF–Æöræ÷Vâ’6Æ÷6T6öÖÖæD6VçG&R‚“°Ğ¢VÇ6R÷Vä6öÖÖæD6VçG&R†WfVçBçF&vWB“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b‚6öÖÖæD6VçG&TF–Æöræ÷Vâ’&WGW&ã°Ğ¢–b†WfVçBæ¶W’ÓÓÒ$W66R"’°Ğ¢WfVçBç&WfVçDFVfVÇB‚“°Ğ¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°Ğ¢6Æ÷6T6öÖÖæD6VçG&R‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢6öç7B6ö×ÆWF–öä¶W’Ò€Ğ¢WfVçBçF&vWBÓÓÒ6öÖÖæD6VçG&T–çWBb`Ğ¢†WfVçBæ¶W’ÓÓÒ%F""ÇÂWfVçBæ¶W’ÓÓÒ$'&÷u&–v‡B"’b`Ğ¢€Ğ¢6öÖÖæD6VçG&U7FFRç&VF–7F–öãòæ–æÆ–æU7Vff—‚ÇÀĞ¢6öÖÖæD6VçG&U7FFRç&VF–7F–öãòæ6÷'&V7FV@Ğ¢’b`Ğ¢6öÖÖæD6VçG&T–çWBç6VÆV7F–öå7F'BÓÓÒ6öÖÖæD6VçG&T–çWBçfÇVRæÆVæwF‚b`Ğ¢6öÖÖæD6VçG&T–çWBç6VÆV7F–öäVæBÓÓÒ6öÖÖæD6VçG&T–çWBçfÇVRæÆVæwF€Ğ¢“°Ğ¢–b†6ö×ÆWF–öä¶W’’°Ğ¢WfVçBç&WfVçDFVfVÇB‚“°Ğ¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°Ğ¢6öÖÖæD6VçG&T66WE&VF–7F–öâ‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBæ¶W’ÓÓÒ$'&÷tF÷vâ"ÇÂWfVçBæ¶W’ÓÓÒ$'&÷uW"’°Ğ¢6öç7B÷F–öç2Ò6öÖÖæD6VçG&U6VÆV7F&ÆT÷F–öç2‚“°Ğ¢–b‚÷F–öç2æÆVæwF‚’&WGW&ã°Ğ¢WfVçBç&WfVçDFVfVÇB‚“°Ğ¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°Ğ¢6öÖÖæD6VçG&U6VÆV7D–æFW‚†6öÖÖæD6VçG&U7FFRç6VÆV7FVD–æFW‚²†WfVçBæ¶W’ÓÓÒ$'&÷tF÷vâ"ò¢Ó’“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b‚†WfVçBæÖWF¶W’ÇÂWfVçBæ7G&Ä¶W’’bbWfVçBæ¶W’ÓÓÒ$VçFW""’°Ğ¢6öç7B7F–öâÒ6öÖÖæD6VçG&T&öG’çVW'•6VÆV7F÷"‚"æ6öÖÖæB×&–Ö'’Ö7F–öã¦æ÷Bƒ¦F—6&ÆVB’"“°Ğ¢–b‚7F–öâ’&WGW&ã°Ğ¢WfVçBç&WfVçDFVfVÇB‚“°Ğ¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°Ğ¢7F–öâæ6Æ–6²‚“°Ğ¢&WGW&ã°Ğ¢ĞĞ¢–b†WfVçBæ¶W’ÓÓÒ$VçFW""bbWfVçBçF&vWBÓÓÒ6öÖÖæD6VçG&T–çWBbb6öÖÖæD6VçG&U6VÆV7F&ÆT÷F–öç2‚’æÆVæwF‚’°Ğ¢WfVçBç&WfVçDFVfVÇB‚“°Ğ¢WfVçBç7F÷–ÖÖVF–FU&÷vF–öâ‚“°Ğ¢6öÖÖæD6VçG&T7F—fFU6VÆV7FVB‚“°Ğ¢ĞĞ§ÒÂG'VR“°Ğ Ğ¦6öç7B6öÖÖæEW6W4Ö56†÷'F7WBÒôÖ7Æ•†öæWÆ•GÆ•öBö’çFW7B†æf–vF÷"çÆFf÷&ÒÇÂæf–vF÷"çW6W$vVçB“°Ğ¦–b†6öÖÖæD6VçG&U6†÷'F7WD†–çB’6öÖÖæD6VçG&U6†÷'F7WD†–çBçFW‡D6öçFVçBÒ6öÖÖæEW6W4Ö56†÷'F7WBò.(É‚²"¢$7G&Â²#°Ğ 
+    correction: raw && parsed && raw.toLocaleLowerCase("en-GB") !== parsed.toLocaleLowerCase("en-GB")
+      ? parsed
+      : ""
+  };
+}
+
+function commandInterpretationMarkup() {
+  const interpretation = commandCentreState.interpretation;
+  if (!interpretation) return "";
+  return `
+    <div class="command-interpretation" aria-label="Interpreted command">
+      <span>Understood</span>
+      <strong>${commandEscape(interpretation.label)}</strong>
+      ${interpretation.correction ? `<span>as â€œ${commandEscape(interpretation.correction)}â€</span>` : ""}
+    </div>
+  `;
+}
+
+function commandTimePickerMarkup({
+  id,
+  label,
+  value = "",
+  kind = "start",
+  hidden = false,
+  disabled = false,
+  fieldAttributes = ""
+}) {
+  const displayId = `${id}Display`;
+  const labelId = `${id}Label`;
+  const listboxId = `${id}Listbox`;
+  return `
+    <div class="command-field command-time-picker-field time-picker-field" data-time-picker="${kind}" ${fieldAttributes} ${hidden ? "hidden" : ""}>
+      <span id="${labelId}">${commandEscape(label)}</span>
+      <input id="${id}" type="hidden" value="${commandAttribute(value)}" ${disabled ? "disabled" : ""} />
+      <input
+        class="time-picker-input"
+        id="${displayId}"
+        type="text"
+        inputmode="numeric"
+        autocomplete="off"
+        spellcheck="false"
+        required
+        role="combobox"
+        aria-autocomplete="list"
+        aria-haspopup="listbox"
+        aria-expanded="false"
+        aria-labelledby="${labelId}"
+        aria-controls="${listboxId}"
+        ${disabled ? "disabled" : ""}
+      />
+      <div class="time-picker-dropdown ${kind === "end" ? "time-picker-dropdown-end" : ""}" hidden>
+        <div class="time-picker-list" id="${listboxId}" role="listbox" aria-label="${commandAttribute(label)} time options"></div>
+      </div>
+    </div>
+  `;
+}
+
+function commandCreateRequestId() {
+  if (!commandCentreState.createRequestId) {
+    commandCentreState.createRequestId = globalThis.crypto?.randomUUID?.()
+      || `command-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+  return commandCentreState.createRequestId;
+}
+
+function commandCentreSetPhase(phase, announcement = "") {
+  const nextPhase = commandCentrePhases.has(phase) ? phase : "error";
+  commandCentreState.phase = nextPhase;
+  commandCentreDialog.dataset.state = nextPhase;
+  commandCentreForm.toggleAttribute("aria-busy", ["parsing", "searching_availability", "saving"].includes(nextPhase));
+  if (announcement) commandCentreStatus.textContent = announcement;
+}
+
+function commandCentreSetBody(markup) {
+  window.closeLocationAutocompletes?.({ immediate: true, resetSession: true });
+  window.CommonGroundTimePicker?.close({ commit: false });
+  commandCentreBody.innerHTML = markup;
+  if (
+    commandCentreState.interpretation &&
+    ["needs_clarification", "preview", "results", "success", "error"].includes(commandCentreState.phase) &&
+    !commandCentreBody.querySelector(".command-interpretation")
+  ) {
+    commandCentreBody.insertAdjacentHTML("afterbegin", commandInterpretationMarkup());
+  }
+  window.CommonGroundTimePicker?.initialize(commandCentreBody);
+  commandCentreSyncOptionSemantics();
+}
+
+function commandCentreIntroMarkup() {
+  return `
+    <div class="command-centre-intro">
+      <p>Create or move an event, find shared time, or navigate the calendar.</p>
+      <div class="command-example-list" aria-label="Example commands">
+        <button type="button" data-command-example="Find an hour for everyone next week">Find a time for everyone</button>
+        <button type="button" data-command-example="Create an event tomorrow at 1">Create an event</button>
+        <button type="button" data-command-example="Move my next event to tomorrow at 3">Move an event</button>
+        <button type="button" data-command-example="Open August">Navigate the calendar</button>
+      </div>
+    </div>
+  `;
+}
+
+function commandCentreRenderIntro() {
+  commandCentreSetPhase("idle", "Command Centre ready.");
+  commandCentreSetBody(commandCentreIntroMarkup());
+}
+
+function commandCentreRenderLoading(label) {
+  commandCentreSetBody(`
+    <div class="command-loading-row">
+      <span class="command-loading-spinner" aria-hidden="true"></span>
+      <span>${commandEscape(label)}</span>
+    </div>
+  `);
+}
+
+function commandCentreRenderMessage(title, message, {
+  phase = "error",
+  actions = ""
+} = {}) {
+  commandCentreSetPhase(phase, message);
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>${commandEscape(title)}</h3>
+      <p>${commandEscape(message)}</p>
+      ${actions ? `<div class="command-actions">${actions}</div>` : ""}
+    </div>
+  `);
+}
+
+function commandCentreAbortRequest() {
+  commandCentreState.controller?.abort();
+  commandCentreState.controller = null;
+}
+
+function commandCentreClearDebounce() {
+  if (commandCentreState.debounceTimer) {
+    window.clearTimeout(commandCentreState.debounceTimer);
+    commandCentreState.debounceTimer = null;
+  }
+}
+
+function commandCentreClearPrediction() {
+  commandCentreState.prediction = null;
+  commandCentreState.announcedPrediction = null;
+  commandCentreCompletionPrefix.textContent = "";
+  commandCentreCompletionSuffix.textContent = "";
+  commandCentreCompletion.classList.remove("is-visible");
+  commandCentreCompletion.style.removeProperty("--completion-scroll-x");
+}
+
+function commandCentreSyncCompletionScroll() {
+  const offset = Math.max(0, Number(commandCentreInput.scrollLeft) || 0);
+  commandCentreCompletion.style.setProperty("--completion-scroll-x", `${-offset}px`);
+}
+
+function commandCentreUpdatePrediction() {
+  if (
+    commandCentreState.composing ||
+    commandCentreInput.selectionStart !== commandCentreInput.value.length ||
+    commandCentreInput.selectionEnd !== commandCentreInput.value.length
+  ) {
+    commandCentreClearPrediction();
+    return null;
+  }
+
+  const prediction = commandBestPrediction(commandCentreInput.value);
+  commandCentreState.prediction = prediction;
+  commandCentreCompletionPrefix.textContent = prediction?.inlineSuffix ? commandCentreInput.value : "";
+  commandCentreCompletionSuffix.textContent = prediction?.inlineSuffix || "";
+  commandCentreCompletion.classList.toggle("is-visible", Boolean(prediction?.inlineSuffix));
+  commandCentreSyncCompletionScroll();
+  return prediction;
+}
+
+function commandCentreRenderPrediction(prediction) {
+  commandCentreState.selectedIndex = 0;
+  commandCentreState.interpretation = {
+    label: prediction.label,
+    correction: prediction.corrected ? prediction.acceptedCommand : ""
+  };
+  const detail = prediction.corrected
+    ? `Correct to â€œ${prediction.acceptedCommand}â€`
+    : prediction.kind === "prefix"
+      ? `Complete â€œ${prediction.acceptedCommand}â€`
+      : "Predicted action";
+  const announcementKey = `${prediction.label}:${prediction.acceptedCommand}`;
+  commandCentreSetPhase("results");
+  if (commandCentreState.announcedPrediction !== announcementKey) {
+    commandCentreState.announcedPrediction = announcementKey;
+    const completionHint = prediction.inlineSuffix || prediction.corrected
+      ? "Press Tab to complete or Enter to run it."
+      : "Press Enter to run it.";
+    commandCentreStatus.textContent = `Suggestion: ${prediction.label}. ${completionHint}`;
+  }
+  commandCentreSetBody(`
+    <div class="command-event-candidate-list command-prediction-list" role="listbox" aria-label="Predicted command">
+      <button class="command-option command-prediction-option is-selected" type="button" role="option" aria-selected="true" data-command-option data-command-prediction-command="${commandAttribute(prediction.acceptedCommand)}">
+        <span class="command-candidate-copy">
+          <strong>${commandEscape(prediction.acceptedCommand)}</strong>
+          <span>${commandEscape(detail)}</span>
+        </span>
+        <span>Tab to complete</span>
+      </button>
+    </div>
+  `);
+}
+
+function commandCentreAcceptPrediction({ submit = false } = {}) {
+  const prediction = commandCentreState.prediction;
+  if (!prediction?.acceptedCommand) return false;
+  commandCentreInput.value = prediction.acceptedCommand;
+  commandCentreInput.setSelectionRange(
+    prediction.acceptedCommand.length,
+    prediction.acceptedCommand.length
+  );
+  commandCentreClearPrediction();
+  if (submit) requestCommandParse({ submitted: true });
+  else commandCentreHandleInput();
+  return true;
+}
+
+function commandCentreHandleInput() {
+  if (commandCentreState.composing) return;
+  if (
+    commandCentreState.phase === "results" &&
+    commandCentreSelectableOptions().length &&
+    !commandCentreBody.querySelector("[data-command-prediction-command]")
+  ) {
+    commandCentreState.selectedIndex = 0;
+    commandCentreSetPhase("idle", "Reading updated command.");
+    commandCentreSetBody(commandCentreIntroMarkup());
+  }
+  commandCentreClearDebounce();
+  commandCentreAbortRequest();
+  commandCentreState.generation += 1;
+  commandCentreScheduleParse();
+}
+
+function commandCentreHasOtherModal() {
+  return Boolean(document.querySelector("dialog[open]:not(#commandCentreDialog)"));
+}
+
+function openCommandCentre(opener = commandCentreButton) {
+  if (!currentRoom?.code || roomPage.classList.contains("hidden")) return;
+  if (commandCentreHasOtherModal()) {
+    calendarStatus.textContent = "Close the current dialog before opening Ask CommonGround.";
+    return;
+  }
+  commandCentreState.opener = opener instanceof HTMLElement ? opener : commandCentreButton;
+  commandCentreState.roomCode = currentRoom.code;
+  commandCentreState.parseResult = null;
+  commandCentreState.availability = null;
+  commandCentreState.moveCandidate = null;
+  commandCentreState.conflictDraft = null;
+  commandCentreState.createTitleSuggestion = "";
+  commandCentreState.createRequestId = null;
+  commandCentreState.createCommandKey = "";
+  commandCentreState.deleteRequestId = null;
+  commandCentreState.deleteCommandKey = "";
+  commandCentreState.deleteCandidateId = null;
+  commandCentreState.interpretation = null;
+  commandCentreState.lastCommand = "";
+  commandCentreState.pendingEventAction = null;
+  commandCentreState.contextEvent = typeof activeEvent === "function" ? activeEvent() : null;
+  commandCentreState.selectedIndex = 0;
+  commandCentreState.composing = false;
+  commandCentreState.announcedPrediction = null;
+  commandCentreInput.value = "";
+  commandCentreClearPrediction();
+  commandCentreRenderIntro();
+  prepareDialogForOpen(commandCentreDialog);
+  commandCentreDialog.showModal();
+  commandCentreButton?.setAttribute("aria-expanded", "true");
+  window.requestAnimationFrame(() => commandCentreInput.focus({ preventScroll: true }));
+}
+
+function closeCommandCentre({ restoreFocus = true, immediate = false } = {}) {
+  commandCentreClearDebounce();
+  commandCentreAbortRequest();
+  commandCentreClearPrediction();
+  window.closeLocationAutocompletes?.({ immediate: true, resetSession: true });
+  commandCentreState.generation += 1;
+  const restoreTarget = commandCentreState.opener;
+  const finish = () => {
+    commandCentreSetPhase("closed");
+    commandCentreButton?.setAttribute("aria-expanded", "false");
+    if (restoreFocus && restoreTarget?.isConnected) restoreTarget.focus({ preventScroll: true });
+  };
+  if (immediate && commandCentreDialog.open) {
+    prepareDialogForOpen(commandCentreDialog);
+    commandCentreDialog.close();
+    finish();
+    return;
+  }
+  closeDialogWithMotion(commandCentreDialog, finish);
+}
+
+function commandCentreScheduleParse() {
+  commandCentreClearDebounce();
+  if (commandCentreState.composing) return;
+  const command = commandCentreInput.value.trim();
+  const prediction = commandCentreUpdatePrediction();
+  if (prediction) commandCentreRenderPrediction(prediction);
+  if (command.length < 3) {
+    commandCentreAbortRequest();
+    if (!prediction) commandCentreRenderIntro();
+    return;
+  }
+  if (prediction && (prediction.kind === "prefix" || !prediction.parseTyped)) {
+    commandCentreAbortRequest();
+    return;
+  }
+  commandCentreState.debounceTimer = window.setTimeout(() => {
+    commandCentreState.debounceTimer = null;
+    requestCommandParse({ submitted: false });
+  }, 420);
+}
+
+function commandParticipantName(participantId) {
+  return currentRoom?.participants?.find((participant) => participant.id === participantId)?.displayName || "Room member";
+}
+
+function commandCanManageEvent(event = {}) {
+  if (typeof canManageEvent === "function") return canManageEvent(event);
+  const isHost = typeof currentIsHost !== "undefined" && currentIsHost;
+  return Boolean(isHost || (currentParticipant?.id && event.createdByParticipantId === currentParticipant.id));
+}
+
+function commandParticipantNames(participantIds = [], { includeCurrent = true } = {}) {
+  return participantIds
+    .filter((participantId) => includeCurrent || participantId !== currentParticipant?.id)
+    .map(commandParticipantName);
+}
+
+function commandEventSuggestionName(participant, members) {
+  const displayName = String(participant?.displayName || "").trim();
+  const firstName = displayName.split(/\s+/)[0] || "Member";
+  const duplicateFirstName = members.some((member) => (
+    member.id !== participant?.id &&
+    String(member.displayName || "").trim().split(/\s+/)[0]?.toLocaleLowerCase("en-GB") ===
+      firstName.toLocaleLowerCase("en-GB")
+  ));
+  return duplicateFirstName ? displayName : firstName;
+}
+
+function commandEventTitleSuggestion(participantIds = []) {
+  const members = (currentRoom?.participants || []).filter((participant) => (
+    participant?.id && String(participant.displayName || "").trim()
+  ));
+  if (members.length <= 1) return "";
+
+  const current = members.find((participant) => participant.id === currentParticipant?.id) || members[0];
+  const otherMembers = members.filter((participant) => participant.id !== current.id);
+  if (!otherMembers.length) return "";
+
+  const requestedIds = new Set(participantIds || []);
+  const requestedOthers = otherMembers.filter((participant) => requestedIds.has(participant.id));
+  const candidates = requestedOthers.length ? requestedOthers : otherMembers;
+  const cursor = commandCentreState.createSuggestionCursor;
+  const other = candidates[cursor % candidates.length];
+  const ideaIndex = Math.floor(cursor / candidates.length) % commandEventIdeaLabels.length;
+  commandCentreState.createSuggestionCursor += 1;
+
+  return `${commandEventSuggestionName(current, members)}/${commandEventSuggestionName(other, members)} ${commandEventIdeaLabels[ideaIndex]}`;
+}
+
+function commandPrepareEventTitleSuggestion(result) {
+  const titleMissing = (
+    result?.missingFields?.includes("title") ||
+    !String(result?.title || "").trim()
+  );
+  commandCentreState.createTitleSuggestion = titleMissing
+    ? commandEventTitleSuggestion(result?.participantIds || [])
+    : "";
+}
+
+function commandParticipantEditorMarkup(selectedIds = [], {
+  creatorParticipantId = null,
+  includeCurrent = true
+} = {}) {
+  const requiredIds = [
+    creatorParticipantId,
+    includeCurrent ? currentParticipant?.id : null
+  ].filter(Boolean);
+  const selected = new Set([...requiredIds, ...selectedIds].filter(Boolean));
+  return `
+    <div class="command-participant-editor">
+      <span>Participants</span>
+      <div class="command-participant-list">
+        ${(currentRoom?.participants || []).map((participant) => {
+          const isCurrent = participant.id === currentParticipant?.id;
+          const isCreator = participant.id === creatorParticipantId;
+          const required = isCreator || (includeCurrent && isCurrent);
+          const suffix = [
+            isCreator ? "Creator" : "",
+            isCurrent ? "You" : ""
+          ].filter(Boolean).join(" Â· ");
+          return `
+            <label class="command-participant-chip" style="--participant-color:${commandAttribute(participant.color)}">
+              <input type="checkbox" value="${commandAttribute(participant.id)}" data-command-participant ${selected.has(participant.id) ? "checked" : ""} ${required ? "disabled" : ""} />
+              <span>${commandEscape(participant.displayName)}${suffix ? ` (${commandEscape(suffix)})` : ""}</span>
+            </label>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function commandLocalDateValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function commandLocalTimeValue(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+}
+
+function commandInclusiveAllDayEndDateValue(start, end) {
+  const startDateValue = commandLocalDateValue(start);
+  if (!end) return startDateValue;
+  const inclusiveEnd = new Date(end);
+  if (Number.isNaN(inclusiveEnd.getTime())) return startDateValue;
+  inclusiveEnd.setDate(inclusiveEnd.getDate() - 1);
+  const endDateValue = commandLocalDateValue(inclusiveEnd);
+  return endDateValue && endDateValue >= startDateValue ? endDateValue : startDateValue;
+}
+
+function commandHumanDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "Choose a date";
+  return new Intl.DateTimeFormat("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long"
+  }).format(date);
+}
+
+function commandHumanTime(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "--:--";
+  return new Intl.DateTimeFormat("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23"
+  }).format(date);
+}
+
+function commandHumanRange(start, end) {
+  return `${commandHumanDate(start)} Â· ${commandHumanTime(start)}â€“${commandHumanTime(end)}`;
+}
+
+function commandMinuteLabel(minuteValue) {
+  const minute = Math.max(0, Math.min(24 * 60, Number(minuteValue || 0)));
+  if (minute === 24 * 60) return "24:00";
+  return `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+}
+
+function commandAvailabilityScopeLabel(result) {
+  const rangeLabels = {
+    default_current_week: "Current week",
+    current_week: "Current week",
+    next_week: "Next week",
+    current_month: "This month",
+    next_month: "Next month",
+    named_month: "Selected month",
+    weekend: "Weekend"
+  };
+  const parts = [];
+  const rangeLabel = rangeLabels[result.rangeKind];
+  if (rangeLabel) {
+    parts.push(rangeLabel);
+  } else if (result.rangeStart && result.rangeEnd) {
+    const finalMoment = new Date(new Date(result.rangeEnd).getTime() - 1);
+    const startLabel = commandHumanDate(result.rangeStart);
+    const endLabel = commandHumanDate(finalMoment);
+    parts.push(startLabel === endLabel ? startLabel : `${startLabel} â€“ ${endLabel}`);
+  }
+  const weekdayLabels = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  if (result.allowedWeekdays?.length) {
+    parts.push(result.allowedWeekdays.map((weekday) => weekdayLabels[weekday]).filter(Boolean).join(" & "));
+  }
+  if (result.earliestMinute !== 8 * 60 || result.latestMinute !== 21 * 60) {
+    parts.push(`${commandMinuteLabel(result.earliestMinute)}â€“${commandMinuteLabel(result.latestMinute)}`);
+  }
+  return parts.join(" Â· ");
+}
+
+function commandMissingQuestion(result) {
+  const missing = result?.missingFields || [];
+  if (result?.ambiguities?.length) return result.ambiguities[0].message;
+  if (missing.includes("date")) return "What date should this event happen?";
+  if (missing.includes("start_time")) return "What time should this event begin?";
+  if (missing.includes("date_range")) return "What day or date range should CommonGround search?";
+  if (missing.includes("participants")) return "Who should CommonGround include?";
+  if (missing.includes("event")) {
+    const action = {
+      rename_event: "rename",
+      delete_event: "delete",
+      duplicate_event: "duplicate",
+      add_participant: "update",
+      remove_participant: "update",
+      update_event: "update"
+    }[result?.intent] || "move";
+    return `Which event should CommonGround ${action}?`;
+  }
+  if (missing.includes("target_date_or_time")) return "When should the event move to?";
+  if (missing.includes("title")) return "What should this event be called?";
+  if (missing.includes("room_code")) return "What six-character room code should CommonGround use?";
+  if (missing.includes("view")) return "Which view should CommonGround open?";
+  return "";
+}
+
+function commandRecoveryCommand(suffix) {
+  const base = String(commandCentreInput?.value || commandCentreState.lastCommand || "").trim().replace(/[.,;:!?]+$/, "");
+  return `${base} ${suffix}`.trim();
+}
+
+function commandReplaceRecoveryToken(token, replacement) {
+  const base = String(commandCentreInput?.value || commandCentreState.lastCommand || "").trim();
+  if (!token) return commandRecoveryCommand(`with ${replacement}`);
+  const escaped = String(token).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const replaced = base.replace(new RegExp(`\\b${escaped}\\b`, "i"), replacement);
+  return replaced === base ? commandRecoveryCommand(`with ${replacement}`) : replaced;
+}
+
+function commandRecoveryMarkup(result) {
+  const missing = result?.missingFields || [];
+  const participantIssue = (result?.ambiguities || []).find((ambiguity) => (
+    ambiguity.type === "participant_not_found" || ambiguity.type === "participant"
+  ));
+  const options = [];
+  if (missing.includes("date")) {
+    options.push(
+      ["Today", commandRecoveryCommand("today")],
+      ["Tomorrow", commandRecoveryCommand("tomorrow")],
+      ["Next Monday", commandRecoveryCommand("next Monday")]
+    );
+  } else if (missing.includes("start_time") || missing.includes("target_date_or_time")) {
+    options.push(
+      ["9:00am", commandRecoveryCommand("at 9am")],
+      ["1:00pm", commandRecoveryCommand("at 1pm")],
+      ["5:00pm", commandRecoveryCommand("at 5pm")]
+    );
+    if (missing.includes("target_date_or_time")) {
+      options.unshift(["15 minutes later", commandRecoveryCommand("15 minutes later")]);
+    }
+  } else if (missing.includes("date_range")) {
+    options.push(
+      ["This week", commandRecoveryCommand("this week")],
+      ["Next week", commandRecoveryCommand("next week")],
+      ["This month", commandRecoveryCommand("this month")]
+    );
+  } else if (missing.includes("participants") || participantIssue) {
+    for (const participant of (currentRoom?.participants || []).filter((entry) => entry.id !== currentParticipant?.id).slice(0, 5)) {
+      options.push([
+        participant.displayName,
+        commandReplaceRecoveryToken(participantIssue?.token, participant.displayName)
+      ]);
+    }
+    if ((currentRoom?.participants || []).length > 1) {
+      options.push([
+        "Everyone",
+        participantIssue
+          ? commandReplaceRecoveryToken(participantIssue.token, "everyone")
+          : commandRecoveryCommand("with everyone")
+      ]);
+    }
+  } else if (missing.includes("event")) {
+    const canUseEvent = (entry) => result?.intent === "duplicate_event" || commandCanManageEvent(entry);
+    for (const event of (currentRoom?.events || []).filter(canUseEvent).slice(0, 5)) {
+      const title = event.title || "(No title)";
+      options.push([
+        title,
+        result?.eventQuery
+          ? commandReplaceRecoveryToken(result.eventQuery, title)
+          : commandRecoveryCommand(title)
+      ]);
+    }
+  } else if (missing.includes("title")) {
+    for (const label of ["Catch-up", "Planning", "Lunch"]) {
+      options.push([label, commandRecoveryCommand(`called ${label}`)]);
+    }
+  }
+  if (!options.length) return "";
+  return `
+    <div class="command-recovery" aria-label="Quick answers">
+      ${options.map(([label, command]) => `
+        <button type="button" data-command-recovery-command="${commandAttribute(command)}">${commandEscape(label)}</button>
+      `).join("")}
+    </div>
+  `;
+}
+
+function commandRenderAmbiguity(result) {
+  const ambiguity = result.ambiguities[0];
+  const hasOptions = Boolean(ambiguity.options?.length);
+  commandCentreSetPhase("needs_clarification", ambiguity.message);
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>${commandEscape(ambiguity.message)}</h3>
+      <p>${hasOptions
+        ? "CommonGround will not guess when two room members could match."
+        : "Adjust the command and try again."}</p>
+    </div>
+    ${!hasOptions ? commandRecoveryMarkup(result) : ""}
+    ${hasOptions ? `<div class="command-event-candidate-list" role="listbox" aria-label="Clarification choices">
+      ${(ambiguity.options || []).map((option, index) => `
+        <button class="command-option ${index === 0 ? "is-selected" : ""}" type="button" role="option" aria-selected="${index === 0}" data-command-option data-command-participant-option="${commandAttribute(option.id)}">
+          <span>${commandEscape(option.label)}</span>
+          <span>Select</span>
+        </button>
+      `).join("")}
+    </div>` : ""}
+  `);
+  commandCentreState.selectedIndex = 0;
+}
+
+function commandRenderCreatePreview(result, {
+  title = result.missingFields?.includes("title") ? "" : result.title,
+  start = result.start,
+  end = result.end,
+  participantIds = result.participantIds,
+  location = result.location || "",
+  description = result.description || "",
+  allDay = result.allDay === true
+} = {}) {
+  const question = commandMissingQuestion(result);
+  const dateValue = commandLocalDateValue(start) || result.dateKey || "";
+  const startValue = commandLocalTimeValue(start);
+  const endValue = commandLocalTimeValue(end);
+  const titleValue = String(title || "").trim();
+  if (!titleValue && !commandCentreState.createTitleSuggestion) {
+    commandCentreState.createTitleSuggestion = commandEventTitleSuggestion(participantIds || []);
+  }
+  const titlePlaceholder = commandCentreState.createTitleSuggestion || "Add title";
+  const inclusiveEndDateValue = allDay
+    ? commandInclusiveAllDayEndDateValue(start, end)
+    : dateValue;
+  commandCentreSetPhase(question ? "needs_clarification" : "preview", question || "Event preview ready.");
+  commandCentreSetBody(`
+    ${question ? `<div class="command-clarification">${commandEscape(question)}</div>${commandRecoveryMarkup(result)}` : ""}
+    <div class="command-preview-card command-create-preview" aria-label="Event details">
+      <h3>Event preview</h3>
+      <div class="command-preview-grid">
+        <label class="command-field command-field-wide">
+          <span>Title</span>
+          <input id="commandEventTitle" type="text" maxlength="120" value="${commandAttribute(titleValue)}" placeholder="${commandAttribute(titlePlaceholder)}" ${!titleValue ? 'aria-invalid="true"' : ""} />
+        </label>
+        <div class="command-schedule-row command-field-wide ${allDay ? "is-all-day" : ""}">
+          <label class="command-field command-date-field">
+            <span>Date</span>
+            <input id="commandEventDate" type="date" value="${commandAttribute(dateValue)}" ${!dateValue ? 'aria-invalid="true"' : ""} />
+          </label>
+          <span class="command-schedule-separator" data-command-all-day-separator aria-hidden="true" ${allDay ? "" : "hidden"}>â€“</span>
+          <label class="command-field" data-command-all-day-end-field ${allDay ? "" : "hidden"}>
+            <span>End date</span>
+            <input id="commandEventEndDate" type="date" min="${commandAttribute(dateValue)}" value="${commandAttribute(inclusiveEndDateValue)}" />
+          </label>
+          ${commandTimePickerMarkup({
+            id: "commandEventStart",
+            label: "Start",
+            value: startValue,
+            kind: "start",
+            hidden: allDay,
+            disabled: allDay,
+            fieldAttributes: "data-command-time-field"
+          })}
+          <span class="command-schedule-separator" data-command-time-separator aria-hidden="true" ${allDay ? "hidden" : ""}>â€“</span>
+          ${commandTimePickerMarkup({
+            id: "commandEventEnd",
+            label: "End",
+            value: endValue,
+            kind: "end",
+            hidden: allDay,
+            disabled: allDay,
+            fieldAttributes: "data-command-time-field"
+          })}
+        </div>
+        <label class="command-all-day command-field-wide">
+          <input id="commandEventAllDay" type="checkbox" ${allDay ? "checked" : ""} />
+          <span>
+            <strong>All day</strong>
+          </span>
+        </label>
+        <div class="command-field command-field-wide location-autocomplete-host">
+          <label for="commandEventLocation">Location</label>
+          <input
+            id="commandEventLocation"
+            type="text"
+            maxlength="200"
+            value="${commandAttribute(location)}"
+            placeholder="Optional"
+            autocomplete="off"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-haspopup="listbox"
+            aria-expanded="false"
+            aria-controls="commandEventLocationListbox"
+            aria-describedby="commandEventLocationStatus"
+          />
+          <div class="location-autocomplete-menu" id="commandEventLocationMenu" hidden>
+            <div class="location-autocomplete-list" id="commandEventLocationListbox" role="listbox" aria-label="Address suggestions"></div>
+            <div class="location-autocomplete-attribution" translate="no">Google Maps</div>
+          </div>
+          <span class="sr-only" id="commandEventLocationStatus" role="status" aria-live="polite"></span>
+        </div>
+        <label class="command-field command-field-wide">
+          <span>Description</span>
+          <textarea id="commandEventDescription" maxlength="4000" placeholder="Optional">${commandEscape(description)}</textarea>
+        </label>
+      </div>
+      ${commandParticipantEditorMarkup(participantIds)}
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-confirm-create>Create event</button>
+      </div>
+    </div>
+  `);
+  window.initializeLocationAutocomplete?.(commandCentreBody.querySelector("#commandEventLocation"));
+}
+
+function commandCreateSummary(result) {
+  if (result.start && result.end) return commandHumanRange(result.start, result.end);
+  if (result.dateKey) return commandHumanDate(`${result.dateKey}T12:00`);
+  return "Choose the date and time in the event composer.";
+}
+
+function commandRenderCreateLauncher(result) {
+  commandCentreSetPhase("preview", "Event composer ready.");
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>Create event</h3>
+      <p>${commandEscape(commandCreateSummary(result))}</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-open-create>Open event composer</button>
+      </div>
+    </div>
+  `);
+}
+
+async function commandOpenCreateComposer(result = commandCentreState.parseResult) {
+  if (!result) return;
+  const title = result.missingFields?.includes("title") ? "" : String(result.title || "").trim();
+  closeCommandCentre({ restoreFocus: false, immediate: true });
+  const opened = await window.openCalendarEventComposerAt?.({
+    title,
+    start: result.start,
+    end: result.end,
+    date: result.dateKey,
+    startMinute: result.startMinute,
+    durationMinutes: result.durationMinutes,
+    allDay: result.allDay === true,
+    location: result.location || "",
+    description: result.description || "",
+    inviteeParticipantIds: result.participantIds || []
+  });
+  if (!opened) {
+    calendarStatus.textContent = "The event composer could not be opened. Close any other popup and try again.";
+  }
+}
+
+function commandRenderAvailabilityClarification(result) {
+  const question = commandMissingQuestion(result);
+  const startDate = commandLocalDateValue(result.rangeStart);
+  const endDate = result.rangeEnd
+    ? commandLocalDateValue(new Date(new Date(result.rangeEnd).getTime() - 1))
+    : startDate;
+  commandCentreSetPhase("needs_clarification", question);
+  commandCentreSetBody(`
+    <div class="command-clarification">${commandEscape(question)}</div>
+    ${commandRecoveryMarkup(result)}
+    <div class="command-preview-card">
+      <h3>Availability search</h3>
+      <div class="command-preview-grid">
+        <label class="command-field">
+          <span>From</span>
+          <input id="commandRangeStartDate" type="date" value="${commandAttribute(startDate)}" />
+        </label>
+        <label class="command-field">
+          <span>To</span>
+          <input id="commandRangeEndDate" type="date" value="${commandAttribute(endDate)}" />
+        </label>
+        <label class="command-field">
+          <span>Duration</span>
+          <input id="commandDuration" type="number" min="15" max="480" step="15" value="${commandAttribute(result.durationMinutes || 60)}" />
+        </label>
+      </div>
+      ${commandParticipantEditorMarkup(result.participantIds)}
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-continue-availability>Find times</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandSelectedParticipantIds({ includeCurrent = true } = {}) {
+  const ids = [...commandCentreBody.querySelectorAll("[data-command-participant]:checked")]
+    .map((input) => input.value);
+  if (includeCurrent && currentParticipant?.id && !ids.includes(currentParticipant.id)) {
+    ids.unshift(currentParticipant.id);
+  }
+  return ids;
+}
+
+function commandReadCreateDraft() {
+  const title = commandCentreBody.querySelector("#commandEventTitle")?.value.trim();
+  const date = commandCentreBody.querySelector("#commandEventDate")?.value;
+  const inclusiveEndDate = commandCentreBody.querySelector("#commandEventEndDate")?.value || date;
+  const startTime = commandCentreBody.querySelector("#commandEventStart")?.value;
+  const endTime = commandCentreBody.querySelector("#commandEventEnd")?.value;
+  const allDay = commandCentreBody.querySelector("#commandEventAllDay")?.checked === true;
+  if (!title || !date) {
+    throw new Error("Add a title and date.");
+  }
+  if (!allDay && (!startTime || !endTime)) {
+    throw new Error("Add a title, date, start time and end time.");
+  }
+  if (allDay && inclusiveEndDate < date) {
+    throw new Error("The all-day end date must be on or after its start date.");
+  }
+  const start = new Date(`${date}T${allDay ? "00:00" : startTime}`);
+  const end = allDay
+    ? new Date(`${inclusiveEndDate}T00:00`)
+    : new Date(`${date}T${endTime}`);
+  if (allDay) {
+    end.setDate(end.getDate() + 1);
+  } else if (!Number.isNaN(end.getTime()) && end <= start && endTime === "00:00") {
+    end.setDate(end.getDate() + 1);
+  }
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    throw new Error("The end time must be after the start time.");
+  }
+  return {
+    requestId: commandCreateRequestId(),
+    title,
+    start: start.toISOString(),
+    end: end.toISOString(),
+    timezone: commandCentreTimezone(),
+    allDay,
+    location: commandCentreBody.querySelector("#commandEventLocation")?.value.trim() || "",
+    description: commandCentreBody.querySelector("#commandEventDescription")?.value.trim() || "",
+    inviteeParticipantIds: commandSelectedParticipantIds(),
+    syncToGoogle: Boolean(calendarEventSyncEnabled())
+  };
+}
+
+function commandSetPreviewError(message) {
+  const existing = commandCentreBody.querySelector(".command-clarification");
+  if (existing) {
+    existing.textContent = message;
+  } else {
+    commandCentreBody.querySelector(".command-preview-card")?.insertAdjacentHTML(
+      "beforebegin",
+      `<div class="command-clarification">${commandEscape(message)}</div>`
+    );
+  }
+  commandCentreSetPhase("error", message);
+}
+
+async function commandSuggestConflictTimes(payload, failure) {
+  const start = new Date(payload.start);
+  const rangeStart = new Date(start);
+  rangeStart.setHours(0, 0, 0, 0);
+  const rangeEnd = new Date(rangeStart);
+  rangeEnd.setDate(rangeEnd.getDate() + 7);
+  const durationMinutes = Math.max(
+    15,
+    Math.round((new Date(payload.end).getTime() - start.getTime()) / 60000)
+  );
+  commandCentreState.conflictDraft = payload;
+  commandCentreSetPhase("searching_availability", "That time is busy. Looking for alternatives.");
+  commandCentreRenderLoading("That time is busy. Finding the next available optionsâ€¦");
+  const result = await window.CommonGroundCommandActions.findOverlapAvailability(
+    payload.inviteeParticipantIds,
+    null,
+    durationMinutes,
+    {
+      intent: "find_time",
+      rangeStart: rangeStart.toISOString(),
+      rangeEnd: rangeEnd.toISOString(),
+      earliestMinute: 8 * 60,
+      latestMinute: 21 * 60,
+      timezone: payload.timezone
+    }
+  );
+  if (!result.success) {
+    commandCentreRenderMessage(
+      "That time is busy",
+      `${failure.message} ${result.message}`.trim(),
+      {
+        actions: '<button class="command-secondary-action" type="button" data-command-edit-conflict>Edit event</button>'
+      }
+    );
+    return;
+  }
+  const availability = result.payload.availability;
+  const parsedResult = {
+    intent: "find_time",
+    participantIds: result.payload.participantIds,
+    durationMinutes,
+    rangeStart: result.payload.rangeStart,
+    rangeEnd: result.payload.rangeEnd,
+    earliestMinute: 8 * 60,
+    latestMinute: 21 * 60,
+    timeOfDay: null,
+    missingFields: [],
+    ambiguities: []
+  };
+  commandCentreState.parseResult = parsedResult;
+  commandCentreState.availability = availability;
+  if (!availability.complete) {
+    commandCentreRenderMessage(
+      "That time is busy",
+      "A connected calendar could not be refreshed, so CommonGround did not guess at an alternative.",
+      {
+        actions: '<button class="command-secondary-action" type="button" data-command-edit-conflict>Edit event</button>'
+      }
+    );
+    return;
+  }
+  commandRenderAvailabilityResults(parsedResult, availability);
+  commandCentreBody.insertAdjacentHTML(
+    "afterbegin",
+    `<div class="command-clarification">That time conflicts with an existing busy block. Choose a safe alternative or edit the event.</div>
+     <div class="command-actions command-conflict-actions">
+       <button class="command-secondary-action" type="button" data-command-edit-conflict>Edit event</button>
+     </div>`
+  );
+}
+
+async function commandConfirmCreate() {
+  if (commandCentreState.phase === "saving" || !currentRoom?.code) return;
+  let payload;
+  try {
+    if (!window.CommonGroundTimePicker?.commit(commandCentreBody)) {
+      throw new Error("Pick a valid start and end time.");
+    }
+    payload = commandReadCreateDraft();
+  } catch (error) {
+    commandSetPreviewError(error.message);
+    return;
+  }
+  const roomCodeSnapshot = currentRoom.code;
+  commandCentreSetPhase("confirming", "Confirming event details.");
+  commandCentreSetPhase("saving", "Creating event.");
+  const action = commandCentreBody.querySelector("[data-command-confirm-create]");
+  if (action) {
+    action.disabled = true;
+    action.textContent = "Creatingâ€¦";
+  }
+  try {
+    const outcome = await window.CommonGroundCommandActions.createCalendarEvent({
+      ...payload,
+      roomCode: roomCodeSnapshot,
+      participants: payload.inviteeParticipantIds,
+      startTime: payload.start,
+      endTime: payload.end
+    });
+    if (currentRoom?.code !== roomCodeSnapshot) return;
+    if (!outcome.success) {
+      if (outcome.code === "availability_conflict") {
+        await commandSuggestConflictTimes(payload, outcome);
+        return;
+      }
+      commandSetPreviewError(outcome.message || "The event could not be created.");
+      if (action) {
+        action.disabled = false;
+        action.textContent = "Create event";
+      }
+      return;
+    }
+    commandCentreState.conflictDraft = null;
+    commandCentreRenderSuccess(outcome.payload.event, "Event created", { allowUndo: true });
+  } catch (error) {
+    commandSetPreviewError(error.message || "The event could not be created.");
+    if (action) {
+      action.disabled = false;
+      action.textContent = "Create event";
+    }
+  }
+}
+
+function commandCentreRenderSuccess(event, title, { allowUndo = false } = {}) {
+  commandCentreState.contextEvent = event;
+  commandCentreSetPhase("success", `${title}: ${event.title}`);
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <div class="command-success-mark" aria-hidden="true">âœ“</div>
+      <h3>${commandEscape(title)}</h3>
+      <p>${commandEscape(event.title)} Â· ${commandEscape(commandHumanRange(event.start, event.end))}</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-close>Done</button>
+        ${allowUndo ? '<button class="command-secondary-action" type="button" data-command-undo-create>Undo</button>' : ""}
+        <button class="command-primary-action" type="button" data-command-open-event="${commandAttribute(event.id)}">View event</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandAvailabilityRequestFromClarification(result) {
+  const startDate = commandCentreBody.querySelector("#commandRangeStartDate")?.value;
+  const endDate = commandCentreBody.querySelector("#commandRangeEndDate")?.value || startDate;
+  const durationMinutes = Number(commandCentreBody.querySelector("#commandDuration")?.value || result.durationMinutes || 60);
+  const participantIds = commandSelectedParticipantIds();
+  if (!startDate || !endDate || endDate < startDate) throw new Error("Choose a valid date range.");
+  if (!participantIds.length) throw new Error("Choose at least one room member.");
+  const rangeStart = new Date(`${startDate}T00:00`);
+  const rangeEnd = new Date(`${endDate}T00:00`);
+  rangeEnd.setDate(rangeEnd.getDate() + 1);
+  return {
+    ...result,
+    participantIds,
+    rangeStart: rangeStart.toISOString(),
+    rangeEnd: rangeEnd.toISOString(),
+    durationMinutes,
+    missingFields: []
+  };
+}
+
+function commandRenderAvailabilityReady(result) {
+  const people = commandParticipantNames(result.participantIds).join(", ");
+  const scope = commandAvailabilityScopeLabel(result);
+  commandCentreSetPhase("preview", "Availability request ready.");
+  commandCentreSetBody(`
+    <div class="command-preview-card">
+      <h3>Search shared availability</h3>
+      <p>${commandEscape(people || "Selected room members")} Â· ${commandEscape(result.durationMinutes)} minutes</p>
+      ${scope ? `<p>${commandEscape(scope)}</p>` : ""}
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-search-availability>Find times</button>
+      </div>
+    </div>
+  `);
+}
+
+async function commandLoadAvailability(result) {
+  if (!currentRoom?.code) return;
+  commandCentreAbortRequest();
+  const controller = new AbortController();
+  const generation = ++commandCentreState.generation;
+  const roomCodeSnapshot = currentRoom.code;
+  commandCentreState.controller = controller;
+  commandCentreSetPhase("searching_availability", "Checking room availability.");
+  commandCentreRenderLoading("Checking everyoneâ€™s availabilityâ€¦");
+  try {
+    const outcome = await window.CommonGroundCommandActions.findOverlapAvailability(
+      result.participantIds,
+      null,
+      result.durationMinutes,
+      {
+        intent: result.intent,
+        rangeStart: result.rangeStart,
+        rangeEnd: result.rangeEnd,
+        earliestMinute: result.earliestMinute,
+        latestMinute: result.latestMinute,
+        timeOfDay: result.timeOfDay,
+        allowedWeekdays: result.allowedWeekdays,
+        timezone: commandCentreTimezone(),
+        signal: controller.signal
+      }
+    );
+    if (controller.signal.aborted) return;
+    if (!outcome.success) {
+      commandCentreRenderMessage("Couldnâ€™t check availability", outcome.message || "Try again shortly.", {
+        actions: '<button class="command-secondary-action" type="button" data-command-search-availability>Try again</button>'
+      });
+      return;
+    }
+    if (
+      generation !== commandCentreState.generation ||
+      currentRoom?.code !== roomCodeSnapshot ||
+      !commandCentreDialog.open
+    ) {
+      return;
+    }
+    result.participantIds = outcome.payload.participantIds;
+    commandCentreState.parseResult = result;
+    commandCentreState.availability = outcome.payload.availability;
+    if (!outcome.payload.availability.complete) {
+      commandCentreRenderMessage(
+        "Availability unavailable",
+        "A connected calendar could not be refreshed, so CommonGround will not guess that the time is free.",
+        {
+          actions: '<button class="command-secondary-action" type="button" data-command-search-availability>Try again</button>'
+        }
+      );
+      return;
+    }
+    commandRenderAvailabilityResults(result, outcome.payload.availability);
+  } catch (error) {
+    if (error.name === "AbortError") return;
+    commandCentreRenderMessage("Couldnâ€™t check availability", error.message || "Try again shortly.", {
+      actions: '<button class="command-secondary-action" type="button" data-command-search-availability>Try again</button>'
+    });
+  } finally {
+    if (commandCentreState.controller === controller) commandCentreState.controller = null;
+  }
+}
+
+function commandRenderNoSlots(result) {
+  commandCentreSetPhase("results", "No matching time was found.");
+  const reduceAction = result.durationMinutes > 30
+    ? '<button class="command-secondary-action" type="button" data-command-refine="shorter">Try 30 minutes</button>'
+    : "";
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>No shared time found</h3>
+      <p>Try expanding the date range, reducing the duration, removing a participant, or including evenings.</p>
+      <div class="command-actions">
+        ${reduceAction}
+        <button class="command-secondary-action" type="button" data-command-refine="evenings">Include evenings</button>
+        <button class="command-primary-action" type="button" data-command-refine="expand">Expand one week</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandRenderAvailabilityResults(result, availability) {
+  const slots = availability.slots || [];
+  if (!slots.length) {
+    commandRenderNoSlots(result);
+    return;
+  }
+  commandCentreSetPhase("results", `Found ${slots.length} possible ${slots.length === 1 ? "time" : "times"}.`);
+  const showMode = result.intent === "show_availability";
+  commandCentreState.selectedIndex = 0;
+  commandCentreSetBody(`
+    <div class="command-results-heading">
+      <h3>${showMode ? "Shared availability" : `Found ${slots.length} possible times`}</h3>
+      <span>${commandEscape(result.durationMinutes)} minutes</span>
+    </div>
+    <div class="command-slot-list" role="listbox" aria-label="Available times">
+      ${slots.map((slot, index) => `
+        <button class="command-slot ${index === 0 ? "is-selected" : ""}" type="button" role="option" aria-selected="${index === 0}" data-command-option data-command-slot-index="${index}">
+          <span class="command-slot-copy">
+            <strong>${commandEscape(commandHumanDate(slot.start))}</strong>
+            <span>${commandEscape(commandHumanTime(slot.start))}â€“${commandEscape(commandHumanTime(slot.end))} Â· Shared calendars show this time as free</span>
+          </span>
+          <span>${showMode ? "Show" : "Select"}</span>
+        </button>
+      `).join("")}
+    </div>
+    ${showMode ? `
+      <div class="command-actions">
+        <button class="command-primary-action" type="button" data-command-show-availability>Show all on calendar</button>
+      </div>
+    ` : ""}
+  `);
+}
+
+function commandCreateDraftFromSlot(result, slot) {
+  const conflictDraft = commandCentreState.conflictDraft;
+  if (conflictDraft) {
+    void commandOpenCreateComposer({
+      ...result,
+      intent: "create_event",
+      title: conflictDraft.title,
+      start: slot.start,
+      end: slot.end,
+      participantIds: conflictDraft.inviteeParticipantIds,
+      location: conflictDraft.location,
+      description: conflictDraft.description,
+      allDay: conflictDraft.allDay === true,
+      missingFields: [],
+      ambiguities: []
+    });
+    return;
+  }
+  void commandOpenCreateComposer({
+    ...result,
+    intent: "create_event",
+    title: "",
+    start: slot.start,
+    end: slot.end,
+    missingFields: ["title"],
+    ambiguities: []
+  });
+}
+
+function commandMoveTargetForCandidate(result, candidate) {
+  const originalStart = new Date(candidate.start);
+  const originalEnd = new Date(candidate.end);
+  const durationMinutes = result.durationMinutes || Math.max(
+    15,
+    Math.round((originalEnd.getTime() - originalStart.getTime()) / 60000)
+  );
+  const targetDate = result.targetDateKey || commandLocalDateValue(originalStart);
+  const targetMinute = result.targetStartMinute ?? (originalStart.getHours() * 60 + originalStart.getMinutes());
+  const targetStart = new Date(`${targetDate}T${String(Math.floor(targetMinute / 60)).padStart(2, "0")}:${String(targetMinute % 60).padStart(2, "0")}`);
+  return {
+    start: targetStart.toISOString(),
+    end: new Date(targetStart.getTime() + durationMinutes * 60000).toISOString()
+  };
+}
+
+function commandEventActionCandidate(result) {
+  const candidates = result?.eventCandidates || [];
+  if (candidates.length === 1) return candidates[0];
+  const explicitId = result?.eventId || result?.targetEventId || result?.contextEventId;
+  if (explicitId) return (currentRoom?.events || []).find((event) => event.id === explicitId) || null;
+  if (result?.usedContextEvent && commandCentreState.contextEvent?.id) {
+    return (currentRoom?.events || []).find((event) => event.id === commandCentreState.contextEvent.id) || null;
+  }
+  return result?.eventCandidate || result?.event || null;
+}
+
+function commandEventActionLabel(intent) {
+  return {
+    move_event: "move",
+    delete_event: "delete",
+    duplicate_event: "duplicate",
+    update_event: "update",
+    rename_event: "rename",
+    adjust_participants: "update",
+    update_participants: "update",
+    participant_adjustment: "update",
+    add_participant: "update",
+    remove_participant: "update"
+  }[intent] || "update";
+}
+
+function commandRenderEventCandidates(result) {
+  const candidates = result.eventCandidates || [];
+  commandCentreSetPhase("needs_clarification", `I found ${candidates.length} matching events.`);
+  commandCentreState.selectedIndex = 0;
+  const action = commandEventActionLabel(result.intent);
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>Which event should ${commandEscape(action)}?</h3>
+      <p>Select the exact CommonGround event. External calendar titles remain private.</p>
+    </div>
+    <div class="command-event-candidate-list" role="listbox" aria-label="Matching events">
+      ${candidates.map((candidate, index) => `
+        <button class="command-event-candidate ${index === 0 ? "is-selected" : ""}" type="button" role="option" aria-selected="${index === 0}" data-command-option data-command-event-candidate="${commandAttribute(candidate.id)}">
+          <span class="command-candidate-copy">
+            <strong>${commandEscape(candidate.title)}</strong>
+            <span>${commandEscape(commandHumanRange(candidate.start, candidate.end))}</span>
+          </span>
+          <span>Select</span>
+        </button>
+      `).join("")}
+    </div>
+  `);
+}
+
+function commandIntendedParticipantIds(result, candidate) {
+  const existing = new Set(candidate.inviteeParticipantIds || candidate.invitees?.map((entry) => entry.participantId) || []);
+  const additions = result.addParticipantIds || result.participantIdsToAdd || [];
+  const removals = result.removeParticipantIds || result.participantIdsToRemove || [];
+  additions.forEach((id) => existing.add(id));
+  removals.forEach((id) => existing.delete(id));
+  if (
+    ["adjust_participants", "update_participants", "participant_adjustment", "add_participant", "remove_participant"].includes(result.intent) &&
+    result.participantIds?.length
+  ) {
+    if (result.intent === "remove_participant" || result.participantAction === "remove") {
+      result.participantIds.forEach((id) => existing.delete(id));
+    } else {
+      result.participantIds.forEach((id) => existing.add(id));
+    }
+  }
+  return [...existing];
+}
+
+function commandRenderDeletePreview(result, candidate) {
+  const commandKey = commandNormalizeVocabulary(commandCentreState.lastCommand);
+  if (
+    !commandCentreState.deleteRequestId ||
+    commandCentreState.deleteCandidateId !== candidate.id ||
+    commandCentreState.deleteCommandKey !== commandKey
+  ) {
+    commandCentreState.deleteRequestId = globalThis.crypto?.randomUUID?.()
+      || `delete-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    commandCentreState.deleteCandidateId = candidate.id;
+    commandCentreState.deleteCommandKey = commandKey;
+  }
+  commandCentreState.pendingEventAction = { intent: "delete_event", candidate };
+  commandCentreState.contextEvent = candidate;
+  if (!commandCanManageEvent(candidate)) {
+    commandCentreRenderMessage("Read-only event", "Only the event creator or room host can delete this event.");
+    return;
+  }
+  commandCentreSetPhase("confirming", "Deletion requires confirmation.");
+  commandCentreSetBody(`
+    <div class="command-preview-card command-destructive-preview">
+      <h3>Delete â€œ${commandEscape(candidate.title)}â€?</h3>
+      <p>${commandEscape(commandHumanRange(candidate.start, candidate.end))}</p>
+      <p>This removes the CommonGround event and any calendar copies created through CommonGround.</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Keep event</button>
+        <button class="command-destructive-action" type="button" data-command-confirm-delete>Delete event</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandRenderDuplicatePreview(result, candidate) {
+  if (!candidate?.start || !candidate?.end) {
+    commandCentreRenderMessage("Event unavailable", "The source event no longer has a complete time range.");
+    return;
+  }
+  commandCentreState.createRequestId = null;
+  const duplicate = {
+    intent: "create_event",
+    sourceIntent: "duplicate_event",
+    title: result.newTitle || `${candidate.title || "Event"} copy`,
+    start: result.targetStart || result.start || candidate.start,
+    end: result.targetEnd || result.end || candidate.end,
+    participantIds: result.participantIds?.length
+      ? result.participantIds
+      : (candidate.inviteeParticipantIds || []),
+    location: candidate.location || "",
+    description: candidate.description || "",
+    allDay: candidate.allDay === true,
+    missingFields: [],
+    ambiguities: []
+  };
+  commandCentreState.parseResult = duplicate;
+  commandCentreState.contextEvent = candidate;
+  commandRenderCreatePreview(duplicate, duplicate);
+}
+
+function commandRenderUpdatePreview(result, candidate) {
+  commandCentreState.pendingEventAction = { intent: result.intent, candidate };
+  commandCentreState.contextEvent = candidate;
+  if (!commandCanManageEvent(candidate)) {
+    commandCentreRenderMessage("Read-only event", "Only the event creator or room host can change this event.");
+    return;
+  }
+  const proposedTitle = result.newTitle || result.updatedTitle || candidate.title || "(No title)";
+  const selectedParticipantIds = commandIntendedParticipantIds(result, candidate);
+  commandCentreSetPhase("preview", "Event update ready for review.");
+  commandCentreSetBody(`
+    <div class="command-preview-card command-update-preview">
+      <h3>Review event changes</h3>
+      <p>${commandEscape(commandHumanRange(candidate.start, candidate.end))}</p>
+      <label class="command-field">
+        <span>Title</span>
+        <input id="commandUpdateEventTitle" type="text" maxlength="120" value="${commandAttribute(proposedTitle)}" />
+      </label>
+      ${commandParticipantEditorMarkup(selectedParticipantIds, {
+        creatorParticipantId: candidate.createdByParticipantId,
+        includeCurrent: false
+      })}
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-confirm-update>Save changes</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandContinueEventAction(result, candidate) {
+  if (!candidate) {
+    commandCentreRenderMessage("Event not found", "Try the eventâ€™s exact CommonGround title.", {
+      actions: commandRecoveryMarkup({ ...result, missingFields: ["event"] })
+    });
+    return;
+  }
+  if (result.intent === "move_event") {
+    commandRenderMovePreview(result, candidate);
+  } else if (result.intent === "delete_event") {
+    commandRenderDeletePreview(result, candidate);
+  } else if (result.intent === "duplicate_event") {
+    commandRenderDuplicatePreview(result, candidate);
+  } else {
+    commandRenderUpdatePreview(result, candidate);
+  }
+}
+
+function commandRenderMovePreview(result, candidate) {
+  const target = result.targetStart && result.targetEnd
+    ? { start: result.targetStart, end: result.targetEnd }
+    : commandMoveTargetForCandidate(result, candidate);
+  commandCentreState.moveCandidate = candidate;
+  commandCentreState.contextEvent = candidate;
+  const question = commandMissingQuestion(result);
+  commandCentreSetPhase(question ? "needs_clarification" : "preview", question || "Move preview ready.");
+  commandCentreSetBody(`
+    ${question ? `<div class="command-clarification">${commandEscape(question)}</div>${commandRecoveryMarkup(result)}` : ""}
+    <div class="command-preview-card">
+      <h3>${commandEscape(candidate.title)}</h3>
+      <p>Review the new time before saving.</p>
+      <div class="command-before-after">
+        <div class="command-time-card">
+          <span>Current</span>
+          <strong>${commandEscape(commandHumanRange(candidate.start, candidate.end))}</strong>
+        </div>
+        <div class="command-time-card">
+          <span>New</span>
+          <strong id="commandMoveNewSummary">${commandEscape(commandHumanRange(target.start, target.end))}</strong>
+        </div>
+      </div>
+      <div class="command-preview-grid">
+        <label class="command-field">
+          <span>Date</span>
+          <input id="commandMoveDate" type="date" value="${commandAttribute(commandLocalDateValue(target.start))}" />
+        </label>
+        ${commandTimePickerMarkup({
+          id: "commandMoveStart",
+          label: "Start",
+          value: commandLocalTimeValue(target.start),
+          kind: "start"
+        })}
+        ${commandTimePickerMarkup({
+          id: "commandMoveEnd",
+          label: "End",
+          value: commandLocalTimeValue(target.end),
+          kind: "end"
+        })}
+      </div>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-confirm-move>Move event</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandReadMoveDraft() {
+  const candidate = commandCentreState.moveCandidate;
+  const date = commandCentreBody.querySelector("#commandMoveDate")?.value;
+  const startTime = commandCentreBody.querySelector("#commandMoveStart")?.value;
+  const endTime = commandCentreBody.querySelector("#commandMoveEnd")?.value;
+  if (!candidate || !date || !startTime || !endTime) throw new Error("Choose a new date, start time and end time.");
+  const start = new Date(`${date}T${startTime}`);
+  const end = new Date(`${date}T${endTime}`);
+  if (!Number.isNaN(end.getTime()) && end <= start && endTime === "00:00") end.setDate(end.getDate() + 1);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    throw new Error("The new end time must be after the start time.");
+  }
+  return {
+    eventId: candidate.id,
+    expectedUpdatedAt: candidate.updatedAt,
+    start: start.toISOString(),
+    end: end.toISOString(),
+    timezone: commandCentreTimezone()
+  };
+}
+
+async function commandConfirmMove() {
+  if (commandCentreState.phase === "saving" || !currentRoom?.code) return;
+  let payload;
+  try {
+    if (!window.CommonGroundTimePicker?.commit(commandCentreBody)) {
+      throw new Error("Pick a valid start and end time.");
+    }
+    payload = commandReadMoveDraft();
+  } catch (error) {
+    commandSetPreviewError(error.message);
+    return;
+  }
+  const roomCodeSnapshot = currentRoom.code;
+  commandCentreSetPhase("confirming", "Confirming the new event time.");
+  commandCentreSetPhase("saving", "Moving event.");
+  const action = commandCentreBody.querySelector("[data-command-confirm-move]");
+  if (action) {
+    action.disabled = true;
+    action.textContent = "Movingâ€¦";
+  }
+  try {
+    const data = await fetchJson(`/api/rooms/${roomCodeSnapshot}/command-centre/move-event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (currentRoom?.code !== roomCodeSnapshot) return;
+    currentRoom.events = currentRoom.events.map((event) => event.id === data.event.id ? data.event : event);
+    render();
+    fetchNotifications();
+    commandCentreRenderSuccess(data.event, "Event moved");
+  } catch (error) {
+    commandSetPreviewError(error.message || "The event could not be moved.");
+    if (action) {
+      action.disabled = false;
+      action.textContent = "Move event";
+    }
+  }
+}
+
+async function commandConfirmEventUpdate() {
+  if (commandCentreState.phase === "saving" || !currentRoom?.code) return;
+  const candidate = commandCentreState.pendingEventAction?.candidate || commandCentreState.contextEvent;
+  if (!candidate || !commandCanManageEvent(candidate)) {
+    commandSetPreviewError("This event is no longer editable.");
+    return;
+  }
+  const title = commandCentreBody.querySelector("#commandUpdateEventTitle")?.value.trim();
+  if (!title) {
+    commandSetPreviewError("Add an event title.");
+    return;
+  }
+  const action = commandCentreBody.querySelector("[data-command-confirm-update]");
+  if (action) {
+    action.disabled = true;
+    action.textContent = "Savingâ€¦";
+  }
+  commandCentreSetPhase("saving", "Updating event.");
+  try {
+    const updateAction = window.CommonGroundCommandActions?.updateCalendarEvent;
+    if (typeof updateAction !== "function") {
+      throw new Error("Event updates are temporarily unavailable. Open the event to edit it directly.");
+    }
+    const outcome = await updateAction(
+      candidate.id,
+      {
+        title,
+        inviteeParticipantIds: commandSelectedParticipantIds({ includeCurrent: false })
+      },
+      { expectedUpdatedAt: candidate.updatedAt || candidate.createdAt }
+    );
+    if (!outcome.success) throw Object.assign(new Error(outcome.message), { code: outcome.code });
+    commandCentreState.contextEvent = outcome.payload.event;
+    commandCentreState.pendingEventAction = null;
+    commandCentreRenderSuccess(outcome.payload.event, "Event updated");
+  } catch (error) {
+    commandSetPreviewError(error.message || "The event could not be updated.");
+    if (action) {
+      action.disabled = false;
+      action.textContent = "Save changes";
+    }
+  }
+}
+
+async function commandConfirmEventDelete() {
+  if (commandCentreState.phase === "saving" || !currentRoom?.code) return;
+  const candidate = commandCentreState.pendingEventAction?.candidate;
+  if (!candidate || !commandCanManageEvent(candidate)) {
+    commandCentreRenderMessage("Event unavailable", "This event can no longer be deleted.");
+    return;
+  }
+  const action = commandCentreBody.querySelector("[data-command-confirm-delete]");
+  if (action) {
+    action.disabled = true;
+    action.textContent = "Deletingâ€¦";
+  }
+  commandCentreSetPhase("saving", "Deleting event.");
+  try {
+    const deleteAction = window.CommonGroundCommandActions?.deleteCalendarEvent;
+    if (typeof deleteAction !== "function") {
+      throw new Error("Event deletion is temporarily unavailable. Open the event to delete it directly.");
+    }
+    const outcome = await deleteAction(candidate.id, {
+      expectedUpdatedAt: candidate.updatedAt || candidate.createdAt,
+      requestId: commandCentreState.deleteRequestId
+    });
+    if (!outcome.success) throw Object.assign(new Error(outcome.message), { code: outcome.code });
+    commandCentreState.pendingEventAction = null;
+    commandCentreState.contextEvent = null;
+    commandCentreState.deleteRequestId = null;
+    commandCentreState.deleteCommandKey = "";
+    commandCentreState.deleteCandidateId = null;
+    commandCentreRenderMessage("Event deleted", `${candidate.title} was removed.`, {
+      phase: "success",
+      actions: '<button class="command-primary-action" type="button" data-command-close>Done</button>'
+    });
+  } catch (error) {
+    commandSetPreviewError(error.message || "The event could not be deleted.");
+    if (action) {
+      action.disabled = false;
+      action.textContent = "Delete event";
+    }
+  }
+}
+
+function commandRenderViewAction(result) {
+  const view = result.targetView;
+  if (!view) {
+    commandCentreRenderMessage("Choose a view", "Try day, week, month, year, or settings.");
+    return;
+  }
+  const label = view === "settings"
+    ? "Open settings"
+    : `Open ${view} view`;
+  commandCentreSetPhase("preview", `${label} is ready.`);
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>${commandEscape(label)}</h3>
+      <p>This changes only what you are viewing. No calendar data will be edited.</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-open-view="${commandAttribute(view)}">${commandEscape(label)}</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandRenderGoogleAction() {
+  const connected = currentUserConnected() && currentParticipantConnected() && calendarWriteReady();
+  commandCentreSetPhase("preview", connected ? "Google Calendar is connected." : "Google connection ready.");
+  commandCentreSetBody(`
+    <div class="command-state-card">
+      <h3>${connected ? "Google Calendar connected" : "Connect Google Calendar"}</h3>
+      <p>${connected
+        ? "Open settings to review event sync."
+        : "Authorization opens in CommonGroundâ€™s secure, centered Google popup."}</p>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-connect-google>${connected ? "Open sync settings" : "Connect Google"}</button>
+      </div>
+    </div>
+  `);
+}
+
+function commandRenderRoomCodePreview(result) {
+  const code = result.newRoomCode;
+  const question = commandMissingQuestion(result);
+  if (question || !code) {
+    commandCentreRenderMessage("Room code needed", question || "Enter a valid six-character room code.");
+    return;
+  }
+  commandCentreSetPhase("preview", `Room code change to ${code} ready.`);
+  commandCentreSetBody(`
+    <div class="command-preview-card">
+      <h3>Change room code</h3>
+      <p>This updates the room link for everyone. Existing events and integrations stay attached.</p>
+      <div class="command-room-code-change" aria-label="Room code change">
+        <strong>${commandEscape(currentRoom?.code || "")}</strong>
+        <span aria-hidden="true">â†’</span>
+        <strong>${commandEscape(code)}</strong>
+      </div>
+      <div class="command-actions">
+        <button class="command-secondary-action" type="button" data-command-cancel>Cancel</button>
+        <button class="command-primary-action" type="button" data-command-update-room-code="${commandAttribute(code)}">Change room code</button>
+      </div>
+    </div>
+  `);
+}
+
+async function commandExecuteView(view) {
+  closeCommandCentre({ restoreFocus: false, immediate: true });
+  if (view === "settings") {
+    await new Promise((resolve) => window.requestAnimationFrame(resolve));
+  }
+  const outcome = await window.CommonGroundCommandActions.navigateToView(view);
+  if (!outcome.success) calendarStatus.textContent = outcome.message;
+}
+
+function commandExecuteGoogleConnect() {
+  const outcome = window.CommonGroundCommandActions.connectGoogleCalendar();
+  if (!outcome.success) {
+    commandCentreRenderMessage("Google connection blocked", outcome.message, {
+      actions: '<button class="command-primary-action" type="button" data-command-connect-google>Try again</button>'
+    });
+    return;
+  }
+  if (outcome.payload.connected) {
+    closeCommandCentre({ restoreFocus: false, immediate: true });
+    return;
+  }
+  commandCentreRenderMessage("Google authorization opened", outcome.message, {
+    phase: "success",
+    actions: '<button class="command-secondary-action" type="button" data-command-close>Done</button>'
+  });
+}
+
+async function commandExecuteRoomCode(code) {
+  if (commandCentreState.phase === "saving") return;
+  commandCentreSetPhase("saving", "Updating room code.");
+  commandCentreRenderLoading("Updating the room codeâ€¦");
+  const outcome = await window.CommonGroundCommandActions.updateCustomRoomCode(code);
+  if (!outcome.success) {
+    commandCentreRenderMessage("Room code not changed", outcome.message, {
+      actions: '<button class="command-secondary-action" type="button" data-command-close>Done</button>'
+    });
+    return;
+  }
+  commandCentreState.roomCode = outcome.payload.newCode;
+  commandCentreRenderMessage("Room code updated", outcome.message, {
+    phase: "success",
+    actions: '<button class="command-primary-action" type="button" data-command-close>Done</button>'
+  });
+}
+
+function commandRenderNavigate(result) {
+  const options = [];
+  if (result.targetDate) {
+    options.push({
+      kind: "date",
+      id: result.targetDate,
+      label: result.targetView === "month" ? `Open ${commandHumanDate(`${result.targetDate}T12:00`)}` : `Go to ${commandHumanDate(`${result.targetDate}T12:00`)}`,
+      meta: result.targetView === "month" ? "Month view" : "Week view"
+    });
+  }
+  for (const participant of result.participantCandidates || []) {
+    options.push({
+      kind: "participant",
+      id: participant.id,
+      label: participant.displayName,
+      meta: "Show room member"
+    });
+  }
+  for (const event of result.eventCandidates || []) {
+    options.push({
+      kind: "event",
+      id: event.id,
+      label: event.title,
+      meta: commandHumanRange(event.start, event.end)
+    });
+  }
+  if (!options.length) {
+    commandCentreRenderMessage("Nothing matched", "Try a month, date, room member, or CommonGround event title.");
+    return;
+  }
+  commandCentreSetPhase("results", `${options.length} navigation ${options.length === 1 ? "result" : "results"}.`);
+  commandCentreState.selectedIndex = 0;
+  commandCentreSetBody(`
+    <div class="command-results-heading">
+      <h3>Open in CommonGround</h3>
+      <span>No changes will be made</span>
+    </div>
+    <div class="command-event-candidate-list" role="listbox" aria-label="Navigation results">
+      ${options.map((option, index) => `
+        <button class="command-option ${index === 0 ? "is-selected" : ""}" type="button" role="option" aria-selected="${index === 0}" data-command-option data-command-navigate-kind="${commandAttribute(option.kind)}" data-command-navigate-id="${commandAttribute(option.id)}" data-command-navigate-view="${commandAttribute(result.targetView || "")}">
+          <span class="command-candidate-copy">
+            <strong>${commandEscape(option.label)}</strong>
+            <span>${commandEscape(option.meta)}</span>
+          </span>
+          <span>Open</span>
+        </button>
+      `).join("")}
+    </div>
+  `);
+}
+
+async function commandExecuteNavigation(button) {
+  const kind = button.dataset.commandNavigateKind;
+  const id = button.dataset.commandNavigateId;
+  const view = button.dataset.commandNavigateView;
+  if (kind === "event") {
+    await commandOpenRoomEvent(id);
+    return;
+  }
+  closeCommandCentre({ restoreFocus: false });
+  if (kind === "participant") {
+    memberSearchInput.value = commandParticipantName(id);
+    setParticipantsPanelExpanded(true);
+    filterParticipantRows();
+    window.requestAnimationFrame(() => {
+      const memberCheckbox = Array.from(
+        participantStrip.querySelectorAll(".member-calendar-checkbox[data-participant-id]")
+      ).find((checkbox) => checkbox.dataset.participantId === id);
+      memberCheckbox?.focus({ preventScroll: true });
+    });
+    return;
+  }
+  if (kind === "date") {
+    if (view === "month") {
+      const alreadyMonth = currentView === "month";
+      currentFocusDate = new Date(`${id}T12:00`);
+      syncMiniCalendarToFocus();
+      const outcome = await window.CommonGroundCommandActions.navigateToView("month");
+      if (outcome.success && alreadyMonth) await refreshCalendarAfterImmediateRender();
+      if (!outcome.success) calendarStatus.textContent = outcome.message;
+    } else {
+      const outcome = await window.CommonGroundCommandActions.navigateToDate(id);
+      if (!outcome.success) calendarStatus.textContent = outcome.message;
+    }
+  }
+}
+
+async function commandOpenRoomEvent(eventId) {
+  const event = roomEventById(eventId);
+  closeCommandCentre({ restoreFocus: false });
+  if (!event) {
+    calendarStatus.textContent = "That event is no longer available. Refresh and try again.";
+    return;
+  }
+  await goToDateInWeek(new Date(event.start));
+  openEventDetail(event.id);
+}
+
+function commandCurrentCreateContext() {
+  const result = commandCentreState.parseResult;
+  const titleInput = commandCentreBody.querySelector("#commandEventTitle");
+  if (!titleInput && result?.intent !== "create_event") return null;
+  const date = commandCentreBody.querySelector("#commandEventDate")?.value;
+  const startTime = commandCentreBody.querySelector("#commandEventStart")?.value;
+  const endTime = commandCentreBody.querySelector("#commandEventEnd")?.value;
+  let start = result?.start || null;
+  let end = result?.end || null;
+  if (date && startTime) {
+    const nextStart = new Date(`${date}T${startTime}`);
+    if (!Number.isNaN(nextStart.getTime())) start = nextStart.toISOString();
+  }
+  if (date && endTime) {
+    const nextEnd = new Date(`${date}T${endTime}`);
+    if (!Number.isNaN(nextEnd.getTime())) {
+      if (start && nextEnd <= new Date(start) && endTime === "00:00") nextEnd.setDate(nextEnd.getDate() + 1);
+      end = nextEnd.toISOString();
+    }
+  }
+  return {
+    ...(result || {}),
+    intent: "create_event",
+    title: titleInput?.value.trim() || result?.title || "",
+    start,
+    end,
+    participantIds: titleInput ? commandSelectedParticipantIds() : (result?.participantIds || []),
+    location: commandCentreBody.querySelector("#commandEventLocation")?.value.trim() || result?.location || "",
+    description: commandCentreBody.querySelector("#commandEventDescription")?.value.trim() || result?.description || "",
+    allDay: commandCentreBody.querySelector("#commandEventAllDay")?.checked === true || result?.allDay === true,
+    missingFields: [...(result?.missingFields || [])],
+    ambiguities: []
+  };
+}
+
+function commandCurrentMoveContext() {
+  const candidate = commandCentreState.moveCandidate || commandCentreState.contextEvent;
+  if (!candidate || !commandCanManageEvent(candidate)) return null;
+  try {
+    if (commandCentreBody.querySelector("#commandMoveDate")) {
+      const draft = commandReadMoveDraft();
+      return { candidate, start: draft.start, end: draft.end };
+    }
+  } catch {
+    // Fall back to the last complete target below.
+  }
+  const result = commandCentreState.parseResult || {};
+  if (result.targetStart && result.targetEnd) {
+    return { candidate, start: result.targetStart, end: result.targetEnd };
+  }
+  return { candidate, start: candidate.start, end: candidate.end };
+}
+
+function commandDurationFromWords(text) {
+  if (/\bhalf (?:an )?hour\b/.test(text)) return 30;
+  if (/\b(?:an|one) hour\b/.test(text)) return 60;
+  const match = text.match(/\b(\d{1,3})\s*(minutes?|hours?)\b/);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  return match[2].startsWith("hour") ? amount * 60 : amount;
+}
+
+function commandResolveMember(value) {
+  const phrase = commandNormalizeVocabulary(value);
+  const matches = [];
+  for (const participant of currentRoom?.participants || []) {
+    if (participant.id === currentParticipant?.id) continue;
+    const full = commandNormalizeVocabulary(participant.displayName);
+    const first = full.split(" ")[0];
+    if (phrase === full || phrase === first) {
+      matches.push({ participant, score: 0 });
+      continue;
+    }
+    const fullDistance = commandEditDistance(phrase, full);
+    const firstDistance = commandEditDistance(phrase, first);
+    const score = Math.min(fullDistance, firstDistance);
+    const limit = phrase.length >= 8 ? 2 : phrase.length >= 4 ? 1 : 0;
+    if (score <= limit) matches.push({ participant, score });
+  }
+  matches.sort((left, right) => left.score - right.score);
+  const bestScore = matches[0]?.score;
+  const best = matches.filter((entry) => entry.score === bestScore);
+  return best.length === 1 ? best[0].participant : null;
+}
+
+function commandRenderContextPreviewMessage(message) {
+  commandCentreStatus.textContent = message;
+  commandCentreSetPhase("preview", message);
+}
+
+function commandApplyDurationContext(durationMinutes) {
+  if (!Number.isFinite(durationMinutes) || durationMinutes < 15 || durationMinutes > 24 * 60) return false;
+  const create = commandCurrentCreateContext();
+  if (create?.start) {
+    const start = new Date(create.start);
+    const next = {
+      ...create,
+      end: new Date(start.getTime() + durationMinutes * 60000).toISOString(),
+      durationMinutes,
+      missingFields: create.missingFields.filter((field) => field !== "start_time")
+    };
+    commandCentreState.parseResult = next;
+    commandRenderCreatePreview(next, next);
+    commandRenderContextPreviewMessage(`Duration updated to ${durationMinutes} minutes.`);
+    return true;
+  }
+  const move = commandCurrentMoveContext();
+  if (!move) return false;
+  const next = {
+    ...(commandCentreState.parseResult || {}),
+    intent: "move_event",
+    targetStart: move.start,
+    targetEnd: new Date(new Date(move.start).getTime() + durationMinutes * 60000).toISOString(),
+    durationMinutes,
+    missingFields: []
+  };
+  commandCentreState.parseResult = next;
+  commandRenderMovePreview(next, move.candidate);
+  commandRenderContextPreviewMessage(`Duration updated to ${durationMinutes} minutes.`);
+  return true;
+}
+
+function commandApplyShiftContext(deltaMinutes) {
+  if (!Number.isFinite(deltaMinutes) || !deltaMinutes || Math.abs(deltaMinutes) > 14 * 24 * 60) return false;
+  const create = commandCurrentCreateContext();
+  if (create?.start && create?.end) {
+    const next = {
+      ...create,
+      start: new Date(new Date(create.start).getTime() + deltaMinutes * 60000).toISOString(),
+      end: new Date(new Date(create.end).getTime() + deltaMinutes * 60000).toISOString(),
+      missingFields: create.missingFields.filter((field) => !["date", "start_time", "target_date_or_time"].includes(field))
+    };
+    commandCentreState.parseResult = next;
+    commandRenderCreatePreview(next, next);
+    commandRenderContextPreviewMessage(`Event shifted ${Math.abs(deltaMinutes)} minutes ${deltaMinutes > 0 ? "later" : "earlier"}.`);
+    return true;
+  }
+  const move = commandCurrentMoveContext();
+  if (!move) return false;
+  const next = {
+    ...(commandCentreState.parseResult || {}),
+    intent: "move_event",
+    targetStart: new Date(new Date(move.start).getTime() + deltaMinutes * 60000).toISOString(),
+    targetEnd: new Date(new Date(move.end).getTime() + deltaMinutes * 60000).toISOString(),
+    missingFields: []
+  };
+  commandCentreState.parseResult = next;
+  commandRenderMovePreview(next, move.candidate);
+  commandRenderContextPreviewMessage(`Event shifted ${Math.abs(deltaMinutes)} minutes ${deltaMinutes > 0 ? "later" : "earlier"}.`);
+  return true;
+}
+
+function commandApplyParticipantContext(memberText) {
+  const create = commandCurrentCreateContext();
+  const participant = commandResolveMember(memberText);
+  if (!participant) return false;
+  if (!create) {
+    const candidate = commandCentreState.moveCandidate || commandCentreState.contextEvent;
+    if (!candidate || !commandCanManageEvent(candidate)) return false;
+    const result = {
+      intent: "update_participants",
+      addParticipantIds: [participant.id],
+      missingFields: [],
+      ambiguities: []
+    };
+    commandCentreState.parseResult = result;
+    commandRenderUpdatePreview(result, candidate);
+    commandRenderContextPreviewMessage(`${participant.displayName} will be added when you save.`);
+    return true;
+  }
+  const participantIds = [...new Set([...(create.participantIds || []), participant.id])];
+  const next = {
+    ...create,
+    participantIds,
+    missingFields: create.missingFields.filter((field) => field !== "participants")
+  };
+  commandCentreState.parseResult = next;
+  commandRenderCreatePreview(next, next);
+  commandRenderContextPreviewMessage(`${participant.displayName} added to the pending event.`);
+  return true;
+}
+
+function commandTryContextualFollowUp(rawCommand) {
+  const text = commandNormalizeVocabulary(rawCommand);
+  const contextual = /\b(?:that|it|event)\b/.test(text) || /^(?:add|invite|include)\b/.test(text);
+  if (!contextual) return false;
+
+  if (/^(?:make|set|change)\b/.test(text) && /\b(?:minutes?|hours?)\b/.test(text)) {
+    const duration = commandDurationFromWords(text);
+    return duration ? commandApplyDurationContext(duration) : false;
+  }
+
+  const shift = text.match(/^(?:move|shift|push)\s+(?:that|it|event)(?:\s+by)?\s+(.+?)\s+(later|forward|earlier|back)$/);
+  if (shift) {
+    const duration = commandDurationFromWords(shift[1]);
+    if (!duration) return false;
+    return commandApplyShiftContext(["earlier", "back"].includes(shift[2]) ? -duration : duration);
+  }
+
+  const member = text.match(/^(?:add|invite|include)\s+(.+)$/);
+  const memberName = member?.[1]?.replace(/\s+to\s+(?:that|it|event)$/, "").trim();
+  if (memberName && commandApplyParticipantContext(memberName)) return true;
+
+  const candidate = commandCentreState.moveCandidate || commandCentreState.contextEvent;
+  if (!candidate || !commandCanManageEvent(candidate)) return false;
+  const rename = String(rawCommand || "").trim().match(
+    /^(?:rename|call|name)\s+(?:that|it|event)(?:\s+to)?\s+(.+)$/i
+  );
+  if (rename?.[1]) {
+    const result = {
+      intent: "rename_event",
+      newTitle: rename[1].trim(),
+      missingFields: [],
+      ambiguities: []
+    };
+    commandCentreState.parseResult = result;
+    commandRenderUpdatePreview(result, candidate);
+    commandRenderContextPreviewMessage("The new title is ready for review.");
+    return true;
+  }
+  if (/^(?:delete|remove|cancel)\s+(?:that|it|event)$/.test(text)) {
+    commandRenderDeletePreview({ intent: "delete_event" }, candidate);
+    return true;
+  }
+  if (/^(?:duplicate|copy)\s+(?:that|it|event)$/.test(text)) {
+    commandRenderDuplicatePreview({ intent: "duplicate_event" }, candidate);
+    return true;
+  }
+  return false;
+}
+
+function commandSafeContextEventId() {
+  const eventId = commandCentreState.moveCandidate?.id || commandCentreState.contextEvent?.id;
+  if (!eventId) return null;
+  return (currentRoom?.events || []).some((event) => event.id === eventId) ? eventId : null;
+}
+
+function commandContinueParsedResult(result, { submitted = false } = {}) {
+  const previousResult = commandCentreState.parseResult;
+  commandCentreState.parseResult = result;
+  if (result.ambiguities?.length) {
+    commandRenderAmbiguity(result);
+    return;
+  }
+  if (result.intent === "unsupported") {
+    commandCentreRenderMessage("Calendar commands only", result.reason);
+    return;
+  }
+  if (result.intent === "navigate_view") {
+    if (submitted && result.targetView) {
+      void commandExecuteView(result.targetView);
+    } else {
+      commandRenderViewAction(result);
+    }
+    return;
+  }
+  if (result.intent === "connect_google") {
+    commandRenderGoogleAction();
+    return;
+  }
+  if (result.intent === "update_room_code") {
+    commandRenderRoomCodePreview(result);
+    return;
+  }
+  if (result.intent === "create_event") {
+    const commandKey = commandNormalizeVocabulary(commandCentreState.lastCommand);
+    if (previousResult?.intent !== "create_event" || commandCentreState.createCommandKey !== commandKey) {
+      commandCentreState.createRequestId = null;
+      commandCentreState.createCommandKey = commandKey;
+    }
+    commandCentreState.conflictDraft = null;
+    commandPrepareEventTitleSuggestion(result);
+    if (submitted) {
+      void commandOpenCreateComposer(result);
+    } else {
+      commandRenderCreateLauncher(result);
+    }
+    return;
+  }
+  if (result.intent === "find_time" || result.intent === "show_availability") {
+    commandCentreState.conflictDraft = null;
+    if (result.missingFields?.length) {
+      commandRenderAvailabilityClarification(result);
+      return;
+    }
+    if (submitted) commandLoadAvailability(result);
+    else commandRenderAvailabilityReady(result);
+    return;
+  }
+  if ([
+    "move_event",
+    "delete_event",
+    "duplicate_event",
+    "update_event",
+    "rename_event",
+    "adjust_participants",
+    "update_participants",
+    "participant_adjustment",
+    "add_participant",
+    "remove_participant"
+  ].includes(result.intent)) {
+    const candidates = result.eventCandidates || [];
+    const candidate = commandEventActionCandidate(result);
+    if (!candidate && candidates.length > 1) {
+      commandRenderEventCandidates(result);
+      return;
+    }
+    if (!candidate) {
+      commandCentreRenderMessage("Event not found", "Try the eventâ€™s exact CommonGround title.", {
+        actions: commandRecoveryMarkup({ ...result, missingFields: ["event"] })
+      });
+      return;
+    }
+    commandContinueEventAction(result, candidate);
+    return;
+  }
+  commandRenderNavigate(result);
+}
+
+async function processUserIntent(inputText, { submitted = true } = {}) {
+  const rawCommand = String(inputText || "").trim();
+  const command = commandExpandForParser(rawCommand);
+  commandCentreState.lastCommand = rawCommand;
+  if (rawCommand.length < 2 || !currentRoom?.code) {
+    commandCentreRenderIntro();
+    return {
+      success: false,
+      message: currentRoom?.code ? "Enter a calendar command." : "Open a room before using Command Centre."
+    };
+  }
+  if (submitted) {
+    commandCentreState.interpretation = {
+      label: "Update pending event",
+      correction: command !== rawCommand ? command : ""
+    };
+  }
+  if (submitted && commandTryContextualFollowUp(rawCommand)) {
+    return {
+      success: true,
+      message: "The pending event preview was updated.",
+      payload: commandCentreState.parseResult
+    };
+  }
+  commandCentreClearDebounce();
+  commandCentreAbortRequest();
+  const controller = new AbortController();
+  const generation = ++commandCentreState.generation;
+  const roomCodeSnapshot = currentRoom.code;
+  commandCentreState.controller = controller;
+  commandCentreSetPhase("parsing", "Understanding command.");
+  commandCentreRenderLoading("Understanding your commandâ€¦");
+  try {
+    const data = await fetchJson(`/api/rooms/${roomCodeSnapshot}/command-centre/parse`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        command,
+        timezone: commandCentreTimezone(),
+        contextEventId: commandSafeContextEventId()
+      }),
+      signal: controller.signal
+    });
+    if (
+      generation !== commandCentreState.generation ||
+      currentRoom?.code !== roomCodeSnapshot ||
+      !commandCentreDialog.open
+    ) {
+      return {
+        success: false,
+        message: "The command result was ignored because the active room changed.",
+        code: "stale_command"
+      };
+    }
+    commandSetInterpretation(data.result, rawCommand, command);
+    commandContinueParsedResult(data.result, { submitted });
+    return {
+      success: true,
+      message: "Command understood.",
+      payload: data.result
+    };
+  } catch (error) {
+    if (error.name === "AbortError") {
+      return {
+        success: false,
+        message: "Command cancelled.",
+        code: "aborted"
+      };
+    }
+    commandCentreRenderMessage("Command failed", error.message || "Try again.");
+    return {
+      success: false,
+      message: error.message || "Try again.",
+      code: error.code || null
+    };
+  } finally {
+    if (commandCentreState.controller === controller) commandCentreState.controller = null;
+  }
+}
+
+async function requestCommandParse({ submitted = true } = {}) {
+  return processUserIntent(commandCentreInput.value, { submitted });
+}
+
+window.processUserIntent = processUserIntent;
+window.CommonGroundCommandRouter = Object.freeze({
+  processUserIntent,
+  ...window.CommonGroundCommandActions
+});
+
+function commandCentreSelectableOptions() {
+  return [...commandCentreBody.querySelectorAll("[data-command-option]")];
+}
+
+function commandCentreSyncOptionSemantics({ announceSelection = false } = {}) {
+  const options = commandCentreSelectableOptions();
+  if (!options.length) {
+    commandCentreInput.removeAttribute("aria-activedescendant");
+    return;
+  }
+
+  const normalized = Math.min(Math.max(0, commandCentreState.selectedIndex), options.length - 1);
+  commandCentreState.selectedIndex = normalized;
+  options.forEach((option, index) => {
+    if (!option.id) {
+      commandCentreOptionSequence += 1;
+      option.id = `command-centre-option-${commandCentreOptionSequence}`;
+    }
+    option.setAttribute("aria-posinset", String(index + 1));
+    option.setAttribute("aria-setsize", String(options.length));
+    const selected = index === normalized;
+    option.classList.toggle("is-selected", selected);
+    option.setAttribute("aria-selected", String(selected));
+  });
+
+  const activeOption = options[normalized];
+  commandCentreInput.setAttribute("aria-activedescendant", activeOption.id);
+  if (announceSelection) {
+    const label = String(activeOption.innerText || activeOption.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    commandCentreStatus.textContent = `${label}. ${normalized + 1} of ${options.length}.`;
+  }
+}
+
+function commandCentreSelectIndex(nextIndex) {
+  const options = commandCentreSelectableOptions();
+  if (!options.length) return;
+  const normalized = ((nextIndex % options.length) + options.length) % options.length;
+  commandCentreState.selectedIndex = normalized;
+  commandCentreSyncOptionSemantics({ announceSelection: true });
+  options[normalized].scrollIntoView({ block: "nearest" });
+}
+
+function commandCentreActivateSelected() {
+  const options = commandCentreSelectableOptions();
+  options[commandCentreState.selectedIndex]?.click();
+}
+
+function commandRefineAvailability(kind) {
+  const result = { ...commandCentreState.parseResult };
+  if (kind === "shorter") result.durationMinutes = 30;
+  if (kind === "evenings") {
+    result.timeOfDay = null;
+    result.earliestMinute = 8 * 60;
+    result.latestMinute = 21 * 60;
+  }
+  if (kind === "expand") {
+    result.rangeEnd = new Date(new Date(result.rangeEnd).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  }
+  commandCentreState.parseResult = result;
+  commandLoadAvailability(result);
+}
+
+async function commandShowAvailabilityOnCalendar() {
+  const availability = commandCentreState.availability;
+  const result = commandCentreState.parseResult;
+  if (!availability?.freeIntervals?.length) return;
+  commandCentreState.highlight = {
+    roomCode: currentRoom?.code,
+    participantIds: [...result.participantIds],
+    intervals: availability.freeIntervals.slice(0, 80),
+    createdAt: Date.now()
+  };
+  const first = new Date(availability.freeIntervals[0].start);
+  closeCommandCentre({ restoreFocus: false });
+  await goToDateInWeek(first);
+  calendarStatus.textContent = `Showing shared availability for ${commandParticipantNames(result.participantIds).join(", ")}.`;
+}
+
+window.commandCentreRenderAvailabilityHighlights = (eventsLayer, days) => {
+  const highlight = commandCentreState.highlight;
+  if (!highlight || highlight.roomCode !== currentRoom?.code || !eventsLayer) return;
+  for (const [dayIndex, day] of days.entries()) {
+    const dayStart = startOfDay(day.date);
+    const dayEnd = addDays(dayStart, 1);
+    for (const interval of highlight.intervals) {
+      const rawStart = new Date(interval.start);
+      const rawEnd = new Date(interval.end);
+      if (rawStart >= dayEnd || rawEnd <= dayStart) continue;
+      const start = rawStart > dayStart ? rawStart : dayStart;
+      const end = rawEnd < dayEnd ? rawEnd : dayEnd;
+      const startHour = start.getHours() + start.getMinutes() / 60;
+      const endHour = end >= dayEnd ? 24 : end.getHours() + end.getMinutes() / 60;
+      if (endHour <= startHour) continue;
+      const block = document.createElement("div");
+      block.className = "command-availability-block";
+      block.style.setProperty("--day-index", String(dayIndex));
+      block.style.setProperty("--start", String(startHour - calendarStartHour));
+      block.style.setProperty("--duration", String(endHour - startHour));
+      block.setAttribute("aria-hidden", "true");
+      const title = document.createElement("strong");
+      const time = document.createElement("span");
+      title.textContent = "Shared free time";
+      time.textContent = formatEventRange(startHour, endHour);
+      block.append(title, time);
+      eventsLayer.appendChild(block);
+    }
+  }
+};
+
+window.commandCentreReset = () => {
+  commandCentreState.highlight = null;
+  commandCentreState.parseResult = null;
+  commandCentreState.availability = null;
+  commandCentreState.moveCandidate = null;
+  commandCentreState.conflictDraft = null;
+  commandCentreState.composing = false;
+  commandCentreState.announcedPrediction = null;
+  commandCentreState.createTitleSuggestion = "";
+  commandCentreState.createRequestId = null;
+  commandCentreState.createCommandKey = "";
+  commandCentreState.deleteRequestId = null;
+  commandCentreState.deleteCommandKey = "";
+  commandCentreState.deleteCandidateId = null;
+  commandCentreState.interpretation = null;
+  commandCentreState.lastCommand = "";
+  commandCentreState.contextEvent = null;
+  commandCentreState.pendingEventAction = null;
+  commandCentreClearDebounce();
+  commandCentreAbortRequest();
+  commandCentreClearPrediction();
+  if (commandCentreDialog.open) closeCommandCentre({ restoreFocus: false, immediate: true });
+};
+
+commandCentreButton?.addEventListener("click", () => {
+  if (commandCentreDialog.open) closeCommandCentre();
+  else openCommandCentre(commandCentreButton);
+});
+
+commandCentreCloseButton?.addEventListener("click", () => closeCommandCentre());
+
+commandCentreInput?.addEventListener("input", commandCentreHandleInput);
+commandCentreInput?.addEventListener("compositionstart", () => {
+  commandCentreState.composing = true;
+  commandCentreClearDebounce();
+  commandCentreAbortRequest();
+  commandCentreClearPrediction();
+  commandCentreRenderIntro();
+});
+commandCentreInput?.addEventListener("compositionend", () => {
+  commandCentreState.composing = false;
+  commandCentreHandleInput();
+});
+commandCentreInput?.addEventListener("scroll", commandCentreSyncCompletionScroll);
+commandCentreInput?.addEventListener("click", commandCentreUpdatePrediction);
+commandCentreInput?.addEventListener("keyup", (event) => {
+  if (!["Tab", "ArrowRight"].includes(event.key)) commandCentreUpdatePrediction();
+});
+
+commandCentreForm?.addEventListener("submit", (event) => {
+  event.preventDefault();
+  if (commandCentreState.composing) return;
+  const selectableOptions = commandCentreSelectableOptions();
+  const hasPredictionOption = Boolean(
+    commandCentreBody.querySelector("[data-command-prediction-command]")
+  );
+  const inputMatchesRenderedCommand = (
+    commandNormalizeVocabulary(commandCentreInput.value) ===
+    commandNormalizeVocabulary(commandCentreState.lastCommand)
+  );
+  if (
+    commandCentreState.phase === "results" &&
+    selectableOptions.length &&
+    (hasPredictionOption || inputMatchesRenderedCommand)
+  ) {
+    commandCentreActivateSelected();
+    return;
+  }
+  requestCommandParse({ submitted: true });
+});
+
+commandCentreBody?.addEventListener("click", async (event) => {
+  const recoveryButton = event.target.closest("[data-command-recovery-command]");
+  if (recoveryButton) {
+    commandCentreInput.value = recoveryButton.dataset.commandRecoveryCommand;
+    commandCentreInput.setSelectionRange(commandCentreInput.value.length, commandCentreInput.value.length);
+    commandCentreClearPrediction();
+    await requestCommandParse({ submitted: true });
+    return;
+  }
+  const predictionButton = event.target.closest("[data-command-prediction-command]");
+  if (predictionButton) {
+    commandCentreInput.value = predictionButton.dataset.commandPredictionCommand;
+    commandCentreClearPrediction();
+    await requestCommandParse({ submitted: true });
+    return;
+  }
+  const example = event.target.closest("[data-command-example]");
+  if (example) {
+    commandCentreInput.value = example.dataset.commandExample;
+    commandCentreClearPrediction();
+    await requestCommandParse({ submitted: true });
+    return;
+  }
+  if (event.target.closest("[data-command-cancel], [data-command-close]")) {
+    closeCommandCentre();
+    return;
+  }
+  if (event.target.closest("[data-command-edit-conflict]")) {
+    const draft = commandCentreState.conflictDraft;
+    if (draft) {
+      commandRenderCreatePreview({
+        ...commandCentreState.parseResult,
+        intent: "create_event",
+        title: draft.title,
+        start: draft.start,
+        end: draft.end,
+        participantIds: draft.inviteeParticipantIds,
+        location: draft.location,
+        description: draft.description,
+        allDay: draft.allDay === true,
+        missingFields: [],
+        ambiguities: []
+      });
+    }
+    return;
+  }
+  const participantOption = event.target.closest("[data-command-participant-option]");
+  if (participantOption) {
+    const result = {
+      ...commandCentreState.parseResult,
+      participantIds: [
+        ...(commandCentreState.parseResult.participantIds || []),
+        participantOption.dataset.commandParticipantOption
+      ],
+      ambiguities: (commandCentreState.parseResult.ambiguities || []).slice(1)
+    };
+    commandContinueParsedResult(result, { submitted: true });
+    return;
+  }
+  const slotButton = event.target.closest("[data-command-slot-index]");
+  if (slotButton) {
+    const slot = commandCentreState.availability?.slots?.[Number(slotButton.dataset.commandSlotIndex)];
+    if (!slot) return;
+    if (commandCentreState.parseResult.intent === "show_availability") {
+      await commandShowAvailabilityOnCalendar();
+    } else {
+      commandCreateDraftFromSlot(commandCentreState.parseResult, slot);
+    }
+    return;
+  }
+  const candidateButton = event.target.closest("[data-command-event-candidate]");
+  if (candidateButton) {
+    const candidate = commandCentreState.parseResult.eventCandidates
+      .find((entry) => entry.id === candidateButton.dataset.commandEventCandidate);
+    if (candidate) commandContinueEventAction(commandCentreState.parseResult, candidate);
+    return;
+  }
+  const navigationButton = event.target.closest("[data-command-navigate-kind]");
+  if (navigationButton) {
+    await commandExecuteNavigation(navigationButton);
+    return;
+  }
+  const viewButton = event.target.closest("[data-command-open-view]");
+  if (viewButton) {
+    await commandExecuteView(viewButton.dataset.commandOpenView);
+    return;
+  }
+  if (event.target.closest("[data-command-connect-google]")) {
+    commandExecuteGoogleConnect();
+    return;
+  }
+  const roomCodeButton = event.target.closest("[data-command-update-room-code]");
+  if (roomCodeButton) {
+    await commandExecuteRoomCode(roomCodeButton.dataset.commandUpdateRoomCode);
+    return;
+  }
+  if (event.target.closest("[data-command-confirm-create]")) {
+    await commandConfirmCreate();
+    return;
+  }
+  if (event.target.closest("[data-command-open-create]")) {
+    await commandOpenCreateComposer();
+    return;
+  }
+  if (event.target.closest("[data-command-confirm-move]")) {
+    await commandConfirmMove();
+    return;
+  }
+  if (event.target.closest("[data-command-confirm-update]")) {
+    await commandConfirmEventUpdate();
+    return;
+  }
+  if (event.target.closest("[data-command-confirm-delete]")) {
+    await commandConfirmEventDelete();
+    return;
+  }
+  if (event.target.closest("[data-command-search-availability]")) {
+    await commandLoadAvailability(commandCentreState.parseResult);
+    return;
+  }
+  if (event.target.closest("[data-command-continue-availability]")) {
+    try {
+      const result = commandAvailabilityRequestFromClarification(commandCentreState.parseResult);
+      commandCentreState.parseResult = result;
+      await commandLoadAvailability(result);
+    } catch (error) {
+      commandSetPreviewError(error.message);
+    }
+    return;
+  }
+  if (event.target.closest("[data-command-show-availability]")) {
+    await commandShowAvailabilityOnCalendar();
+    return;
+  }
+  if (event.target.closest("[data-command-undo-create]")) {
+    await undoLastEventCreation();
+    commandCentreState.conflictDraft = null;
+    commandCentreRenderMessage("Event removed", "The event and its connected-calendar copy were removed.", {
+      phase: "success",
+      actions: '<button class="command-primary-action" type="button" data-command-close>Done</button>'
+    });
+    return;
+  }
+  const refineButton = event.target.closest("[data-command-refine]");
+  if (refineButton) {
+    commandRefineAvailability(refineButton.dataset.commandRefine);
+    return;
+  }
+  const openEventButton = event.target.closest("[data-command-open-event]");
+  if (openEventButton) {
+    await commandOpenRoomEvent(openEventButton.dataset.commandOpenEvent);
+  }
+});
+
+for (const eventName of ["input", "change"]) {
+  commandCentreBody?.addEventListener(eventName, (event) => {
+    if (event.target.matches("#commandEventAllDay, #commandEventDate")) {
+      const allDayInput = commandCentreBody.querySelector("#commandEventAllDay");
+      const checked = allDayInput?.checked === true;
+      const date = commandCentreBody.querySelector("#commandEventDate");
+      const endDate = commandCentreBody.querySelector("#commandEventEndDate");
+      const start = commandCentreBody.querySelector("#commandEventStart");
+      const end = commandCentreBody.querySelector("#commandEventEnd");
+      const schedule = commandCentreBody.querySelector(".command-schedule-row");
+      const allDayEndField = commandCentreBody.querySelector("[data-command-all-day-end-field]");
+      const allDaySeparator = commandCentreBody.querySelector("[data-command-all-day-separator]");
+      const timeSeparator = commandCentreBody.querySelector("[data-command-time-separator]");
+      const timeFields = commandCentreBody.querySelectorAll("[data-command-time-field]");
+
+      schedule?.classList.toggle("is-all-day", checked);
+      allDayEndField?.toggleAttribute("hidden", !checked);
+      allDaySeparator?.toggleAttribute("hidden", !checked);
+      timeSeparator?.toggleAttribute("hidden", checked);
+      timeFields.forEach((field) => field.toggleAttribute("hidden", checked));
+
+      if (endDate && date) {
+        endDate.min = date.value;
+        if (!endDate.value || endDate.value < date.value) endDate.value = date.value;
+      }
+      if (!checked && start && end && (!start.value || start.value === "00:00") && (!end.value || end.value === "00:00")) {
+        start.value = "09:00";
+        end.value = "10:00";
+      }
+      if (start && end) {
+        start.disabled = checked;
+        end.disabled = checked;
+        window.CommonGroundTimePicker?.setDisabled(schedule, checked);
+        const startDisplay = commandCentreBody.querySelector("#commandEventStartDisplay");
+        const endDisplay = commandCentreBody.querySelector("#commandEventEndDisplay");
+        startDisplay?.toggleAttribute("aria-invalid", !checked && !start.value);
+        endDisplay?.toggleAttribute("aria-invalid", !checked && !end.value);
+      }
+      return;
+    }
+    if (!event.target.matches("#commandMoveDate, #commandMoveStart, #commandMoveEnd")) return;
+    try {
+      const move = commandReadMoveDraft();
+      const summary = commandCentreBody.querySelector("#commandMoveNewSummary");
+      if (summary) summary.textContent = commandHumanRange(move.start, move.end);
+    } catch {
+      // The focused edit remains visible until all three fields form a valid range.
+    }
+  });
+}
+
+commandCentreDialog?.addEventListener("click", (event) => {
+  if (event.target === commandCentreDialog) closeCommandCentre();
+});
+
+commandCentreDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeCommandCentre();
+});
+
+window.addEventListener("keydown", (event) => {
+  if (event.isComposing || commandCentreState.composing || event.keyCode === 229) return;
+  const commandShortcut = (event.metaKey || event.ctrlKey) && !event.altKey && event.key.toLowerCase() === "k";
+  const slashShortcut = event.key === "/" && !event.metaKey && !event.ctrlKey && !event.altKey && !shouldIgnoreViewShortcut(event.target);
+  if (commandShortcut || slashShortcut) {
+    if (!currentRoom?.code || roomPage.classList.contains("hidden")) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    if (commandCentreDialog.open) closeCommandCentre();
+    else openCommandCentre(event.target);
+    return;
+  }
+  if (!commandCentreDialog.open) return;
+  if (event.key === "Escape") {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    closeCommandCentre();
+    return;
+  }
+  const completionKey = (
+    event.target === commandCentreInput &&
+    (event.key === "Tab" || event.key === "ArrowRight") &&
+    (
+      commandCentreState.prediction?.inlineSuffix ||
+      commandCentreState.prediction?.corrected
+    ) &&
+    commandCentreInput.selectionStart === commandCentreInput.value.length &&
+    commandCentreInput.selectionEnd === commandCentreInput.value.length
+  );
+  if (completionKey) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    commandCentreAcceptPrediction();
+    return;
+  }
+  if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+    const options = commandCentreSelectableOptions();
+    if (!options.length) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    commandCentreSelectIndex(commandCentreState.selectedIndex + (event.key === "ArrowDown" ? 1 : -1));
+    return;
+  }
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    const action = commandCentreBody.querySelector(".command-primary-action:not(:disabled)");
+    if (!action) return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    action.click();
+    return;
+  }
+  if (event.key === "Enter" && event.target === commandCentreInput && commandCentreSelectableOptions().length) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    commandCentreActivateSelected();
+  }
+}, true);
+
+const commandUsesMacShortcut = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent);
+if (commandCentreShortcutHint) commandCentreShortcutHint.textContent = commandUsesMacShortcut ? "âŒ˜ K" : "Ctrl K";
