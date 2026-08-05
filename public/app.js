@@ -59,6 +59,7 @@ const todayButton = document.querySelector("#todayButton");
 const calendarViewMenu = document.querySelector("#calendarViewMenu");
 const calendarViewLabel = document.querySelector("#calendarViewLabel");
 const calendarSidebarButton = document.querySelector("#calendarSidebarButton");
+const sidebarBackdrop = document.querySelector("#sidebarBackdrop");
 const memberSearchInput = document.querySelector("#memberSearchInput");
 const membersSectionToggle = document.querySelector("#membersSectionToggle");
 const miniCalendarTitle = document.querySelector("#miniCalendarTitle");
@@ -68,6 +69,7 @@ const miniCalendarNext = document.querySelector("#miniCalendarNext");
 const roomSwitcher = document.querySelector("#roomSwitcher");
 const participantStrip = document.querySelector("#participantStrip");
 const calendarGrid = document.querySelector("#calendarGrid");
+const calendarScrollport = calendarGrid?.closest(".calendar-wrap");
 const connectWidgetText = document.querySelector("#connectWidgetText");
 const topbarIdentity = document.querySelector("#topbarIdentity");
 const viewSwitcher = document.querySelector("#viewSwitcher");
@@ -173,6 +175,9 @@ const refreshButton = document.querySelector("#refreshButton");
 const fullscreenButton = document.querySelector("#fullscreenButton");
 const fullscreenIcon = document.querySelector("#fullscreenIcon");
 const settingsButton = document.querySelector("#settingsButton");
+const settingsCloseButton = document.querySelector("#settingsCloseButton");
+const calendarUtilityOverflowButton = document.querySelector("#calendarUtilityOverflowButton");
+const calendarUtilityOverflowMenu = document.querySelector("#calendarUtilityOverflowMenu");
 const calendarGoogleButton = document.querySelector("#calendarGoogleButton");
 const themeToggle = document.querySelector("#themeToggle");
 const addEventButton = document.querySelector("#addEventButton");
@@ -193,7 +198,11 @@ const emojiPickerPopover = document.querySelector("#emojiPickerPopover");
 const emojiPickerSearch = document.querySelector("#emojiPickerSearch");
 const emojiPickerGrid = document.querySelector("#emojiPickerGrid");
 const emojiPickerStatus = document.querySelector("#emojiPickerStatus");
+const emojiPickerCloseButton = document.querySelector("#emojiPickerCloseButton");
 const emojiPickerTriggers = Array.from(document.querySelectorAll(".emoji-trigger[data-emoji-target]"));
+const deleteEventConfirmDialog = document.querySelector("#deleteEventConfirmDialog");
+const cancelDeleteEventButton = document.querySelector("#cancelDeleteEventButton");
+const confirmDeleteEventButton = document.querySelector("#confirmDeleteEventButton");
 
 let appConfig = null;
 let sessionInfo = null;
@@ -217,7 +226,11 @@ let weatherLocationKey = "";
 let weatherHourlyRequestGeneration = 0;
 let weatherHourlyTrigger = null;
 let weatherTooltipHideTimer = null;
-let currentView = "week";
+const calendarViewStorageKey = "cg-calendar-view-v1";
+const calendarScrollStorageKey = "cg-calendar-scroll-v1";
+const sidebarOpenStorageKey = "cg-sidebar-open-v1";
+const supportedCalendarViews = new Set(["day", "week", "month", "year"]);
+let currentView = readStoredCalendarView();
 let currentFocusDate = new Date();
 let miniCalendarCursor = new Date(currentFocusDate.getFullYear(), currentFocusDate.getMonth(), 1);
 let refreshTimer = null;
@@ -253,6 +266,11 @@ let suppressOutsideSurfaceClick = false;
 let suppressOutsideSurfaceTimer = null;
 let activeEventTimePicker = null;
 let participantsDrawerGesture = null;
+let settingsReturnFocus = null;
+let calendarScrollSaveTimer = null;
+let calendarScrollRestoreFrame = null;
+let pendingRoomPreview = null;
+let deleteEventReturnFocus = null;
 const pendingEventMoveKeys = new Set();
 const weatherForecastFreshnessMs = 25 * 60 * 1000;
 const weatherForecastRetryMs = 5 * 60 * 1000;
@@ -268,8 +286,151 @@ const weatherIconNames = new Set([
   "thermometer-snowflake"
 ]);
 
-/* TODO: Commonground Free Block Rendering - Hidden for current demo */
-const showFreeBlocks = false;
+const showFreeBlocks = true;
+
+function readStoredCalendarView() {
+  try {
+    const storedView = window.localStorage.getItem(calendarViewStorageKey);
+    return supportedCalendarViews.has(storedView) ? storedView : "week";
+  } catch {
+    return "week";
+  }
+}
+
+function persistCalendarView(view = currentView) {
+  if (!supportedCalendarViews.has(view)) return;
+  try {
+    window.localStorage.setItem(calendarViewStorageKey, view);
+  } catch {
+    // Calendar view persistence is an enhancement; the active view still works.
+  }
+}
+
+function readStoredSidebarOpen() {
+  const mobileLayout = window.matchMedia("(max-width: 900px)").matches;
+  try {
+    const storedValue = window.localStorage.getItem(sidebarOpenStorageKey);
+    if (storedValue === "true") return true;
+    if (storedValue === "false") return false;
+  } catch {
+    // Fall through to the responsive default.
+  }
+  return !mobileLayout;
+}
+
+function persistSidebarOpen(open) {
+  try {
+    window.localStorage.setItem(sidebarOpenStorageKey, String(Boolean(open)));
+  } catch {
+    // Sidebar persistence is optional.
+  }
+}
+
+function readStoredCalendarScrollPositions() {
+  const fallback = { day: null, week: null, month: 0, year: 0 };
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(calendarScrollStorageKey) || "null");
+    if (!parsed || typeof parsed !== "object") return fallback;
+    for (const view of supportedCalendarViews) {
+      const value = Number(parsed[view]);
+      fallback[view] = Number.isFinite(value) && value >= 0 ? value : fallback[view];
+    }
+  } catch {
+    // Keep the safe defaults when local storage is unavailable or malformed.
+  }
+  return fallback;
+}
+
+const calendarScrollPositions = readStoredCalendarScrollPositions();
+
+function persistCalendarScrollPositions() {
+  try {
+    window.localStorage.setItem(calendarScrollStorageKey, JSON.stringify(calendarScrollPositions));
+  } catch {
+    // Scroll restoration is optional.
+  }
+}
+
+function saveCalendarScrollPosition(view = currentView) {
+  if (!calendarScrollport || !supportedCalendarViews.has(view)) return;
+  calendarScrollPositions[view] = Math.max(0, calendarScrollport.scrollTop);
+  persistCalendarScrollPositions();
+}
+
+function defaultTimedCalendarScrollTop() {
+  if (!calendarGrid || !calendarScrollport) return 0;
+  const now = new Date();
+  const includesToday = currentView === "day"
+    ? sameDate(currentFocusDate, now)
+    : currentWeekDays().some((day) => sameDate(day.date, now));
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const targetMinutes = includesToday && currentMinutes >= 6 * 60 && currentMinutes <= 22 * 60
+    ? Math.max(0, currentMinutes - 2 * 60)
+    : 8 * 60;
+  const headerHeight = parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--calendar-header-height")) || 72;
+  const gridOffset = calendarGrid.offsetTop || 0;
+  return Math.max(0, gridOffset + headerHeight + (targetMinutes / 60) * resolvedCalendarRowHeight() - 16);
+}
+
+function restoreCalendarScrollPosition(view = currentView) {
+  if (!calendarScrollport || !supportedCalendarViews.has(view)) return;
+  if (calendarScrollRestoreFrame) window.cancelAnimationFrame(calendarScrollRestoreFrame);
+  calendarScrollRestoreFrame = window.requestAnimationFrame(() => {
+    calendarScrollRestoreFrame = null;
+    if (view !== currentView) return;
+    const storedPosition = calendarScrollPositions[view];
+    const nextPosition = (view === "day" || view === "week") && storedPosition === null
+      ? defaultTimedCalendarScrollTop()
+      : Math.max(0, Number(storedPosition) || 0);
+    calendarScrollport.scrollTop = nextPosition;
+    if (view === "month" || view === "year") calendarScrollport.scrollLeft = 0;
+  });
+}
+
+function eventInkForColor(color) {
+  const match = String(color || "").trim().match(/^#([0-9a-f]{6})$/i);
+  if (!match) return { mode: "light", value: "#ffffff" };
+  const channels = [0, 2, 4].map((offset) => parseInt(match[1].slice(offset, offset + 2), 16) / 255);
+  const [red, green, blue] = channels.map((channel) => (
+    channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+  ));
+  const luminance = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+  const whiteContrast = 1.05 / (luminance + 0.05);
+  const darkContrast = (luminance + 0.05) / 0.05;
+  return darkContrast >= whiteContrast
+    ? { mode: "dark", value: "#111111" }
+    : { mode: "light", value: "#ffffff" };
+}
+
+function applyEventInk(node, color) {
+  if (!node) return;
+  const ink = eventInkForColor(color);
+  node.dataset.eventInk = ink.mode;
+  node.style.setProperty("--event-ink", ink.value);
+}
+
+function setCalendarStatus(message, {
+  notify = false,
+  title = "CommonGround",
+  type = "status",
+  action = null
+} = {}) {
+  const text = String(message || "").trim();
+  if (calendarStatus) calendarStatus.textContent = text;
+  if (!notify || !text) return;
+  showNotification({
+    id: `local-status-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    type,
+    title,
+    message: text,
+    createdAt: new Date().toISOString(),
+    action
+  });
+}
+
+function freeBlocksEnabled() {
+  return Boolean(showFreeBlocks && visibleParticipantIds().size > 0);
+}
 
 function setButtonLabelWithIcon(button, label, iconClass) {
   if (!button) return;
@@ -559,6 +720,8 @@ function showHome() {
 }
 
 function showEntryChoice() {
+  if (choiceConnectButton) choiceConnectButton.disabled = false;
+  if (choiceGuestButton) choiceGuestButton.disabled = false;
   showAppPage(entryChoicePage);
 }
 
@@ -3279,14 +3442,18 @@ function applyParticipantPatchLocally(participantId, patch) {
 }
 
 async function setCurrentView(view) {
-  if (!view) return;
+  if (!supportedCalendarViews.has(view)) return;
   if (calendarViewMenu) calendarViewMenu.open = false;
   if (currentView === view) {
     updateViewButtons();
     return;
   }
+  saveCalendarScrollPosition(currentView);
   currentView = view;
-  await refreshCalendarAfterImmediateRender();
+  persistCalendarView(view);
+  const refreshPromise = refreshCalendarAfterImmediateRender();
+  restoreCalendarScrollPosition(view);
+  await refreshPromise;
 }
 
 function calendarPeriodText({ includeYear = false } = {}) {
@@ -3355,14 +3522,18 @@ async function toggleFullscreenMode() {
 
 async function goToDateInWeek(date) {
   const wasWeekView = currentView === "week";
+  if (!wasWeekView) saveCalendarScrollPosition(currentView);
   currentFocusDate = startOfDay(date);
   currentView = "week";
+  persistCalendarView(currentView);
   syncMiniCalendarToFocus();
   if (wasWeekView) {
     animateCalendarTransition(render);
     return;
   }
-  await refreshCalendarAfterImmediateRender();
+  const refreshPromise = refreshCalendarAfterImmediateRender();
+  restoreCalendarScrollPosition(currentView);
+  await refreshPromise;
 }
 
 function shouldIgnoreViewShortcut(target) {
@@ -3378,6 +3549,7 @@ function updateViewButtons() {
   if (calendarViewLabel) {
     calendarViewLabel.textContent = `${currentView.slice(0, 1).toUpperCase()}${currentView.slice(1)}`;
   }
+  if (roomPage) roomPage.dataset.calendarView = currentView;
 }
 
 function roomInviteLink() {
@@ -3568,12 +3740,15 @@ async function copyRoomLink() {
   if (!currentRoom?.code) return;
   try {
     await copyTextToClipboard(roomInviteLink());
-    calendarStatus.textContent = "Room link copied.";
+    setCalendarStatus("Room link copied.", { notify: true, title: "Invite link ready" });
     replayMotionClass(calendarStatus, "motion-feedback");
     replayMotionClass(copyInviteButton, "motion-feedback");
     replayMotionClass(copyInviteButtonEmpty, "motion-feedback");
   } catch {
-    calendarStatus.textContent = `Copy this room link: ${roomInviteLink()}`;
+    setCalendarStatus(`Copy this room link: ${roomInviteLink()}`, {
+      notify: true,
+      title: "Copy failed"
+    });
   }
 }
 
@@ -3660,7 +3835,7 @@ async function copyRoomCode() {
     copiedRoomCodeValue = code;
     if (roomCodeCopyTimer) window.clearTimeout(roomCodeCopyTimer);
     renderRoomCodePill();
-    calendarStatus.textContent = "Room code copied.";
+    setCalendarStatus("Room code copied.", { notify: true, title: "Room code copied" });
     roomCodeCopyTimer = window.setTimeout(() => {
       if (copiedRoomCodeValue === code) {
         copiedRoomCodeValue = "";
@@ -3669,15 +3844,18 @@ async function copyRoomCode() {
       roomCodeCopyTimer = null;
     }, 1800);
   } catch {
-    calendarStatus.textContent = code;
+    setCalendarStatus(`Copy this room code manually: ${code}`, {
+      notify: true,
+      title: "Copy failed"
+    });
   }
 }
 
 function participantStatusText(participant) {
-  if (!participant) return "guest";
-  if (participant.syncStatus === "needs_reconnect" || participant.needsReconnect) return "reconnect needed";
-  if (participant.syncStatus === "error") return "sync issue";
-  return participant.connected ? "live" : "guest";
+  if (!participant) return "Guest";
+  if (participant.syncStatus === "needs_reconnect" || participant.needsReconnect) return "Reconnect";
+  if (participant.syncStatus === "error" || participant.lastSyncError) return "Sync error";
+  return participant.connected ? "Live" : "Guest";
 }
 
 function participantColorOption(color) {
@@ -3718,13 +3896,17 @@ function busyVisibilityLabel(participant, isOwnBlock) {
 
 function calendarParticipantLabel(participant) {
   const participantId = participant?.participantId || participant?.id || "";
-  if (participantId && participantId === currentParticipant?.id) return "You";
+  if (participantId && participantId === currentParticipant?.id) {
+    return String(currentParticipant?.displayName || "You").trim() || "You";
+  }
   return String(participant?.ownerName || participant?.displayName || "Participant").trim() || "Participant";
 }
 
 function calendarEventOwnerLabel(eventBlock) {
   const creatorId = eventBlock?.originalEvent?.createdByParticipantId || eventBlock?.createdByParticipantId || "";
-  if (creatorId && creatorId === currentParticipant?.id) return "You";
+  if (creatorId && creatorId === currentParticipant?.id) {
+    return String(currentParticipant?.displayName || "You").trim() || "You";
+  }
   return String(eventBlock?.participantName || "Someone").trim() || "Someone";
 }
 
@@ -3870,7 +4052,21 @@ function renderTopbarIdentity() {
 function renderParticipants() {
   participantStrip.innerHTML = "";
   pruneHiddenParticipantIds({ persist: true });
-  for (const participant of currentRoom?.participants || []) {
+  const participants = currentRoom?.participants || [];
+  const duplicateNameCounts = new Map();
+  for (const participant of participants) {
+    const key = normalizedTextKey(participant.displayName) || "member";
+    duplicateNameCounts.set(key, (duplicateNameCounts.get(key) || 0) + 1);
+  }
+  const duplicateNameIndexes = new Map();
+
+  for (const participant of participants) {
+    const nameKey = normalizedTextKey(participant.displayName) || "member";
+    const duplicateIndex = (duplicateNameIndexes.get(nameKey) || 0) + 1;
+    duplicateNameIndexes.set(nameKey, duplicateIndex);
+    const duplicateSuffix = duplicateNameCounts.get(nameKey) > 1 ? ` (${duplicateIndex})` : "";
+    const selfSuffix = participant.id === currentParticipant?.id ? " (You)" : "";
+    const memberDisplayName = `${participant.displayName}${duplicateSuffix}${selfSuffix}`;
     const isHidden = hiddenParticipantIds.has(participant.id);
     const row = document.createElement("div");
     row.className = [
@@ -3892,7 +4088,7 @@ function renderParticipants() {
     checkbox.checked = !isHidden;
     checkbox.value = participant.id;
     checkbox.dataset.participantId = participant.id;
-    checkbox.setAttribute("aria-label", `Show ${participant.displayName}'s calendar`);
+    checkbox.setAttribute("aria-label", `Show ${memberDisplayName}'s calendar`);
     checkbox.addEventListener("change", () => {
       if (checkbox.checked) {
         hiddenParticipantIds.delete(participant.id);
@@ -3911,13 +4107,17 @@ function renderParticipants() {
     const copy = document.createElement("span");
     copy.className = "participant-copy member-calendar-copy";
     const participantStatus = participantStatusText(participant);
-    const statusMarkup = ["reconnect needed", "sync issue"].includes(participantStatus)
-      ? `<small class="member-calendar-alert">${escapeHtml(participantStatus)}</small>`
-      : "";
-    copy.innerHTML = `
-      <strong>${escapeHtml(participant.displayName)}</strong>
-      ${statusMarkup}
-    `;
+    const memberName = document.createElement("strong");
+    memberName.textContent = memberDisplayName;
+    const status = document.createElement("small");
+    const statusClass = participantStatus.toLowerCase().replace(/\s+/g, "-");
+    status.className = `member-calendar-status member-calendar-status-${statusClass}`;
+    if (["Reconnect", "Sync error"].includes(participantStatus)) {
+      status.classList.add("member-calendar-alert");
+    }
+    status.textContent = participantStatus;
+    if (participant.lastSyncError) status.title = participant.lastSyncError;
+    copy.append(memberName, status);
 
     label.append(checkbox, checkmark, copy);
     row.appendChild(label);
@@ -3951,13 +4151,143 @@ function filterParticipantRows() {
   }
 }
 
-function setParticipantsPanelExpanded(expanded) {
+function sidebarUsesDrawerLayout() {
+  return window.matchMedia("(max-width: 900px)").matches;
+}
+
+function setParticipantsPanelExpanded(expanded, { persist = true, restoreFocus = true } = {}) {
   if (!participantsSidebar) return;
   const isExpanded = Boolean(expanded);
+  const focusWasInside = participantsSidebar.contains(document.activeElement);
   participantsSidebar.classList.toggle("is-open", isExpanded);
   roomPage?.classList.toggle("sidebar-collapsed", !isExpanded);
   participantsSidebar.dataset.open = String(isExpanded);
+  participantsSidebar.inert = !isExpanded;
+  participantsSidebar.setAttribute("aria-hidden", String(!isExpanded));
   calendarSidebarButton?.setAttribute("aria-expanded", String(isExpanded));
+  calendarSidebarButton?.setAttribute("aria-label", isExpanded ? "Close rooms and members sidebar" : "Open rooms and members sidebar");
+  const showBackdrop = isExpanded && sidebarUsesDrawerLayout();
+  sidebarBackdrop?.classList.toggle("hidden", !showBackdrop);
+  sidebarBackdrop?.setAttribute("aria-hidden", String(!showBackdrop));
+  if (sidebarBackdrop) sidebarBackdrop.inert = !showBackdrop;
+  if (persist) persistSidebarOpen(isExpanded);
+  if (!isExpanded && restoreFocus && focusWasInside) {
+    calendarSidebarButton?.focus({ preventScroll: true });
+  }
+}
+
+function focusableElementsWithin(container) {
+  if (!container) return [];
+  return [...container.querySelectorAll(
+    'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), summary, [tabindex]:not([tabindex="-1"])'
+  )].filter((element) => (
+    !element.hidden &&
+    !element.closest(".hidden") &&
+    element.getAttribute("aria-hidden") !== "true" &&
+    getComputedStyle(element).display !== "none"
+  ));
+}
+
+function settingsPanelIsOpen() {
+  return Boolean(hostPopover && !hostPopover.classList.contains("hidden") && !hostPopover.classList.contains("is-closing"));
+}
+
+function setSettingsPanelOpen(open, { focusFirst = false, restoreFocus = true } = {}) {
+  if (!hostPopover || !settingsButton) return;
+  const isOpen = Boolean(open);
+  const focusWasInside = hostPopover.contains(document.activeElement);
+
+  if (isOpen) {
+    settingsReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : settingsButton;
+    hostPopover.inert = false;
+    hostPopover.setAttribute("aria-hidden", "false");
+    hostPopover.setAttribute("role", "dialog");
+    hostPopover.setAttribute("aria-modal", "false");
+    hostPopover.setAttribute("aria-label", "Settings");
+    settingsButton.setAttribute("aria-expanded", "true");
+    settingsButton.setAttribute("aria-controls", hostPopover.id);
+    setPanelVisibility(hostPopover, true);
+    if (focusFirst) {
+      window.requestAnimationFrame(() => {
+        focusableElementsWithin(hostPopover)[0]?.focus({ preventScroll: true });
+      });
+    }
+    return;
+  }
+
+  settingsButton.setAttribute("aria-expanded", "false");
+  hostPopover.setAttribute("aria-hidden", "true");
+  if (restoreFocus && focusWasInside) {
+    const focusTarget = settingsReturnFocus?.isConnected ? settingsReturnFocus : settingsButton;
+    focusTarget?.focus({ preventScroll: true });
+  }
+  hostPopover.inert = true;
+  settingsReturnFocus = null;
+  setPanelVisibility(hostPopover, false);
+}
+
+function setCalendarUtilityMenuOpen(open, { focusFirst = false } = {}) {
+  if (!calendarUtilityOverflowButton || !calendarUtilityOverflowMenu) return;
+  const isOpen = Boolean(open);
+  calendarUtilityOverflowMenu.classList.toggle("hidden", !isOpen);
+  calendarUtilityOverflowMenu.inert = !isOpen;
+  calendarUtilityOverflowButton.setAttribute("aria-expanded", String(isOpen));
+  if (isOpen && focusFirst) {
+    window.requestAnimationFrame(() => {
+      focusableElementsWithin(calendarUtilityOverflowMenu)[0]?.focus({ preventScroll: true });
+    });
+  }
+}
+
+function initializeCalendarUtilityMenu() {
+  if (!calendarUtilityOverflowMenu || calendarUtilityOverflowMenu.children.length) return;
+  const utilities = [
+    {
+      label: "Reload calendar",
+      iconClass: "ui-icon-refresh",
+      run: async () => {
+        setCalendarUtilityMenuOpen(false);
+        await refreshRoomData();
+      }
+    },
+    {
+      label: "Toggle fullscreen",
+      iconClass: "ui-icon-maximize",
+      run: async () => {
+        setCalendarUtilityMenuOpen(false);
+        await toggleFullscreenMode();
+      }
+    },
+    {
+      label: "Settings",
+      iconClass: "ui-icon-settings",
+      run: async () => {
+        setCalendarUtilityMenuOpen(false);
+        setSettingsPanelOpen(true, { focusFirst: true });
+      }
+    }
+  ];
+
+  for (const utility of utilities) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.setAttribute("role", "menuitem");
+    button.className = "calendar-utility-overflow-item button-with-icon";
+    setButtonLabelWithIcon(button, utility.label, utility.iconClass);
+    button.addEventListener("click", () => {
+      void utility.run();
+    });
+    calendarUtilityOverflowMenu.appendChild(button);
+  }
+  calendarUtilityOverflowMenu.inert = true;
+}
+
+function syncCalendarUtilityOverflowVisibility() {
+  if (!calendarUtilityOverflowButton) return;
+  const shouldShow = window.matchMedia("(max-width: 1320px)").matches;
+  calendarUtilityOverflowButton.classList.toggle("hidden", !shouldShow);
+  calendarUtilityOverflowButton.setAttribute("aria-hidden", String(!shouldShow));
+  if (!shouldShow) setCalendarUtilityMenuOpen(false);
 }
 
 function renderJoinRequests() {
@@ -4043,11 +4373,9 @@ function renderCalendarGoogleControl() {
     iconClass = "ui-icon-rotate";
     state = "needs-reconnect";
   } else if (connected) {
-    label = copiedTopbarRoomCode === currentRoom?.code ? "Link copied" : "Copy link";
-    accessibleLabel = copiedTopbarRoomCode === currentRoom?.code
-      ? "Google Calendar connected. Room link copied"
-      : `Google Calendar connected. Copy link to join room ${currentRoom?.code || ""}`;
-    iconClass = "ui-icon-link";
+    label = "Google Calendar connected";
+    accessibleLabel = "Google Calendar connected";
+    iconClass = "ui-icon-calendar-sync";
     state = "is-connected";
   }
 
@@ -4060,24 +4388,28 @@ function renderCalendarGoogleControl() {
     "is-connected"
   );
   calendarGoogleButton.classList.add(state);
-  calendarGoogleButton.dataset.googleAction = connected ? "copy" : (googleAvailable ? "authorize" : "unavailable");
+  calendarGoogleButton.dataset.googleAction = connected ? "connected" : (googleAvailable ? "authorize" : "unavailable");
   calendarGoogleButton.title = accessibleLabel;
   calendarGoogleButton.setAttribute("aria-label", accessibleLabel);
-  calendarGoogleButton.disabled = !ready || (!connected && !googleAvailable);
+  calendarGoogleButton.disabled = connected || !ready || !googleAvailable;
+  calendarGoogleButton.classList.toggle("hidden", connected);
   calendarGoogleButton.setAttribute("aria-busy", String(!ready));
 
   roomPage.dataset.googleReady = String(ready);
   roomPage.dataset.googleConnected = String(connected);
   googleConnectionIndicator?.classList.toggle("hidden", !connected);
   googleConnectionIndicator?.setAttribute("aria-hidden", String(!connected));
+  googleConnectionIndicator?.setAttribute("aria-label", connected ? "Google Calendar connected" : "");
   const connectionNoticeText = calendarConnectionNotice?.querySelector("span:last-child");
   if (connectionNoticeText) {
     connectionNoticeText.textContent = googleAvailable
       ? "Connect your Google Calendar to see overlapping availability."
       : "Google Calendar connection is currently unavailable.";
   }
-  calendarConnectionNotice?.classList.toggle("hidden", connected || !ready);
-  calendarConnectionNotice?.setAttribute("aria-hidden", String(connected || !ready));
+  // The top-bar CTA is the single connection action. Keeping a second banner
+  // over the grid duplicated state and obscured time slots.
+  calendarConnectionNotice?.classList.add("hidden");
+  calendarConnectionNotice?.setAttribute("aria-hidden", "true");
   setPanelVisibility(emptyRoomState, false);
 }
 
@@ -4103,6 +4435,8 @@ function renderRoomMeta() {
 
   setPanelVisibility(emptyRoomState, false);
 
+  if (connectGoogleButton) connectGoogleButton.disabled = false;
+
   if (currentGoogleNeedsReconnect()) {
     setButtonLabelWithIcon(connectGoogleButton, "Reconnect calendar", "ui-icon-rotate");
     settingsReconnectButton.classList.remove("hidden");
@@ -4113,6 +4447,8 @@ function renderRoomMeta() {
       : "Reconnect calendar to keep availability updated.";
   } else if (isGoogleConnected()) {
     setButtonLabelWithIcon(connectGoogleButton, "Calendar connected", "ui-icon-calendar-sync");
+    connectGoogleButton.disabled = true;
+    connectGoogleButton.setAttribute("aria-label", "Google Calendar connected");
     const needsWriteAccess = !calendarWriteReady();
     settingsReconnectButton.classList.toggle("hidden", !needsWriteAccess);
     settingsReconnectButton.dataset.calendarWrite = needsWriteAccess ? "true" : "false";
@@ -4125,6 +4461,11 @@ function renderRoomMeta() {
     connectWidgetText.textContent = `Last synced at ${syncStamp || "--"}`;
   } else {
     setButtonLabelWithIcon(connectGoogleButton, "Connect calendar", "ui-icon-calendar-sync");
+    connectGoogleButton.disabled = appConfig?.googleReady !== true;
+    connectGoogleButton.setAttribute(
+      "aria-label",
+      appConfig?.googleReady === true ? "Connect Google Calendar" : "Google Calendar connection unavailable"
+    );
     settingsReconnectButton.classList.add("hidden");
     settingsReconnectButton.dataset.calendarWrite = "false";
     connectWidgetText.textContent = "Connect calendar to sync availability.";
@@ -4428,10 +4769,14 @@ function openEventDetail(eventId) {
   setVoteButtons(currentResponse);
 
   const canManage = currentIsHost || event.createdByParticipantId === currentParticipant?.id;
-  renderEventPanelForm(event, canManage);
+  // The detail panel is an inspection/RSVP surface. All mutations go through
+  // the same compact composer used for event creation.
+  renderEventPanelForm(event, false);
+  eventPanelForm?.setAttribute("aria-label", "Event details");
   inviteeSummary.textContent = event.invitees?.length ? `${event.invitees.length} invited` : "No invitees selected.";
   const canRespond = Boolean(event.isInvited);
-  editEventButton.classList.add("hidden");
+  editEventButton.classList.toggle("hidden", !canManage);
+  saveEventChangesButton?.classList.add("hidden");
   deleteEventButton.classList.toggle("hidden", !canManage);
   // Time changes are made by the event creator in the editor. Guests can vote
   // without mutating the event's canonical start and end times.
@@ -5016,7 +5361,16 @@ function dismissOutsideFloatingSurfaces(target) {
   }
 
   if (panelIsVisible(hostPopover) && !hostPopover.contains(target)) {
-    setPanelVisibility(hostPopover, false);
+    setSettingsPanelOpen(false, { restoreFocus: false });
+    dismissed = true;
+  }
+
+  if (
+    calendarUtilityOverflowButton?.getAttribute("aria-expanded") === "true" &&
+    !calendarUtilityOverflowMenu?.contains(target) &&
+    !calendarUtilityOverflowButton.contains(target)
+  ) {
+    setCalendarUtilityMenuOpen(false);
     dismissed = true;
   }
 
@@ -5124,6 +5478,8 @@ function createSingleBusyCard(segment, dayIndex) {
   block.dataset.overlapRole = hasLaneOverlap ? (isOverlapAnchor ? "anchor" : "overlay") : "single";
   block.dataset.googleCalendarId = googleItem?.googleCalendarId || "";
   block.dataset.googleEventId = googleItem?.googleEventId || "";
+  block.dataset.eventStart = googleItem?.start || "";
+  block.dataset.eventEnd = googleItem?.end || "";
   block.dataset.eventDate = dateKey(segment.date);
   block.dataset.dayIndex = String(dayIndex);
   block.dataset.startMinute = String(Math.round((segment.startHour - calendarStartHour) * 60));
@@ -5135,6 +5491,7 @@ function createSingleBusyCard(segment, dayIndex) {
   block.style.setProperty("--start", segment.startHour - calendarStartHour);
   block.style.setProperty("--duration", duration);
   block.style.setProperty("--event-color", participant.color);
+  applyEventInk(block, participant.color);
   applyCalendarLanePosition(
     block,
     dayIndex,
@@ -5149,6 +5506,7 @@ function createSingleBusyCard(segment, dayIndex) {
   const tooltip = [ownerLabel, titleLabel || (isOwnBlock ? "No title" : "Busy"), timeRange].filter(Boolean).join(" · ");
   block.dataset.tooltip = tooltip;
   block.title = tooltip;
+  block.setAttribute("aria-label", [formatFullDate(segment.date), ownerLabel, titleLabel || (isOwnBlock ? "No title" : "Busy"), timeRange].filter(Boolean).join(", "));
 
   const appendLine = (className, text) => {
     if (!text) return null;
@@ -5178,6 +5536,11 @@ function createSingleBusyCard(segment, dayIndex) {
   });
   if (canMove) {
     block.addEventListener("pointerdown", startGoogleBusyMove);
+    block.addEventListener("keydown", handleGoogleBusyKeyboardAdjustment);
+    block.setAttribute(
+      "aria-description",
+      "Alt plus Up or Down moves by 15 minutes. Alt plus Shift plus Up or Down changes the duration by 15 minutes. Alt plus Left or Right moves by one day."
+    );
   }
   return block;
 }
@@ -5269,6 +5632,7 @@ function createBusyStack(segment, dayIndex) {
     card.type = "button";
     card.className = `busy-stack-item ${participantInvitedOverlap ? "invited-overlap" : ""}`.trim();
     card.style.setProperty("--event-color", participant.color);
+    applyEventInk(card, participant.color);
     card.style.setProperty("--stack-order", index);
     const itemTooltip = `${ownerLabel}\n${visibilityLabel}\n${participantTimeLabel}`;
     card.dataset.tooltip = itemTooltip;
@@ -5389,12 +5753,14 @@ function createEventBlock(item, dayIndex, dayDate) {
   block.style.setProperty("--start", item.startHour - calendarStartHour);
   block.style.setProperty("--duration", duration);
   block.style.setProperty("--event-owner-color", item.participantColor);
+  applyEventInk(block, item.participantColor);
   block.style.setProperty("--event-lane-count", laneCount);
   block.style.setProperty("--event-lane-index", laneIndex);
   applyCalendarLanePosition(block, dayIndex, laneCount, laneIndex, item.clusterLaneCount);
   const timeRange = formatEventRange(item.startHour, item.endHour);
   const ownerLabel = calendarEventOwnerLabel(item);
-  block.setAttribute("aria-label", `${ownerLabel}, ${item.title || "Event"}, ${timeRange}`);
+  const fullDateLabel = dayDate ? formatFullDate(dayDate) : "";
+  block.setAttribute("aria-label", [fullDateLabel, ownerLabel, item.title || "Event", timeRange].filter(Boolean).join(", "));
   const tooltip = [ownerLabel, item.title, timeRange, item.location, item.summary].filter(Boolean).join("\n");
   block.dataset.tooltip = tooltip;
   block.title = tooltip;
@@ -5412,7 +5778,7 @@ function createEventBlock(item, dayIndex, dayDate) {
   };
 
   if (durationClass === "event-15") {
-    appendLine("event-line-compact", compactPrefix);
+    appendLine("event-line-compact event-line-owner", compactPrefix);
     configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
   } else if (durationClass === "event-30") {
     appendLine("event-line-owner", ownerLabel);
@@ -5440,6 +5806,11 @@ function createEventBlock(item, dayIndex, dayDate) {
   });
   if (canMove) {
     block.addEventListener("pointerdown", startEventMove);
+    block.addEventListener("keydown", handleRoomEventKeyboardAdjustment);
+    block.setAttribute(
+      "aria-description",
+      "Alt plus Up or Down moves by 15 minutes. Alt plus Shift plus Up or Down changes the duration by 15 minutes. Alt plus Left or Right moves by one day."
+    );
   }
 
   if (canResizeTop) {
@@ -5752,12 +6123,13 @@ function upsertCalendarEventPreview({
   dragPreviewNode.dataset.previewKind = composer ? "composer" : "drag";
   const titleText = String(title || "").trim() || "(No title)";
   const timeRange = formatEventRange(startHour, endHour);
-  const ownerLabel = "You";
+  const ownerLabel = String(currentParticipant?.displayName || "You").trim() || "You";
   const compactPrefix = [ownerLabel, titleText].filter(Boolean).join(" · ");
+  applyEventInk(dragPreviewNode, previewColor);
   dragPreviewNode.innerHTML = `
     <div class="drag-create-preview-copy">
       ${durationClass === "event-15"
-        ? `<div class="event-line event-line-compact">${escapeHtml(compactPrefix)}</div>`
+        ? `<div class="event-line event-line-compact event-line-owner">${escapeHtml(compactPrefix)}</div>`
         : `<div class="event-line event-line-owner">${escapeHtml(ownerLabel)}</div>
            <div class="event-line event-line-title">${escapeHtml(titleText)}</div>`}
       <div class="event-line event-line-meta" data-event-time-line="true" data-event-time-prefix="" data-event-time-suffix="">${escapeHtml(timeRange)}</div>
@@ -6099,7 +6471,7 @@ function refreshLiveFreeBlocksForResize(
   { live = true, force = false } = {}
 ) {
   if (!state?.dayKey || !Number.isFinite(startMinute) || !Number.isFinite(durationMinute)) return;
-  if (!showFreeBlocks) {
+  if (!freeBlocksEnabled()) {
     calendarGrid.querySelectorAll(".free-block").forEach((block) => block.remove());
     return;
   }
@@ -6463,8 +6835,12 @@ async function handleEventMoveEnd(event) {
       try {
         if (await loadFreeBusy()) render();
       } catch (syncRefreshError) {
-        calendarStatus.textContent = syncRefreshError.message;
+        setCalendarStatus(syncRefreshError.message, {
+          notify: true,
+          title: "Calendar refresh delayed"
+        });
       }
+      setCalendarStatus("Google event moved.", { notify: true, title: "Event updated" });
       return;
     }
 
@@ -6493,11 +6869,18 @@ async function handleEventMoveEnd(event) {
     try {
       if (await loadFreeBusy()) render();
     } catch (syncRefreshError) {
-      calendarStatus.textContent = syncRefreshError.message;
+      setCalendarStatus(syncRefreshError.message, {
+        notify: true,
+        title: "Calendar refresh delayed"
+      });
     }
+    setCalendarStatus("Event moved.", { notify: true, title: "Event updated" });
   } catch (error) {
     if (currentRoom?.code !== roomCodeSnapshot) return;
-    calendarStatus.textContent = error.message;
+    setCalendarStatus(error.message || "The event could not be moved.", {
+      notify: true,
+      title: "Move failed"
+    });
     if (isGoogleBusy) {
       googleBusy = previousGoogleBusy;
     } else {
@@ -6727,8 +7110,12 @@ async function handleEventResizeEnd(event) {
     currentRoom.events = currentRoom.events.map((item) => item.id === state.eventId ? data.event : item);
     render();
     fetchNotifications();
+    setCalendarStatus("Event duration updated.", { notify: true, title: "Event updated" });
   } catch (error) {
-    calendarStatus.textContent = error.message;
+    setCalendarStatus(error.message || "The event duration could not be updated.", {
+      notify: true,
+      title: "Resize failed"
+    });
     if (dayEvent && block?.isConnected) {
       resetEventResizeVisual(block, state.baseStartMinute, state.baseDurationMinute);
     }
@@ -6886,19 +7273,30 @@ function startDragCreate(event) {
 function renderPlanner(days) {
   calendarGrid.innerHTML = "";
   calendarGrid.className = `calendar-grid ${currentView}-view`;
+  calendarGrid.setAttribute("role", "grid");
+  calendarGrid.setAttribute("aria-label", `${currentView === "day" ? "Day" : "Week"} calendar, ${calendarPeriodText({ includeYear: true })}`);
+  calendarGrid.setAttribute("aria-rowcount", String(hours.length + 1));
+  calendarGrid.setAttribute("aria-colcount", String(days.length + 1));
   calendarGrid.style.setProperty("--day-count", days.length);
   calendarGrid.style.setProperty("--hour-count", hours.length);
 
   const corner = document.createElement("div");
   corner.className = "calendar-corner";
+  corner.setAttribute("role", "columnheader");
+  corner.setAttribute("aria-colindex", "1");
+  corner.setAttribute("aria-rowindex", "1");
   corner.textContent = currentTimezoneLabel(days[0]?.date || currentFocusDate);
   corner.setAttribute("aria-label", `Time zone ${corner.textContent}`);
   calendarGrid.appendChild(corner);
 
-  for (const day of days) {
+  for (const [dayIndex, day] of days.entries()) {
     const header = document.createElement("div");
     const isSelected = sameDate(day.date, currentFocusDate);
     header.className = `day-header ${isSelected ? "selected" : ""}`.trim();
+    header.setAttribute("role", "columnheader");
+    header.setAttribute("aria-colindex", String(dayIndex + 2));
+    header.setAttribute("aria-rowindex", "1");
+    header.setAttribute("aria-label", formatFullDate(day.date));
     header.innerHTML = formatDayHeader(day);
     const dateButton = header.querySelector(".day-header-date");
     if (isSelected) dateButton?.setAttribute("aria-current", "date");
@@ -6914,6 +7312,9 @@ function renderPlanner(days) {
     const timeCell = document.createElement("div");
     timeCell.className = "time-cell";
     timeCell.textContent = formatHour(hour);
+    timeCell.setAttribute("role", "rowheader");
+    timeCell.setAttribute("aria-rowindex", String(hour - calendarStartHour + 2));
+    timeCell.setAttribute("aria-colindex", "1");
     calendarGrid.appendChild(timeCell);
 
     for (let dayIndex = 0; dayIndex < days.length; dayIndex += 1) {
@@ -6923,12 +7324,17 @@ function renderPlanner(days) {
       cell.dataset.dayIndex = String(dayIndex);
       cell.dataset.dayKey = dateKey(day.date);
       cell.dataset.hour = String(hour);
+      cell.setAttribute("role", "gridcell");
+      cell.setAttribute("aria-rowindex", String(hour - calendarStartHour + 2));
+      cell.setAttribute("aria-colindex", String(dayIndex + 2));
+      cell.setAttribute("aria-label", `${formatFullDate(day.date)}, ${formatHour(hour)}`);
       calendarGrid.appendChild(cell);
     }
   }
 
   const eventsLayer = document.createElement("div");
   eventsLayer.className = "events-layer";
+  eventsLayer.setAttribute("role", "presentation");
   calendarGrid.appendChild(eventsLayer);
 
   days.forEach((day, dayIndex) => {
@@ -6940,12 +7346,11 @@ function renderPlanner(days) {
     ]);
     const occupiedSegments = occupiedSegmentsForDate(day.date, rawBusySegments, rawEventBlocks);
 
-    /*
-      TODO: Commonground Free Block Rendering - Hidden for current demo
+    if (freeBlocksEnabled()) {
       for (const segment of freeSegmentsForDate(day.date, occupiedSegments)) {
         eventsLayer.appendChild(createFreeGlowBlock({ ...segment, occupiedSegments }, dayIndex));
       }
-    */
+    }
 
     for (const item of laneItems) {
       const node = item.laneKind === "busy"
@@ -6967,6 +7372,10 @@ function renderPlanner(days) {
 function renderMonth() {
   calendarGrid.innerHTML = "";
   calendarGrid.className = "calendar-grid month-view";
+  calendarGrid.setAttribute("role", "grid");
+  calendarGrid.setAttribute("aria-label", `Month calendar, ${formatMonthYear(currentFocusDate)}`);
+  calendarGrid.setAttribute("aria-rowcount", "7");
+  calendarGrid.setAttribute("aria-colcount", "7");
 
   const today = new Date();
   const monthStart = new Date(currentFocusDate.getFullYear(), currentFocusDate.getMonth(), 1);
@@ -6981,10 +7390,14 @@ function renderMonth() {
     busyByDate.set(dateKey(date), { segments, eventBlocks });
   }
 
-  for (const day of dayNames) {
+  for (const [dayIndex, day] of dayNames.entries()) {
     const header = document.createElement("div");
     header.className = "month-weekday";
     header.textContent = day.short;
+    header.setAttribute("role", "columnheader");
+    header.setAttribute("aria-colindex", String(dayIndex + 1));
+    header.setAttribute("aria-rowindex", "1");
+    header.setAttribute("aria-label", new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(addDays(startOfWeek(new Date(2026, 0, 4)), dayIndex)));
     calendarGrid.appendChild(header);
   }
 
@@ -6997,7 +7410,11 @@ function renderMonth() {
     const isFreeDay = !(data?.segments?.length) && !events.length;
     const cell = document.createElement("div");
     cell.className = ["month-cell", date.getMonth() !== monthStart.getMonth() ? "muted-month" : "", sameDate(date, today) ? "today" : "", sameDate(date, currentFocusDate) ? "selected" : ""].filter(Boolean).join(" ");
-    if (showFreeBlocks && isFreeDay) {
+    cell.setAttribute("role", "gridcell");
+    cell.setAttribute("aria-rowindex", String(Math.floor(index / 7) + 2));
+    cell.setAttribute("aria-colindex", String((index % 7) + 1));
+    cell.setAttribute("aria-label", formatFullDate(date));
+    if (freeBlocksEnabled() && isFreeDay) {
       cell.classList.add("free-day");
       cell.title = "Free day";
     }
@@ -7074,21 +7491,57 @@ function monthEventChipLabel(eventBlock) {
 function renderYear() {
   calendarGrid.innerHTML = "";
   calendarGrid.className = "calendar-grid year-view";
+  calendarGrid.setAttribute("role", "region");
+  calendarGrid.setAttribute("aria-label", `Year calendar, ${currentFocusDate.getFullYear()}`);
+  calendarGrid.removeAttribute("aria-rowcount");
+  calendarGrid.removeAttribute("aria-colcount");
   const today = new Date();
+  const year = currentFocusDate.getFullYear();
+
+  const monthJump = document.createElement("nav");
+  monthJump.className = "year-month-jump";
+  monthJump.setAttribute("aria-label", `Jump to a month in ${year}`);
+  for (let month = 0; month < 12; month += 1) {
+    const monthDate = new Date(year, month, 1);
+    const monthName = new Intl.DateTimeFormat(undefined, { month: "long" }).format(monthDate);
+    const jumpButton = document.createElement("button");
+    jumpButton.type = "button";
+    jumpButton.className = "year-month-jump-button";
+    jumpButton.textContent = monthName.slice(0, 3);
+    jumpButton.setAttribute("aria-label", `Jump to ${monthName} ${year}`);
+    if (month === currentFocusDate.getMonth()) jumpButton.setAttribute("aria-current", "true");
+    jumpButton.addEventListener("click", () => {
+      for (const button of monthJump.querySelectorAll(".year-month-jump-button")) {
+        button.removeAttribute("aria-current");
+      }
+      jumpButton.setAttribute("aria-current", "true");
+      const target = document.querySelector(`#calendar-year-month-${year}-${month + 1}`);
+      target?.scrollIntoView({
+        block: "start",
+        behavior: prefersReducedMotion() ? "auto" : "smooth"
+      });
+    });
+    monthJump.appendChild(jumpButton);
+  }
+  calendarGrid.appendChild(monthJump);
 
   for (let month = 0; month < 12; month += 1) {
     const tile = document.createElement("section");
     tile.className = "year-month";
+    tile.id = `calendar-year-month-${year}-${month + 1}`;
     const title = document.createElement("h3");
+    title.id = `${tile.id}-title`;
     title.textContent = new Intl.DateTimeFormat(undefined, { month: "long" }).format(new Date(currentFocusDate.getFullYear(), month, 1));
+    tile.setAttribute("aria-labelledby", title.id);
     tile.appendChild(title);
 
     const mini = document.createElement("div");
     mini.className = "mini-month";
-    for (const day of dayNames) {
+    for (const [dayIndex, day] of dayNames.entries()) {
       const label = document.createElement("span");
       label.className = "mini-weekday";
       label.textContent = day.short.slice(0, 1);
+      label.setAttribute("aria-label", new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(addDays(startOfWeek(new Date(2026, 0, 4)), dayIndex)));
       mini.appendChild(label);
     }
 
@@ -7379,7 +7832,7 @@ async function viewJoinNotification(notification) {
   if (currentRoom?.code !== notification.roomCode) {
     await switchRoom(notification.roomCode);
   }
-  setPanelVisibility(hostPopover, true);
+  setSettingsPanelOpen(true);
   joinRequestQueue?.scrollIntoView({ block: "nearest" });
   await markNotificationRead(notification.id);
 }
@@ -7431,7 +7884,11 @@ function createNotificationCard(notification) {
   const actions = document.createElement("div");
   actions.className = "notification-actions";
 
-  if (notification.type === "event_invite" || notification.type === "event_updated") {
+  if (
+    (notification.type === "event_invite" || notification.type === "event_updated")
+    && notification.roomCode
+    && notification.eventId
+  ) {
     addNotificationAction(actions, "Yes", () => respondFromNotification(notification, "yes"), "primary");
     addNotificationAction(actions, "Maybe", () => respondFromNotification(notification, "maybe"));
     addNotificationAction(actions, "No", () => respondFromNotification(notification, "no"));
@@ -7582,6 +8039,7 @@ async function enterRoomFromResponse(data, { replaceRoute = false } = {}) {
   await loadFreeBusy();
   await refreshMyRooms();
   render();
+  restoreCalendarScrollPosition(currentView);
   startAutoRefresh();
 }
 
@@ -7824,37 +8282,250 @@ function startAutoRefresh() {
   }, 25000);
 }
 
-async function createRoom(event) {
-  event.preventDefault();
+function keyboardCalendarAdjustment(event) {
+  if (!event.altKey || event.ctrlKey || event.metaKey) return null;
+  if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.key)) return null;
+  if (event.shiftKey && !["ArrowUp", "ArrowDown"].includes(event.key)) return null;
+  if (event.shiftKey) {
+    return {
+      kind: "resize-end",
+      minuteDelta: event.key === "ArrowUp" ? -eventResizeSnapMinutes : eventResizeSnapMinutes,
+      dayDelta: 0
+    };
+  }
+  if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+    return {
+      kind: "move",
+      minuteDelta: 0,
+      dayDelta: event.key === "ArrowLeft" ? -1 : 1
+    };
+  }
+  return {
+    kind: "move",
+    minuteDelta: event.key === "ArrowUp" ? -eventResizeSnapMinutes : eventResizeSnapMinutes,
+    dayDelta: 0
+  };
+}
+
+function adjustedKeyboardEventRange(startValue, endValue, adjustment) {
+  const start = new Date(startValue);
+  const end = new Date(endValue);
+  if (
+    !adjustment ||
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    end <= start
+  ) return null;
+
+  const durationMs = end.getTime() - start.getTime();
+  if (adjustment.kind === "resize-end") {
+    const nextEnd = new Date(end.getTime() + adjustment.minuteDelta * 60 * 1000);
+    const minimumEnd = new Date(start.getTime() + eventResizeMinMinutes * 60 * 1000);
+    if (nextEnd < minimumEnd) return null;
+    return { start, end: nextEnd };
+  }
+
+  const offsetMs = adjustment.minuteDelta * 60 * 1000 + adjustment.dayDelta * 24 * 60 * 60 * 1000;
+  const nextStart = new Date(start.getTime() + offsetMs);
+  const nextEnd = new Date(nextStart.getTime() + durationMs);
+  if (adjustment.dayDelta === 0 && dateKey(nextStart) !== dateKey(start)) return null;
+  if (adjustment.dayDelta === 0 && dateKey(nextEnd) !== dateKey(end)) return null;
+  return { start: nextStart, end: nextEnd };
+}
+
+function eventPayloadForAdjustedRange(eventEntry, range) {
+  return {
+    title: eventEntry.title || "(No title)",
+    start: range.start.toISOString(),
+    end: range.end.toISOString(),
+    timezone: eventEntry.timezone || "UTC",
+    allDay: Boolean(eventEntry.allDay),
+    location: eventEntry.location || "",
+    description: eventEntry.description || "",
+    syncToGoogle: eventEntry.syncToGoogle === true || calendarEventSyncEnabled(),
+    syncToOutlook: eventEntry.syncToOutlook === true,
+    inviteeParticipantIds: eventInviteeIds(eventEntry)
+  };
+}
+
+async function adjustRoomEventFromKeyboard(eventId, adjustment, block) {
+  const eventEntry = roomEventById(eventId);
+  if (
+    !eventEntry ||
+    eventEntry.createdByParticipantId !== currentParticipant?.id ||
+    eventEntry.allDay
+  ) return;
+  const range = adjustedKeyboardEventRange(eventEntry.start, eventEntry.end, adjustment);
+  if (!range) {
+    setCalendarStatus("That adjustment would move the event outside the supported day range.", {
+      notify: true,
+      title: "Event time unchanged"
+    });
+    return;
+  }
+
+  const moveKey = `room:${currentRoom?.code || ""}:${eventId}`;
+  if (pendingEventMoveKeys.has(moveKey)) return;
+  pendingEventMoveKeys.add(moveKey);
+  block?.setAttribute("aria-busy", "true");
   try {
-    const roomNameValue = String(createRoomName?.value || "").trim();
-    const data = await fetchJson("/api/rooms", {
-      method: "POST",
+    const data = await fetchJson(`/api/rooms/${currentRoom.code}/events/${eventId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(eventPayloadForAdjustedRange(eventEntry, range))
+    });
+    currentRoom.events = currentRoom.events.map((item) => item.id === eventId ? data.event : item);
+    render();
+    try {
+      if (await loadFreeBusy()) render();
+    } catch {
+      // The room event is already saved; the normal refresh loop will reconcile availability.
+    }
+    setCalendarStatus(
+      adjustment.kind === "resize-end" ? "Event duration updated by 15 minutes." : "Event moved by 15 minutes.",
+      { notify: true, title: "Event updated" }
+    );
+  } catch (error) {
+    setCalendarStatus(error.message || "The event time could not be updated.", {
+      notify: true,
+      title: "Event update failed"
+    });
+  } finally {
+    pendingEventMoveKeys.delete(moveKey);
+    block?.removeAttribute("aria-busy");
+  }
+}
+
+async function adjustGoogleBusyFromKeyboard(calendarId, providerEventId, startValue, endValue, adjustment, block) {
+  if (!calendarId || !providerEventId) return;
+  const range = adjustedKeyboardEventRange(startValue, endValue, adjustment);
+  if (!range) {
+    setCalendarStatus("That adjustment would move the event outside the supported day range.", {
+      notify: true,
+      title: "Event time unchanged"
+    });
+    return;
+  }
+  const moveKey = `google:${currentRoom?.code || ""}:${calendarId}:${providerEventId}`;
+  if (pendingEventMoveKeys.has(moveKey)) return;
+  pendingEventMoveKeys.add(moveKey);
+  block?.setAttribute("aria-busy", "true");
+  try {
+    await fetchJson(`/api/rooms/${currentRoom.code}/google-calendar-events`, {
+      method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        name: roomNameValue,
-        emoji: normalizeRoomEmoji(createRoomEmoji?.value)
+        calendarId,
+        eventId: providerEventId,
+        start: range.start.toISOString(),
+        end: range.end.toISOString()
       })
     });
-
-    if (currentUserConnected()) {
-      await enterRoomFromResponse(data);
-      createRoomForm?.reset();
-      return;
-    }
-
-    pendingEntryMode = "host";
-    pendingEntryRoomCode = data.room.code;
-    pendingHostRoomState = {
-      room: data.room,
-      participant: data.participant,
-      isHost: true
-    };
-    entryChoiceLead.textContent = `Room ${data.room.code} is ready. Sync Google Calendar to add your live availability automatically, or continue as a guest for now.`;
-    showEntryChoice();
+    await loadFreeBusy();
+    render();
+    setCalendarStatus(
+      adjustment.kind === "resize-end" ? "Google event duration updated by 15 minutes." : "Google event moved by 15 minutes.",
+      { notify: true, title: "Google event updated" }
+    );
   } catch (error) {
-    setStatus(homeStatus, error.message, "warn");
+    setCalendarStatus(error.message || "The Google event time could not be updated.", {
+      notify: true,
+      title: "Google event update failed"
+    });
+  } finally {
+    pendingEventMoveKeys.delete(moveKey);
+    block?.removeAttribute("aria-busy");
   }
+}
+
+function handleRoomEventKeyboardAdjustment(event) {
+  const adjustment = keyboardCalendarAdjustment(event);
+  if (!adjustment) return;
+  event.preventDefault();
+  event.stopPropagation();
+  void adjustRoomEventFromKeyboard(event.currentTarget?.dataset.eventId, adjustment, event.currentTarget);
+}
+
+function handleGoogleBusyKeyboardAdjustment(event) {
+  const adjustment = keyboardCalendarAdjustment(event);
+  if (!adjustment) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const block = event.currentTarget;
+  void adjustGoogleBusyFromKeyboard(
+    block?.dataset.googleCalendarId,
+    block?.dataset.googleEventId,
+    block?.dataset.eventStart,
+    block?.dataset.eventEnd,
+    adjustment,
+    block
+  );
+}
+
+function clearPendingEntryState() {
+  pendingEntryRoomCode = null;
+  pendingEntryMode = null;
+  pendingHostRoomState = null;
+  pendingRoomPreview = null;
+}
+
+async function createRoomFromPendingDraft() {
+  const draft = pendingHostRoomState?.draft;
+  if (pendingEntryMode !== "host" || !draft) {
+    throw new Error("The room draft is no longer available. Please start again.");
+  }
+  if (!pendingHostRoomState.createPromise) {
+    pendingHostRoomState.createPromise = fetchJson("/api/rooms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(draft)
+    });
+  }
+  return pendingHostRoomState.createPromise;
+}
+
+async function continueEntryWithGoogle() {
+  if (pendingEntryMode === "host") {
+    try {
+      choiceConnectButton.disabled = true;
+      const data = await createRoomFromPendingDraft();
+      createRoomForm?.reset();
+      if (currentUserConnected()) {
+        clearPendingEntryState();
+        await enterRoomFromResponse(data);
+        return;
+      }
+      const roomCodeValue = data.room.code;
+      clearPendingEntryState();
+      window.location.href = googleAuthUrl(roomCodeValue);
+    } catch (error) {
+      if (pendingHostRoomState) pendingHostRoomState.createPromise = null;
+      entryChoiceLead.textContent = error.message || "The room could not be created.";
+      choiceConnectButton.disabled = false;
+    }
+    return;
+  }
+
+  if (!pendingEntryRoomCode) return;
+  window.location.href = googleAuthUrl(pendingEntryRoomCode);
+}
+
+async function createRoom(event) {
+  event.preventDefault();
+  const roomNameValue = String(createRoomName?.value || "").trim() || "Untitled room";
+  createRoomName?.setAttribute("aria-invalid", "false");
+  pendingEntryMode = "host";
+  pendingEntryRoomCode = null;
+  pendingRoomPreview = null;
+  pendingHostRoomState = {
+    draft: {
+      name: roomNameValue,
+      emoji: normalizeRoomEmoji(createRoomEmoji?.value)
+    },
+    createPromise: null
+  };
+  entryChoiceLead.textContent = `Choose how you want to enter “${roomNameValue}”. The room will be created when you continue.`;
+  showEntryChoice();
 }
 
 async function openRoomEntryPage() {
@@ -7930,42 +8601,52 @@ async function joinRoom(event) {
   event.preventDefault();
   const code = normalizeRoomCodeInput(joinRoomCode.value);
   if (code.length !== 6) {
+    joinRoomCode.setAttribute("aria-invalid", "true");
     setStatus(homeStatus, "Enter the six-character room code.", "warn");
+    joinRoomCode.focus();
     return;
   }
+  joinRoomCode.setAttribute("aria-invalid", "false");
 
-  pendingEntryRoomCode = code;
-  pendingEntryMode = "join";
-  pendingHostRoomState = null;
+  try {
+    const previewData = await fetchJson(`/api/rooms/${code}/preview`);
+    const preview = previewData?.room || previewData;
+    if (!preview || preview.exists === false || normalizeRoomCodeInput(preview.code || code) !== code) {
+      throw new Error("That room could not be found.");
+    }
+    pendingEntryRoomCode = code;
+    pendingEntryMode = "join";
+    pendingHostRoomState = null;
+    pendingRoomPreview = preview;
 
-  if (currentUserConnected()) {
-    await joinRoomAsGuest(code);
-    return;
+    if (currentUserConnected()) {
+      await joinRoomAsGuest(code);
+      return;
+    }
+
+    const roomLabel = String(preview.name || code).trim() || code;
+    entryChoiceLead.textContent = Boolean(preview.locked ?? preview.accessLocked)
+      ? `${roomLabel} is locked. Continue to send a join request to the host.`
+      : `Join ${roomLabel} as a guest, or connect Google Calendar to add live availability.`;
+    showEntryChoice();
+  } catch (error) {
+    clearPendingEntryState();
+    joinRoomCode.setAttribute("aria-invalid", "true");
+    setStatus(homeStatus, error.message || "That room could not be found.", "warn");
+    joinRoomCode.focus();
   }
-
-  entryChoiceLead.textContent = `Room ${code} is ready. Join now as a guest, or sync Google Calendar to add your live availability automatically.`;
-  showEntryChoice();
 }
 
 async function joinRoomAsGuest(code = pendingEntryRoomCode) {
   const roomCode = normalizeRoomCodeInput(code);
-  if (!roomCode) return;
+  if (!roomCode && pendingEntryMode !== "host") return;
   try {
-    if (pendingEntryMode === "host" && pendingHostRoomState?.room?.code === roomCode) {
-      pushRoomRoute(roomCode);
-      currentRoom = pendingHostRoomState.room;
-      currentParticipant = pendingHostRoomState.participant;
-      currentIsHost = true;
-      await loadConfigAndSession();
-      googleBusy = [];
-      showRoom();
-      await loadFreeBusy();
-      await refreshMyRooms();
-      render();
-      startAutoRefresh();
-      pendingEntryRoomCode = null;
-      pendingEntryMode = null;
-      pendingHostRoomState = null;
+    if (pendingEntryMode === "host" && pendingHostRoomState?.draft) {
+      choiceGuestButton.disabled = true;
+      const data = await createRoomFromPendingDraft();
+      createRoomForm?.reset();
+      clearPendingEntryState();
+      await enterRoomFromResponse(data);
       return;
     }
 
@@ -7976,19 +8657,23 @@ async function joinRoomAsGuest(code = pendingEntryRoomCode) {
     });
 
     if (data.requested) {
-      pendingEntryRoomCode = null;
-      pendingEntryMode = null;
-      pendingHostRoomState = null;
+      clearPendingEntryState();
       showHome();
       setStatus(homeStatus, data.message || "Join request sent to the host.", "connected");
       return;
     }
 
     await enterRoomFromResponse(data);
-    pendingEntryRoomCode = null;
-    pendingEntryMode = null;
-    pendingHostRoomState = null;
+    clearPendingEntryState();
   } catch (error) {
+    choiceGuestButton.disabled = false;
+    if (pendingEntryMode === "host" && pendingHostRoomState?.draft) {
+      pendingHostRoomState.createPromise = null;
+      entryChoiceLead.textContent = error.message || "The room could not be created. Try again.";
+      showEntryChoice();
+      return;
+    }
+    clearPendingEntryState();
     showHome();
     setStatus(homeStatus, error.message, "warn");
   }
@@ -8155,12 +8840,18 @@ async function saveRoomLockState() {
     currentRoom = data.room;
     currentParticipant = data.participant;
     currentIsHost = Boolean(data.isHost);
-    calendarStatus.textContent = locked ? "Room locked." : "Room unlocked.";
+    setCalendarStatus(locked ? "Room locked." : "Room unlocked.", {
+      notify: true,
+      title: "Room access updated"
+    });
     render();
   } catch (error) {
     if (roomLockToggle) roomLockToggle.checked = Boolean(currentRoom?.accessLocked);
     updateRoomLockIcon(Boolean(currentRoom?.accessLocked));
-    calendarStatus.textContent = error.message;
+    setCalendarStatus(error.message || "Room access could not be updated.", {
+      notify: true,
+      title: "Room update failed"
+    });
   }
 }
 
@@ -8231,8 +8922,15 @@ async function removeParticipant(participantId) {
     currentIsHost = Boolean(data.isHost);
     await refreshMyRooms();
     render();
+    setCalendarStatus(`${participant?.displayName || "Participant"} was removed.`, {
+      notify: true,
+      title: "Member removed"
+    });
   } catch (error) {
-    calendarStatus.textContent = error.message;
+    setCalendarStatus(error.message || "The participant could not be removed.", {
+      notify: true,
+      title: "Member removal failed"
+    });
   }
 }
 
@@ -8407,7 +9105,18 @@ function attemptCloseEventModal(source) {
 
 function openEventModal(mode = "create", options = {}) {
   closeAllLocationAutocompletes({ immediate: true, resetSession: true });
-  editingEventId = mode === "edit" ? selectedEventId : null;
+  editingEventId = mode === "edit" ? (options.eventId || selectedEventId) : null;
+  const editingEvent = editingEventId
+    ? currentRoom?.events?.find((event) => String(event.id) === String(editingEventId)) || null
+    : null;
+  if (mode === "edit" && !editingEvent) {
+    editingEventId = null;
+    setCalendarStatus("That event is no longer available to edit.", {
+      notify: true,
+      title: "Event unavailable"
+    });
+    return;
+  }
   if (eventModalLabel) eventModalLabel.textContent = mode === "edit" ? "Edit group event" : "Add group event";
   if (eventModalTitle) eventModalTitle.textContent = mode === "edit" ? "Update proposal" : pendingEventPrefill ? "Create group event" : "Create proposal";
   saveEventButton.textContent = mode === "edit" ? "Save changes" : "Create event";
@@ -8419,8 +9128,8 @@ function openEventModal(mode = "create", options = {}) {
   if (!eventComposerPreviewActive) clearDragPreview();
   if (eventInviteDropdown) eventInviteDropdown.open = false;
 
-  if (mode === "edit" && activeEvent()) {
-    const event = activeEvent();
+  if (mode === "edit" && editingEvent) {
+    const event = editingEvent;
     const start = new Date(event.start);
     const end = new Date(event.end);
     const allDayRange = typeof event.allDay === "boolean" ? event.allDay : isWholeDayRange(start, end);
@@ -8477,6 +9186,7 @@ function openEventModal(mode = "create", options = {}) {
   eventModal.showModal();
   eventModalInitialState = eventFormStateSnapshot();
   requestAnimationFrame(() => {
+    eventTitleInput?.focus({ preventScroll: true });
     if (eventComposerPreviewActive) {
       syncEventComposerPreview({ reveal: true, navigate: true });
     } else {
@@ -8514,6 +9224,7 @@ async function saveEvent(event) {
   event.preventDefault();
   if (!currentRoom || eventForm.dataset.saving === "true") return;
   setEventFormFeedback();
+  const wasEditing = Boolean(editingEventId);
 
   const date = eventDateInput.value;
   const allDay = Boolean(eventAllDayInput?.checked);
@@ -8569,8 +9280,15 @@ async function saveEvent(event) {
     closeEventModal();
     render();
     fetchNotifications();
+    setCalendarStatus(wasEditing ? "Event changes saved." : "Event created.", {
+      notify: true,
+      title: wasEditing ? "Event updated" : "Event created"
+    });
   } catch (error) {
-    calendarStatus.textContent = error.message;
+    setCalendarStatus(error.message || (wasEditing ? "The event could not be updated." : "The event could not be created."), {
+      notify: true,
+      title: wasEditing ? "Update failed" : "Create failed"
+    });
     setEventFormFeedback(error.message || "The event could not be created. Try again.", "error");
   } finally {
     setEventFormSaving(false);
@@ -8640,18 +9358,57 @@ async function saveEventPanelChanges(event) {
   }
 }
 
+function openDeleteEventConfirmDialog() {
+  if (!deleteEventConfirmDialog || !selectedEventId || deleteEventConfirmDialog.open) return;
+  if (confirmDeleteEventButton) confirmDeleteEventButton.disabled = false;
+  deleteEventReturnFocus = document.activeElement instanceof HTMLElement
+    ? document.activeElement
+    : deleteEventButton;
+  prepareDialogForOpen(deleteEventConfirmDialog);
+  deleteEventConfirmDialog.showModal();
+  window.requestAnimationFrame(() => {
+    cancelDeleteEventButton?.focus({ preventScroll: true });
+  });
+}
+
+function closeDeleteEventConfirmDialog({ restoreFocus = true } = {}) {
+  if (!deleteEventConfirmDialog?.open) return;
+  const returnFocus = deleteEventReturnFocus;
+  closeDialogWithMotion(deleteEventConfirmDialog, () => {
+    deleteEventReturnFocus = null;
+    if (!restoreFocus) return;
+    const focusTarget = returnFocus?.isConnected ? returnFocus : deleteEventButton;
+    focusTarget?.focus({ preventScroll: true });
+  });
+}
+
 async function deleteEvent() {
   if (!currentRoom || !selectedEventId) return;
+  if (confirmDeleteEventButton?.disabled) return;
+
+  const deletedEvent = activeEvent();
+  if (confirmDeleteEventButton) confirmDeleteEventButton.disabled = true;
 
   try {
     await fetchJson(`/api/rooms/${currentRoom.code}/events/${selectedEventId}`, { method: "DELETE" });
     removeEventFromUndoStack(selectedEventId);
     currentRoom.events = currentRoom.events.filter((event) => event.id !== selectedEventId);
+    closeDeleteEventConfirmDialog({ restoreFocus: false });
     clearDetailPanel();
     render();
     fetchNotifications();
+    setCalendarStatus(`${deletedEvent?.title || "Event"} was deleted.`, {
+      notify: true,
+      title: "Event deleted",
+      type: "event_cancelled"
+    });
   } catch (error) {
-    calendarStatus.textContent = error.message;
+    if (confirmDeleteEventButton) confirmDeleteEventButton.disabled = false;
+    setCalendarStatus(error.message || "The event could not be deleted.", {
+      notify: true,
+      title: "Delete failed",
+      type: "event_cancelled"
+    });
   }
 }
 
@@ -8802,8 +9559,15 @@ async function renameRoomByValue(name) {
     currentIsHost = Boolean(data.isHost);
     await refreshMyRooms();
     render();
+    setCalendarStatus(`Room renamed to ${nextName}.`, {
+      notify: true,
+      title: "Room renamed"
+    });
   } catch (error) {
-    calendarStatus.textContent = error.message;
+    setCalendarStatus(error.message || "The room could not be renamed.", {
+      notify: true,
+      title: "Rename failed"
+    });
   }
 }
 
@@ -8904,6 +9668,7 @@ async function bootRoom() {
   } else {
     await refreshRoomData();
   }
+  restoreCalendarScrollPosition(currentView);
   startAutoRefresh();
 }
 
@@ -8930,18 +9695,19 @@ createRoomForm.addEventListener("submit", createRoom);
 joinRoomForm.addEventListener("submit", joinRoom);
 joinRoomCode?.addEventListener("input", () => {
   joinRoomCode.value = normalizeRoomCodeInput(joinRoomCode.value);
+  joinRoomCode.setAttribute("aria-invalid", "false");
+});
+createRoomName?.addEventListener("input", () => {
+  createRoomName.setAttribute("aria-invalid", "false");
 });
 choiceConnectButton.addEventListener("click", () => {
-  if (!pendingEntryRoomCode) return;
-  window.location.href = googleAuthUrl(pendingEntryRoomCode);
+  void continueEntryWithGoogle();
 });
 choiceGuestButton.addEventListener("click", async () => {
   await joinRoomAsGuest();
 });
 entryChoiceBackButton.addEventListener("click", () => {
-  pendingEntryRoomCode = null;
-  pendingEntryMode = null;
-  pendingHostRoomState = null;
+  clearPendingEntryState();
   showHome();
 });
 deleteRoomButton.addEventListener("click", deleteRoom);
@@ -9094,20 +9860,48 @@ themeToggle?.addEventListener("change", () => {
   }, motionDelay(motionStandardMs + 40));
 });
 settingsButton.addEventListener("click", () => {
-  const shouldOpen = hostPopover.classList.contains("hidden") || hostPopover.classList.contains("is-closing");
-  setPanelVisibility(hostPopover, shouldOpen);
+  setSettingsPanelOpen(!settingsPanelIsOpen(), { focusFirst: true });
+});
+settingsCloseButton?.addEventListener("click", () => {
+  setSettingsPanelOpen(false);
 });
 calendarGoogleButton?.addEventListener("click", () => {
   if (!currentRoom?.code) return;
-
-  if (calendarGoogleButton.dataset.googleAction === "copy" && isGoogleConnected()) {
-    void copyRoomLinkFromTopbar();
-    return;
-  }
-
   if (calendarGoogleButton.dataset.googleAction !== "authorize") return;
 
   window.location.href = googleAuthUrl(currentRoom.code, { calendarWrite: true });
+});
+sidebarBackdrop?.addEventListener("click", () => {
+  setParticipantsPanelExpanded(false, { restoreFocus: true });
+});
+calendarUtilityOverflowButton?.addEventListener("click", () => {
+  const isOpen = calendarUtilityOverflowButton.getAttribute("aria-expanded") === "true";
+  setCalendarUtilityMenuOpen(!isOpen, { focusFirst: !isOpen });
+});
+calendarUtilityOverflowMenu?.addEventListener("keydown", (event) => {
+  if (event.key !== "Escape") return;
+  event.preventDefault();
+  setCalendarUtilityMenuOpen(false);
+  calendarUtilityOverflowButton?.focus({ preventScroll: true });
+});
+hostPopover?.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    event.preventDefault();
+    setSettingsPanelOpen(false);
+    return;
+  }
+  if (event.key !== "Tab") return;
+  const focusable = focusableElementsWithin(hostPopover);
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable.at(-1);
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus({ preventScroll: true });
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus({ preventScroll: true });
+  }
 });
 participantsSidebar?.addEventListener("pointerdown", (event) => {
   if (event.pointerType === "mouse") return;
@@ -9153,7 +9947,22 @@ document.addEventListener("focusout", (event) => {
 window.addEventListener("keydown", async (event) => {
   if (event.key === "Escape") {
     closeExpandedBusyStacks();
-    setParticipantsPanelExpanded(false);
+    if (calendarUtilityOverflowButton?.getAttribute("aria-expanded") === "true") {
+      event.preventDefault();
+      setCalendarUtilityMenuOpen(false);
+      calendarUtilityOverflowButton.focus({ preventScroll: true });
+      return;
+    }
+    if (settingsPanelIsOpen()) {
+      event.preventDefault();
+      setSettingsPanelOpen(false);
+      return;
+    }
+    if (sidebarUsesDrawerLayout() && participantsSidebar?.dataset.open === "true") {
+      event.preventDefault();
+      setParticipantsPanelExpanded(false, { restoreFocus: true });
+      return;
+    }
   }
   if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.key.toLowerCase() === "z") {
     if (shouldIgnoreUndoShortcut(event.target)) return;
@@ -9181,10 +9990,25 @@ window.addEventListener("keydown", async (event) => {
 window.addEventListener("resize", () => {
   positionEventModal();
   if (activeEventTimePicker) positionEventTimePicker(activeEventTimePicker);
+  syncCalendarUtilityOverflowVisibility();
+  setParticipantsPanelExpanded(participantsSidebar?.dataset.open === "true", {
+    persist: false,
+    restoreFocus: false
+  });
 });
 calendarGrid.addEventListener("pointerdown", startDragCreate, true);
 calendarGrid.addEventListener("click", suppressCalendarClickCapture, true);
-setParticipantsPanelExpanded(!window.matchMedia("(max-width: 760px)").matches);
+calendarScrollport?.addEventListener("scroll", () => {
+  if (calendarScrollRestoreFrame) return;
+  window.clearTimeout(calendarScrollSaveTimer);
+  calendarScrollSaveTimer = window.setTimeout(() => {
+    saveCalendarScrollPosition(currentView);
+    calendarScrollSaveTimer = null;
+  }, 140);
+}, { passive: true });
+initializeCalendarUtilityMenu();
+syncCalendarUtilityOverflowVisibility();
+setParticipantsPanelExpanded(readStoredSidebarOpen(), { persist: false, restoreFocus: false });
 function bindRoomNameEditor(target) {
   if (!target) return;
   target.addEventListener("dblclick", (event) => {
@@ -9218,6 +10042,13 @@ function bindRoomNameEditor(target) {
 bindRoomNameEditor(roomName);
 bindRoomNameEditor(topbarRoomName);
 closeDetailButton.addEventListener("click", clearDetailPanel);
+editEventButton?.addEventListener("click", () => {
+  const eventId = selectedEventId;
+  const eventEntry = activeEvent();
+  if (!eventId || !eventEntry || !canManageEvent(eventEntry)) return;
+  clearDetailPanel();
+  openEventModal("edit", { eventId });
+});
 initializeEventTimePickers();
 initializeLocationAutocomplete(eventLocationInput);
 initializeLocationAutocomplete(detailLocationInput);
@@ -9321,7 +10152,23 @@ confirmDiscardEventDraftButton?.addEventListener("click", () => {
 createRoomModalForm?.addEventListener("submit", createRoomFromSwitcher);
 cancelCreateRoomModalButton?.addEventListener("click", closeCreateRoomModal);
 cancelCreateRoomModalSecondary?.addEventListener("click", closeCreateRoomModal);
-  deleteEventButton.addEventListener("click", deleteEvent);
+deleteEventButton.addEventListener("click", openDeleteEventConfirmDialog);
+deleteEventConfirmDialog?.addEventListener("click", (event) => {
+  if (event.target.closest("#cancelDeleteEventButton")) {
+    event.preventDefault();
+    event.stopPropagation();
+    closeDeleteEventConfirmDialog();
+    return;
+  }
+  if (event.target.closest("#confirmDeleteEventButton")) {
+    event.preventDefault();
+    event.stopPropagation();
+    void deleteEvent();
+  }
+});
+emojiPickerCloseButton?.addEventListener("click", () => {
+  closeEmojiPicker({ restoreFocus: true });
+});
   downloadIcsButton.addEventListener("click", downloadIcs);
   commentForm.addEventListener("submit", addComment);
 for (const button of document.querySelectorAll(".vote-button")) {
@@ -9343,14 +10190,23 @@ document.addEventListener("click", (event) => {
     setSidebarCreateMenuOpen(false);
   }
 
+  if (
+    calendarUtilityOverflowButton?.getAttribute("aria-expanded") === "true"
+    && !calendarUtilityOverflowButton.contains(event.target)
+    && !calendarUtilityOverflowMenu?.contains(event.target)
+  ) {
+    setCalendarUtilityMenuOpen(false);
+  }
+
   if (hostPopover && !hostPopover.classList.contains("hidden")) {
     if (
       !hostPopover.contains(event.target) &&
       !settingsButton.contains(event.target) &&
       !calendarGoogleButton?.contains(event.target) &&
+      !calendarUtilityOverflowMenu?.contains(event.target) &&
       !emojiPickerPopover?.contains(event.target)
     ) {
-      setPanelVisibility(hostPopover, false);
+      setSettingsPanelOpen(false, { restoreFocus: false });
     }
   }
 
@@ -9366,6 +10222,8 @@ document.addEventListener("click", (event) => {
   if (detailPanel && !detailPanel.classList.contains("hidden")) {
     if (
       detailPanel.contains(event.target) ||
+      deleteEventConfirmDialog?.open ||
+      deleteEventConfirmDialog?.contains(event.target) ||
       window.commonGroundDatePicker?.containsTarget(event.target) ||
       event.target.closest(".event-card, .busy-card, .busy-stack, .busy-chip, .event-chip, .free-block, .free-glow-block")
     ) {
@@ -9383,6 +10241,7 @@ document.addEventListener("fullscreenchange", () => {
 
 enableDialogBackdropClose(eventModal, attemptCloseEventModal);
 enableDialogBackdropClose(discardEventDraftDialog, closeDiscardEventDraftDialog);
+enableDialogBackdropClose(deleteEventConfirmDialog, closeDeleteEventConfirmDialog);
 enableDialogBackdropClose(createRoomModal, closeCreateRoomModal);
 
 createRoomModal?.addEventListener("close", () => {
@@ -9405,7 +10264,20 @@ discardEventDraftDialog?.addEventListener("cancel", (event) => {
   closeDiscardEventDraftDialog();
 });
 
+deleteEventConfirmDialog?.addEventListener("cancel", (event) => {
+  event.preventDefault();
+  closeDeleteEventConfirmDialog();
+});
+
+deleteEventConfirmDialog?.addEventListener("close", () => {
+  if (!deleteEventReturnFocus) return;
+  const focusTarget = deleteEventReturnFocus?.isConnected ? deleteEventReturnFocus : deleteEventButton;
+  deleteEventReturnFocus = null;
+  focusTarget?.focus({ preventScroll: true });
+});
+
 updateFullscreenControl();
+setSettingsPanelOpen(false, { restoreFocus: false });
 document.addEventListener("pointerdown", handleOutsideFloatingSurfacePointer, true);
 document.addEventListener("click", handleOutsideFloatingSurfaceClick, true);
 initializeEmojiPickers();

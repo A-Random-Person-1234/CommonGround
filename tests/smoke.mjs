@@ -322,19 +322,19 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260805-sf-pro-composer"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260805-whole-product-3"/);
   assert.match(home.text, /src="\/theme-bootstrap\.js\?v=20260804-persisted-theme"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260804-persisted-theme"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260805-whole-product-2"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
-  assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
+  assert.match(home.text, /src="\/command-centre\.js\?v=20260805-whole-product"/);
   assertInOrder(
     home.text,
     [
       'src="/theme-bootstrap.js?v=20260804-persisted-theme"',
-      'href="/styles.css?v=20260805-sf-pro-composer"',
+      'href="/styles.css?v=20260805-whole-product-3"',
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-persisted-theme"'
+      'src="/app.js?v=20260805-whole-product-2"'
     ],
     "The CSP-safe theme bootstrap must precede CSS, and the date picker must precede the app controller"
   );
@@ -358,7 +358,11 @@ try {
     /id="weatherHourlyPopover"[^>]*popover="auto"[^>]*role="dialog"[\s\S]*?id="weatherHourlyList"[\s\S]*?Source: Includes weather data from Google/,
     "The hourly weather popover needs a top-layer dialog, list, and nearby attribution"
   );
-  assert.match(home.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
+  assert.doesNotMatch(
+    home.text,
+    /site-guard\.js|oncontextmenu|contextmenu/,
+    "The application shell must leave native browser context menus available"
+  );
   assert.match(home.text, /<meta name="theme-color" content="#101c31" \/>/);
   assert.match(home.text, /<link rel="icon" href="\/icons\/favicon\.ico\?v=20260724-appicon-new" sizes="any" \/>/);
   assert.match(home.text, /<link rel="icon" type="image\/png" sizes="32x32" href="\/icons\/favicon-32\.png\?v=20260724-appicon-new" \/>/);
@@ -398,6 +402,41 @@ try {
   assert.match(home.text, /id="emojiPickerSearch" type="search" placeholder="Search emoji\.\.\."[^>]*aria-controls="emojiPickerGrid"/);
   assert.match(home.text, /id="emojiPickerGrid" role="group" aria-label="Emoji results"/);
   assert.match(home.text, /id="emojiPickerStatus" role="status" aria-live="polite"/);
+  assert.match(
+    home.text,
+    /id="emojiPickerCloseButton"[^>]*type="button"[^>]*aria-label="Close emoji picker"[^>]*aria-controls="emojiPickerPopover"/,
+    "The responsive emoji picker must expose an explicit close action"
+  );
+  assert.match(
+    home.text,
+    /id="sidebarBackdrop"[^>]*type="button"[^>]*aria-label="Close rooms and members sidebar"[^>]*aria-controls="participantsSidebar"[^>]*tabindex="-1"/,
+    "The mobile sidebar must have a non-calendar dismiss backdrop"
+  );
+  assert.match(
+    home.text,
+    /id="settingsButton"[^>]*aria-haspopup="dialog"[^>]*aria-controls="hostPopover"[^>]*aria-expanded="false"/,
+    "The settings trigger must expose its controlled-dialog state"
+  );
+  assert.match(
+    home.text,
+    /id="hostPopover"[^>]*role="dialog"[^>]*aria-modal="false"[^>]*aria-labelledby="settingsPanelTitle"[^>]*tabindex="-1"/,
+    "The settings surface must be a labelled, focusable non-modal dialog"
+  );
+  assert.match(
+    home.text,
+    /id="calendarUtilityOverflowButton"[^>]*aria-haspopup="menu"[^>]*aria-controls="calendarUtilityOverflowMenu"[^>]*aria-expanded="false"[\s\S]*?id="calendarUtilityOverflowMenu"[^>]*role="menu"/,
+    "Compact headers must retain reload and fullscreen through an accessible utility overflow"
+  );
+  assert.match(
+    home.text,
+    /id="createRoomName"[^>]*aria-errormessage="homeStatus"[^>]*aria-invalid="false"[\s\S]*?id="joinRoomCode"[^>]*aria-errormessage="homeStatus"[^>]*aria-invalid="false"/,
+    "Room entry fields must expose validation state through the shared live status"
+  );
+  assert.match(
+    home.text,
+    /id="themeToggle"[^>]*role="switch"[^>]*aria-label="Dark mode"[^>]*aria-describedby="themeToggleDescription"[\s\S]*?id="themeToggleDescription">Turn dark mode on or off\. Your theme preference is saved\./,
+    "The persisted theme control must use switch semantics and explain persistence"
+  );
   const staticDateInputIds = [
     "detailDateInput",
     "eventDateInput",
@@ -468,6 +507,11 @@ try {
     discardEventDraftMarkup,
     /id="cancelDiscardEventDraftButton" type="button">Cancel<\/button>[\s\S]*?id="confirmDiscardEventDraftButton" type="button">Discard<\/button>/,
     "The safe action must precede the explicit discard action"
+  );
+  assert.match(
+    home.text,
+    /id="deleteEventConfirmDialog"[\s\S]*?role="alertdialog"[\s\S]*?aria-labelledby="deleteEventConfirmTitle"[\s\S]*?aria-describedby="deleteEventConfirmDescription"[\s\S]*?id="cancelDeleteEventButton"[^>]*>Cancel<\/button>[\s\S]*?id="confirmDeleteEventButton"[^>]*>Delete<\/button>/,
+    "Event deletion must require a dedicated confirmation with the safe action first"
   );
   const eventDetailStart = home.text.indexOf('<div class="detail-body hidden" id="eventDetail">');
   const eventDetailEnd = home.text.indexOf('<div class="detail-body hidden" id="busyDetail">', eventDetailStart);
@@ -634,6 +678,11 @@ try {
   );
   assert.match(
     home.text,
+    /id="commandCentreDescription">Ask CommonGround can create or move events, find shared time, and navigate the calendar\.<\/p>/,
+    "The Command Centre must state its supported capabilities before users type"
+  );
+  assert.match(
+    home.text,
     /class="command-centre-input-shell"[\s\S]*?id="commandCentreCompletion" aria-hidden="true"[\s\S]*?id="commandCentreCompletionPrefix"[\s\S]*?id="commandCentreCompletionSuffix"[\s\S]*?id="commandCentreInput"[^>]*aria-autocomplete="inline"[^>]*aria-controls="commandCentreBody"[^>]*aria-describedby="[^"]*\bcommandCentreCompletionHelp\b[^"]*"/,
     "Predictive text must be a screen-reader-hidden visual layer behind an inline-autocomplete input"
   );
@@ -654,7 +703,7 @@ try {
   );
   assert.match(
     home.text,
-    /<\/header>\s*<aside class="participants-sidebar" id="participantsSidebar"[^>]*data-open="true">[\s\S]*?<div class="mini-calendar-grid" id="miniCalendarGrid"><\/div>[\s\S]*?<input id="memberSearchInput" type="search" placeholder="Search for people"[\s\S]*?<span>Members<\/span>[\s\S]*?<div class="participant-strip" id="participantStrip"><\/div>/,
+    /<\/header>\s*<aside class="participants-sidebar" id="participantsSidebar"[^>]*data-open="true"[^>]*>[\s\S]*?<div class="mini-calendar-grid" id="miniCalendarGrid"><\/div>[\s\S]*?<input id="memberSearchInput" type="search" placeholder="Search for people"[\s\S]*?<span>Members<\/span>[\s\S]*?<div class="participant-strip" id="participantStrip"><\/div>/,
     "The persistent left sidebar must contain the mini calendar, member search, and Members selection list"
   );
   assert.doesNotMatch(
@@ -1122,6 +1171,16 @@ try {
   );
   assert.match(
     commandCentreScript.text,
+    /function commandCentreSyncOptionSemantics\([^)]*\)[\s\S]*?option\.id = `command-centre-option-\$\{commandCentreOptionSequence\}`[\s\S]*?aria-posinset[\s\S]*?aria-setsize[\s\S]*?aria-selected[\s\S]*?commandCentreInput\.setAttribute\("aria-activedescendant", activeOption\.id\)[\s\S]*?\$\{normalized \+ 1\} of \$\{options\.length\}/,
+    "Keyboard result navigation must expose the active option, set position, and announce selection"
+  );
+  assert.match(
+    commandCentreScript.text,
+    /Create or move an event, find shared time, or navigate the calendar\.[\s\S]*?data-command-example="Move my next event to tomorrow at 3">Move an event<\/button>/,
+    "The Command Centre intro must communicate event creation, moving, availability, and navigation"
+  );
+  assert.match(
+    commandCentreScript.text,
     /window\.setTimeout\(\(\) => \{[\s\S]*?requestCommandParse\(\{ submitted: false \}\);[\s\S]*?\}, 420\);/,
     "Lightweight command parsing must be debounced"
   );
@@ -1472,13 +1531,13 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function renderCalendarGoogleControl\(\)[\s\S]*?const googleAvailable = appConfig\?\.googleReady === true;[\s\S]*?let label = "Connect Google Calendar";[\s\S]*?label = "Google Calendar unavailable";[\s\S]*?label = "Reconnect Google Calendar";[\s\S]*?"Link copied" : "Copy link"[\s\S]*?dataset\.googleAction = connected \? "copy" : \(googleAvailable \? "authorize" : "unavailable"\);/,
-    "The persistent primary CTA must switch cleanly between connect, reconnect, and room-link states"
+    /function renderCalendarGoogleControl\(\)[\s\S]*?const googleAvailable = appConfig\?\.googleReady === true;[\s\S]*?let label = "Connect Google Calendar";[\s\S]*?label = "Google Calendar unavailable";[\s\S]*?label = "Reconnect Google Calendar";[\s\S]*?label = "Google Calendar connected";[\s\S]*?dataset\.googleAction = connected \? "connected" : \(googleAvailable \? "authorize" : "unavailable"\);[\s\S]*?disabled = connected \|\| !ready \|\| !googleAvailable;[\s\S]*?classList\.toggle\("hidden", connected\)/,
+    "The Google CTA must cover connect and reconnect, then retire itself in favour of the compact connected indicator"
   );
   assert.match(
     eventComposerScript.text,
-    /function renderCalendarGoogleControl\(\)[\s\S]*?roomPage\.dataset\.googleReady = String\(ready\);[\s\S]*?roomPage\.dataset\.googleConnected = String\(connected\);[\s\S]*?googleConnectionIndicator\?\.classList\.toggle\("hidden", !connected\);[\s\S]*?calendarConnectionNotice\?\.classList\.toggle\("hidden", connected \|\| !ready\);[\s\S]*?setPanelVisibility\(emptyRoomState, false\);/,
-    "Connection state must drive the shell, indicator, contextual notice, and removal of the legacy invite strip"
+    /function renderCalendarGoogleControl\(\)[\s\S]*?roomPage\.dataset\.googleReady = String\(ready\);[\s\S]*?roomPage\.dataset\.googleConnected = String\(connected\);[\s\S]*?googleConnectionIndicator\?\.classList\.toggle\("hidden", !connected\);[\s\S]*?calendarConnectionNotice\?\.classList\.add\("hidden"\);[\s\S]*?setPanelVisibility\(emptyRoomState, false\);/,
+    "Connection state must drive the shell and indicator while keeping duplicate grid banners removed"
   );
   assert.match(
     eventComposerScript.text,
@@ -1497,11 +1556,6 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /async function copyRoomLinkFromTopbar\(\) \{[\s\S]*?await copyTextToClipboard\(roomInviteLink\(\)\);[\s\S]*?copiedTopbarRoomCode = roomCodeSnapshot;[\s\S]*?renderCalendarGoogleControl\(\);/,
-    "The connected CTA must copy the exact room link and expose immediate feedback"
-  );
-  assert.match(
-    eventComposerScript.text,
     /async function copyRoomLink\(\) \{[\s\S]*?await copyTextToClipboard\(roomInviteLink\(\)\);[\s\S]*?calendarStatus\.textContent = "Room link copied\.";/,
     "Every room copy control must copy only the exact join URL"
   );
@@ -1512,8 +1566,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /calendarGoogleButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?dataset\.googleAction === "copy" && isGoogleConnected\(\)[\s\S]*?copyRoomLinkFromTopbar\(\);[\s\S]*?dataset\.googleAction !== "authorize"[\s\S]*?window\.location\.href = googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true \}\);/,
-    "The top-bar CTA must copy the room link when connected and start secure OAuth otherwise"
+    /calendarGoogleButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?dataset\.googleAction !== "authorize"[\s\S]*?window\.location\.href = googleAuthUrl\(currentRoom\.code, \{ calendarWrite: true \}\);/,
+    "The top-bar Google CTA must only initiate secure OAuth while disconnected"
   );
   assert.match(
     eventComposerScript.text,
@@ -1692,7 +1746,6 @@ try {
   assert.match(oauthPopupPage.text, /@font-face\s*\{[^}]*font-family:\s*"SF Pro Display";[^}]*SFProDisplay-Bold\.otf\?v=20260805-sf-pro-display[^}]*font-style:\s*normal;[^}]*font-weight:\s*700;/s);
   assert.match(oauthPopupPage.text, /html,\s*body\s*\{[^}]*font-family:\s*var\(--font-ui\);[^}]*font-synthesis:\s*none;[^}]*font-variant-numeric:\s*tabular-nums lining-nums;[^}]*font-feature-settings:\s*"tnum" 1, "lnum" 1;/s);
   assert.match(oauthPopupPage.text, /<script src="\/oauth-popup\.js\?v=20260718-modal" defer><\/script>/);
-  assert.match(oauthPopupPage.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(oauthPopupPage.text, /<img class="mark" src="\/icons\/icon-192\.png\?v=20260724-appicon-new" alt="" width="46" height="46" \/>/);
   assert.doesNotMatch(
     oauthPopupPage.text,
@@ -1752,8 +1805,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /async function goToDateInWeek\(date\) \{\s*const wasWeekView = currentView === "week";\s*currentFocusDate = startOfDay\(date\);\s*currentView = "week";\s*syncMiniCalendarToFocus\(\);\s*if \(wasWeekView\) \{\s*animateCalendarTransition\(render\);\s*return;\s*\}\s*await refreshCalendarAfterImmediateRender\(\);/,
-    "Date navigation must retain the clicked date as the selection anchor and use week view"
+    /async function goToDateInWeek\(date\) \{\s*const wasWeekView = currentView === "week";\s*if \(!wasWeekView\) saveCalendarScrollPosition\(currentView\);\s*currentFocusDate = startOfDay\(date\);\s*currentView = "week";\s*persistCalendarView\(currentView\);\s*syncMiniCalendarToFocus\(\);[\s\S]*?const refreshPromise = refreshCalendarAfterImmediateRender\(\);\s*restoreCalendarScrollPosition\(currentView\);\s*await refreshPromise;/,
+    "Date navigation must retain the clicked date in week view while preserving each view's own scroll position"
   );
   assert.match(eventComposerScript.text, /input\.style\.setProperty\("--inline-name-width", `\$\{targetWidth\}px`\)/);
   assert.match(
@@ -1787,10 +1840,25 @@ try {
     /async function refreshCalendarAfterImmediateRender\(\) \{\s*const refreshPromise = loadCalendarRangeWithMotion\(\);\s*animateCalendarTransition\(render\);\s*if \(await refreshPromise\) render\(\);\s*\}/,
     "The target timetable must render before free\/busy refresh completes"
   );
-  assert.equal(
-    (eventComposerScript.text.match(/await refreshCalendarAfterImmediateRender\(\);/g) || []).length,
-    4,
-    "View, period, Today, and drill-down changes must share the immediate-render path"
+  assert.match(
+    eventComposerScript.text,
+    /async function setCurrentView\(view\)[\s\S]*?const refreshPromise = refreshCalendarAfterImmediateRender\(\);[\s\S]*?restoreCalendarScrollPosition\(view\);[\s\S]*?await refreshPromise;/,
+    "View changes must render immediately and restore that view's scroll position"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function shiftCalendarPeriod\(direction\)[\s\S]*?syncMiniCalendarToFocus\(\);[\s\S]*?await refreshCalendarAfterImmediateRender\(\);/,
+    "Period navigation must share the immediate-render refresh path"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /todayButton\?\.addEventListener\("click", async \(\) => \{[\s\S]*?currentFocusDate = startOfDay\(new Date\(\)\);[\s\S]*?await refreshCalendarAfterImmediateRender\(\);/,
+    "Today must share the immediate-render refresh path"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function goToDateInWeek\(date\)[\s\S]*?const refreshPromise = refreshCalendarAfterImmediateRender\(\);[\s\S]*?restoreCalendarScrollPosition\(currentView\);[\s\S]*?await refreshPromise;/,
+    "Date drill-down must render immediately and restore Week scroll independently"
   );
   assert.match(
     eventComposerScript.text,
@@ -1841,7 +1909,27 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function setParticipantsPanelExpanded\(expanded\) \{[\s\S]*?roomPage\?\.classList\.toggle\("sidebar-collapsed", !isExpanded\)[\s\S]*?calendarSidebarButton\?\.setAttribute\("aria-expanded", String\(isExpanded\)\)/,
+    /function openEventDetail\([^)]*\)[\s\S]*?renderEventPanelForm\(event, false\)[\s\S]*?editEventButton\.classList\.toggle\("hidden", !canManage\)[\s\S]*?saveEventChangesButton\?\.classList\.add\("hidden"\)/,
+    "Event details must be an inspection surface whose mutations route through the compact composer"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /editEventButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?activeEvent\(\)[\s\S]*?canManageEvent\(eventEntry\)[\s\S]*?clearDetailPanel\(\);[\s\S]*?openEventModal\("edit", \{ eventId \}\);/,
+    "The detail Edit action must open the same compact composer used for creation"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function openDeleteEventConfirmDialog\(\)[\s\S]*?deleteEventConfirmDialog\.showModal\(\)[\s\S]*?cancelDeleteEventButton\?\.focus[\s\S]*?async function deleteEvent\(\)[\s\S]*?method: "DELETE"[\s\S]*?deleteEventButton\.addEventListener\("click", openDeleteEventConfirmDialog\)[\s\S]*?deleteEventConfirmDialog\?\.addEventListener\("click", \(event\) => \{[\s\S]*?closest\("#cancelDeleteEventButton"\)[\s\S]*?closeDeleteEventConfirmDialog\(\)[\s\S]*?closest\("#confirmDeleteEventButton"\)[\s\S]*?deleteEvent\(\)/,
+    "Deleting an event must require confirmation before the destructive request"
+  );
+  assert.match(
+    home.text,
+    /id="deleteEventConfirmDialog"[\s\S]*?<form[^>]*method="dialog"[\s\S]*?id="cancelDeleteEventButton"[^>]*type="submit"[^>]*value="cancel"[\s\S]*?id="confirmDeleteEventButton"[^>]*type="button"/,
+    "The delete confirmation must retain a native safe cancel path while keeping deletion explicit"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function setParticipantsPanelExpanded\(expanded,[^)]*\) \{[\s\S]*?roomPage\?\.classList\.toggle\("sidebar-collapsed", !isExpanded\)[\s\S]*?calendarSidebarButton\?\.setAttribute\("aria-expanded", String\(isExpanded\)\)/,
     "The application navigation must control the persistent Members sidebar"
   );
   assert.match(
@@ -1860,16 +1948,6 @@ try {
       `${option.name} is missing from the participant colour picker`
     );
   }
-  assert.match(
-    eventComposerScript.text,
-    /\/\*\s*TODO: Commonground Free Block Rendering - Hidden for current demo[\s\S]*?for \(const segment of freeSegmentsForDate\(day\.date, occupiedSegments\)\) \{[\s\S]*?eventsLayer\.appendChild\(createFreeGlowBlock\(\{ \.\.\.segment, occupiedSegments \}, dayIndex\)\);[\s\S]*?\}\s*\*\//,
-    "The complete Free-block injection loop must remain available but explicitly commented out for the current demo"
-  );
-  assert.match(
-    eventComposerScript.text,
-    /\/\* TODO: Commonground Free Block Rendering - Hidden for current demo \*\/\s*const showFreeBlocks = false;/,
-    "Free-block rendering must be disabled behind an explicit demo flag"
-  );
   assert.match(
     eventComposerScript.text,
     /function dragTargetIsBlocked\(target\) \{[\s\S]*?target\.closest\("\.event-card"\)\) return true;/,
@@ -1907,7 +1985,7 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?if \(durationClass === "event-15"\)[\s\S]*?appendLine\("event-line-compact", compactPrefix\)[\s\S]*?configureCalendarBlockTimeLine\(appendLine\("event-line-meta", timeRange\)\)[\s\S]*?function configureFreeGlowBlock/,
+    /function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?if \(durationClass === "event-15"\)[\s\S]*?appendLine\("event-line-compact event-line-owner", compactPrefix\)[\s\S]*?configureCalendarBlockTimeLine\(appendLine\("event-line-meta", timeRange\)\)[\s\S]*?function configureFreeGlowBlock/,
     "A 15-minute CommonGround event must keep its owner/title and live-updating right-aligned time in separate lines"
   );
   assert.match(
@@ -1917,8 +1995,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function calendarParticipantLabel\(participant\)[\s\S]*?participantId === currentParticipant\?\.id\) return "You";[\s\S]*?function createSingleBusyCard[\s\S]*?const ownerLabel = calendarParticipantLabel\(participant\);[\s\S]*?function createBusyStack[\s\S]*?const ownerLabel = calendarParticipantLabel\(participant\);/,
-    "The signed-in participant must be labelled You in single and stacked imported-event views"
+    /function calendarParticipantLabel\(participant\)[\s\S]*?participantId === currentParticipant\?\.id[\s\S]*?currentParticipant\?\.displayName \|\| "You"[\s\S]*?function createSingleBusyCard[\s\S]*?const ownerLabel = calendarParticipantLabel\(participant\);[\s\S]*?function createBusyStack[\s\S]*?const ownerLabel = calendarParticipantLabel\(participant\);/,
+    "Single and stacked imported events must visibly use the signed-in participant's room name"
   );
   assert.match(
     eventComposerScript.text,
@@ -1927,18 +2005,18 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function calendarEventOwnerLabel\(eventBlock\)[\s\S]*?creatorId === currentParticipant\?\.id\) return "You";[\s\S]*?function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?const ownerLabel = calendarEventOwnerLabel\(item\)[\s\S]*?appendLine\("event-line-owner", ownerLabel\)/,
-    "Manual event cards must identify the viewer as You and visibly render other creators"
+    /function calendarEventOwnerLabel\(eventBlock\)[\s\S]*?creatorId === currentParticipant\?\.id[\s\S]*?currentParticipant\?\.displayName \|\| "You"[\s\S]*?function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?const ownerLabel = calendarEventOwnerLabel\(item\)[\s\S]*?appendLine\("event-line-owner", ownerLabel\)/,
+    "Manual event cards must visibly render the creator's room display name"
   );
   assert.match(
     eventComposerScript.text,
-    /block\.setAttribute\("aria-label", `\$\{ownerLabel\}, \$\{item\.title \|\| "Event"\}, \$\{timeRange\}`\)/,
-    "Manual event cards must include the resolved creator in their accessible name"
+    /block\.setAttribute\("aria-label", \[fullDateLabel, ownerLabel, item\.title \|\| "Event", timeRange\]\.filter\(Boolean\)\.join\(", "\)\)/,
+    "Manual event cards must include their full date, creator, title, and time in the accessible name"
   );
   assert.match(
     eventComposerScript.text,
-    /function upsertCalendarEventPreview\([\s\S]*?const ownerLabel = "You";[\s\S]*?event-line event-line-owner[\s\S]*?escapeHtml\(ownerLabel\)/,
-    "The live manual-event preview must identify its creator as You"
+    /function upsertCalendarEventPreview\([\s\S]*?const ownerLabel = String\(currentParticipant\?\.displayName \|\| "You"\)[\s\S]*?event-line event-line-owner[\s\S]*?escapeHtml\(ownerLabel\)/,
+    "The live manual-event preview must use the current participant's room display name"
   );
   assert.match(
     eventComposerScript.text,
@@ -2123,8 +2201,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function refreshLiveFreeBlocksForResize\([\s\S]*?if \(!showFreeBlocks\) \{[\s\S]*?calendarGrid\.querySelectorAll\("\.free-block"\)\.forEach\(\(block\) => block\.remove\(\)\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?occupiedSegmentsForDate\([\s\S]*?freeSegmentsForDate\([\s\S]*?configureFreeGlowBlock\(/,
-    "Live Free-block reflow must preserve its future implementation while returning immediately in the hidden demo"
+    /function refreshLiveFreeBlocksForResize\([\s\S]*?if \(!freeBlocksEnabled\(\)\) \{[\s\S]*?calendarGrid\.querySelectorAll\("\.free-block"\)\.forEach\(\(block\) => block\.remove\(\)\);[\s\S]*?return;[\s\S]*?\}[\s\S]*?occupiedSegmentsForDate\([\s\S]*?freeSegmentsForDate\([\s\S]*?configureFreeGlowBlock\(/,
+    "Live Free blocks must reflow during owned-event resizing and clear when no members are selected"
   );
   assert.match(
     serverSource,
@@ -2525,6 +2603,26 @@ try {
     "The full period must remain available to pointer and assistive-technology users"
   );
   assert.match(
+    eventComposerScript.text,
+    /const calendarViewStorageKey = "cg-calendar-view-v1";[\s\S]*?function readStoredCalendarView\(\)[\s\S]*?localStorage\.getItem\(calendarViewStorageKey\)[\s\S]*?function persistCalendarView\(view = currentView\)[\s\S]*?localStorage\.setItem\(calendarViewStorageKey, view\)/,
+    "The chosen calendar view must survive a reload"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const sidebarOpenStorageKey = "cg-sidebar-open-v1";[\s\S]*?function readStoredSidebarOpen\(\)[\s\S]*?max-width: 900px[\s\S]*?localStorage\.getItem\(sidebarOpenStorageKey\)[\s\S]*?function persistSidebarOpen\(open\)[\s\S]*?localStorage\.setItem\(sidebarOpenStorageKey, String\(Boolean\(open\)\)\)/,
+    "The sidebar preference must persist while retaining a closed mobile default"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const calendarScrollStorageKey = "cg-calendar-scroll-v1";[\s\S]*?const fallback = \{ day: null, week: null, month: 0, year: 0 \};[\s\S]*?function saveCalendarScrollPosition\(view = currentView\)[\s\S]*?calendarScrollPositions\[view\][\s\S]*?function restoreCalendarScrollPosition\(view = currentView\)[\s\S]*?view === "day" \|\| view === "week"[\s\S]*?defaultTimedCalendarScrollTop\(\)[\s\S]*?view === "month" \|\| view === "year"[\s\S]*?calendarScrollport\.scrollLeft = 0/,
+    "Each view must restore its own position; timed views get a useful default and overview views reset horizontally"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function setParticipantsPanelExpanded\([^)]*\)[\s\S]*?participantsSidebar\.inert = !isExpanded;[\s\S]*?aria-hidden[\s\S]*?calendarSidebarButton\?\.setAttribute\("aria-expanded"[\s\S]*?sidebarBackdrop\?\.classList\.toggle\("hidden", !showBackdrop\)[\s\S]*?persistSidebarOpen\(isExpanded\)/,
+    "A collapsed sidebar must be inert, hidden from assistive technology, and dismissed through its backdrop"
+  );
+  assert.match(
     eventComposerStyles.text,
     /#roomPage \.calendar-nav-primary\s*\{[^}]*flex:\s*1 1 0;[^}]*overflow:\s*visible;/s,
     "The primary navigation must preserve complete button and focus-ring edges"
@@ -2698,8 +2796,13 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /\/\* TODO: Commonground Free Block Rendering - Hidden for current demo[\s\S]*?\.free-block\s*\{[\s\S]*?border:\s*1px solid rgba\(218, 165, 32, 0\.3\);[\s\S]*?background:\s*linear-gradient\(180deg, rgba\(218, 165, 32, 0\.05\) 0%, rgba\(218, 165, 32, 0\.02\) 100%\);[\s\S]*?box-shadow:\s*0 0 16px rgba\(218, 165, 32, 0\.12\), inset 0 0 24px rgba\(218, 165, 32, 0\.08\);[\s\S]*?\}\s*\*\//,
-    "The future Free-block presentation must remain documented inside the explicit disabled-demo CSS comment"
+    /#roomPage \.free-block,\s*#roomPage \.free-glow-block\s*\{(?=[^}]*border:\s*1px solid rgba\(218, 165, 32, 0\.3\))(?=[^}]*border-radius:\s*8px)(?=[^}]*rgba\(218, 165, 32, 0\.05\) 0%)(?=[^}]*rgba\(218, 165, 32, 0\.02\) 100%)(?=[^}]*0 0 16px rgba\(218, 165, 32, 0\.12\))(?=[^}]*inset 0 0 24px rgba\(218, 165, 32, 0\.08\))[^}]*\}/s,
+    "Active Free blocks must use the isolated, exact CommonGround gold treatment"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const showFreeBlocks = true;[\s\S]*?function freeBlocksEnabled\(\)[\s\S]*?showFreeBlocks && visibleParticipantIds\(\)\.size > 0[\s\S]*?if \(freeBlocksEnabled\(\)\)[\s\S]*?freeSegmentsForDate\([\s\S]*?createFreeGlowBlock\(/,
+    "Shared availability must be active and rendered only for selected room members"
   );
   assert.match(
     eventComposerStyles.text,
@@ -2771,10 +2874,10 @@ try {
     /\.event-card\.can-resize:hover \.event-resize-handle/,
     "Hovering an event's sides or body must not reveal both resize affordances"
   );
-  assert.doesNotMatch(
-    eventComposerStyles.text,
-    /@media \(max-width: 480px\)\s*\{[\s\S]*?#roomPage #settingsButton\s*\{[\s\S]*?display:\s*none;/,
-    "Mobile users must retain Settings access after the connected Google badge is hidden"
+  assert.match(
+    eventComposerScript.text,
+    /function initializeCalendarUtilityMenu\(\)[\s\S]*?label: "Reload calendar"[\s\S]*?label: "Toggle fullscreen"[\s\S]*?label: "Settings"[\s\S]*?setSettingsPanelOpen\(true, \{ focusFirst: true \}\)[\s\S]*?setAttribute\("role", "menuitem"\)/,
+    "Compact headers must keep Settings, reload, and fullscreen available in the utility overflow"
   );
   assert.match(
     eventComposerStyles.text,
@@ -3262,6 +3365,41 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
+    /@media \(max-width: 900px\)\s*\{[\s\S]*?#roomPage \.sidebar-backdrop\s*\{[^}]*position:\s*fixed;[^}]*pointer-events:\s*none;[\s\S]*?#roomPage \.sidebar-backdrop:not\(\.hidden\)[\s\S]*?pointer-events:\s*auto;[\s\S]*?#roomPage \.participants-sidebar\s*\{[^}]*position:\s*fixed;[^}]*translate3d\(-100%, 0, 0\)/s,
+    "Tablet and phone sidebars must use a real scrim-backed drawer instead of covering the calendar silently"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-width: 760px\)\s*\{[\s\S]*?#roomPage \.calendar-grid\.day-view\s*\{[^}]*width:\s*100%;[^}]*min-width:\s*0;[^}]*grid-template-columns:\s*var\(--time-width\) minmax\(0, 1fr\);[\s\S]*?#roomPage \.calendar-wrap:has\(\.calendar-grid\.day-view\)\s*\{[^}]*overflow-x:\s*hidden;/s,
+    "Phone Day view must fit one day without inherited horizontal scrolling"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-width: 760px\)\s*\{[\s\S]*?#roomPage \.month-cell \.event-chip\s*\{[^}]*color:\s*transparent;[^}]*font-size:\s*0;[\s\S]*?#roomPage \.month-cell \.event-chip::before\s*\{[^}]*width:\s*7px;[^}]*border-radius:\s*50%;[^}]*background:\s*var\(--event-color, var\(--brand\)\)/s,
+    "Compact Month view must reduce events to colour markers instead of clipping text"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /@media \(max-width: 420px\)\s*\{[\s\S]*?#eventModal \.composer-date-field[\s\S]*?grid-column:\s*1 \/ -1;[^}]*grid-row:\s*1;[\s\S]*?#eventModal \.composer-time-grid > \.time-picker-field:first-of-type\s*\{[^}]*grid-row:\s*2;/s,
+    "Narrow event composers must give the date its own row before the start and end time controls"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function renderYear\(\)[\s\S]*?monthJump\.className = "year-month-jump";[\s\S]*?monthJump\.setAttribute\("aria-label", `Jump to a month in \$\{year\}`\)[\s\S]*?jumpButton\.setAttribute\("aria-label", `Jump to \$\{monthName\} \$\{year\}`\)[\s\S]*?tile\.id = `calendar-year-month-\$\{year\}-\$\{month \+ 1\}`/,
+    "Year view must expose stable, labelled month jump targets"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.calendar-grid\.year-view\s*\{[^}]*--year-jump-clearance:\s*54px;[\s\S]*?#roomPage \.year-month\s*\{[^}]*scroll-margin-top:\s*calc\(var\(--year-jump-clearance, 54px\) \+ 8px\);[\s\S]*?@media \(min-width: 901px\)\s*\{[\s\S]*?#roomPage \.year-month h3\s*\{[^}]*position:\s*sticky;[^}]*top:\s*var\(--year-jump-clearance, 54px\);/s,
+    "Desktop Year view month labels must remain scannable while scrolling"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /jumpButton\.addEventListener\("click", \(\) => \{[\s\S]*?monthJump\.querySelectorAll\("\.year-month-jump-button"\)[\s\S]*?button\.removeAttribute\("aria-current"\);[\s\S]*?jumpButton\.setAttribute\("aria-current", "true"\);[\s\S]*?scrollIntoView/,
+    "The Year month jump navigation must expose the month most recently chosen"
+  );
+  assert.match(
+    eventComposerStyles.text,
     /#roomPage \.participants-sidebar\s*\{[^}]*grid-area:\s*sidebar[^}]*position:\s*relative[^}]*border-right:\s*0[^}]*background:\s*var\(--shell-panel\)[^}]*opacity:\s*1/s,
     "The Members sidebar must remain a seamless application-shell column without a divider"
   );
@@ -3343,7 +3481,11 @@ try {
     "The install manifest must expose both CommonGround app-icon sizes"
   );
   const siteGuard = await publicSession.request("/site-guard.js", { accept: "text/javascript" });
-  assert.match(siteGuard.text, /document\.addEventListener\(\s*"contextmenu"[\s\S]*?event\.preventDefault\(\)[\s\S]*?\{ capture: true \}/);
+  assert.doesNotMatch(
+    siteGuard.text,
+    /contextmenu|preventDefault\s*\(/,
+    "The compatibility script must not suppress native context menus"
+  );
   const contentSecurityPolicy = home.response.headers.get("content-security-policy");
   assert.ok(contentSecurityPolicy, "CSP header is missing");
   assert.match(contentSecurityPolicy, /script-src 'self'/);
@@ -3362,8 +3504,7 @@ try {
     assert.match(legalPage.text, /<link rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png\?v=20260724-appicon-new" \/>/);
     assert.match(legalPage.text, /<img class="mark app-brand-icon" src="\/icons\/icon-192\.png\?v=20260724-appicon-new" alt="" width="46" height="46" \/>/);
     assert.match(legalPage.text, /<script src="\/theme-bootstrap\.js\?v=20260804-persisted-theme" data-sync-server="true"><\/script>/);
-    assert.match(legalPage.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
-    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260805-sf-pro-composer" \/>/);
+    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260805-whole-product-3" \/>/);
     assert.doesNotMatch(
       legalPage.text,
       /<script(?![^>]*\bsrc=)[^>]*>/i,
@@ -3458,6 +3599,9 @@ try {
   await guest.request("/api/me");
   await spectator.request("/api/me");
 
+  const previewVisitor = new BrowserSession();
+  await previewVisitor.request("/api/rooms/ZZZZZZ/preview", { expected: 404 });
+
   const created = await host.request("/api/rooms", {
     method: "POST",
     expected: 201,
@@ -3467,6 +3611,19 @@ try {
   assert.match(firstCode, /^[A-HJ-NP-Z2-9]{6}$/);
   assert.equal(created.payload.room.emoji, "🧭");
   assert.equal(created.payload.isHost, true);
+
+  const roomPreview = await previewVisitor.request(`/api/rooms/${firstCode.toLowerCase()}/preview`);
+  assert.equal(roomPreview.payload.room.code, firstCode);
+  assert.equal(roomPreview.payload.room.name, "Decagon");
+  assert.equal(roomPreview.payload.room.locked, false);
+  assert.equal(roomPreview.payload.canJoin, true);
+  assertNoKeys(roomPreview.payload, new Set(["participants", "events", "participant", "sessionId", "tokens"]));
+  const roomAfterPreview = await host.request(`/api/rooms/${firstCode}`);
+  assert.equal(
+    roomAfterPreview.payload.room.participants.length,
+    1,
+    "Reading the room-entry preview must not join the previewing browser or create a participant"
+  );
 
   const secondRoom = await host.request("/api/rooms", {
     method: "POST",

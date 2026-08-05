@@ -4401,6 +4401,7 @@ const server = http.createServer(async (req, res) => {
   applySecurityHeaders(res);
   const url = new URL(req.url, `http://${req.headers.host}`);
   const roomCodeMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)$/);
+  const roomPreviewMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/preview$/);
   const roomJoinMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/join$/);
   const roomJoinRequestMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/join-requests\/([^/]+)$/);
   const roomJoinRequestActionMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/join-requests\/([^/]+)\/(approve|decline)$/);
@@ -4813,6 +4814,29 @@ const server = http.createServer(async (req, res) => {
       saveStore();
 
       sendJson(res, 201, buildRoomResponse(room, session, participant));
+      return;
+    }
+
+    if (roomPreviewMatch && req.method === "GET") {
+      const code = normalizeRoomCode(roomPreviewMatch[1]);
+      const session = getSession(req, res);
+      const user = currentUserFromSession(session);
+      const room = findRoom(code);
+      if (!room) {
+        sendJson(res, 404, { error: "Room not found." });
+        return;
+      }
+
+      const locked = isRoomLocked(room);
+      sendJson(res, 200, {
+        room: {
+          code: room.code,
+          name: room.name,
+          emoji: room.emoji || room.icon || defaultRoomEmoji,
+          locked
+        },
+        canJoin: !locked || canJoinLockedRoom(room, session, user)
+      });
       return;
     }
 

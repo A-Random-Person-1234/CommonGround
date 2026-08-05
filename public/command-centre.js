@@ -9,6 +9,7 @@ const commandCentreCloseButton = document.querySelector("#commandCentreCloseButt
 const commandCentreBody = document.querySelector("#commandCentreBody");
 const commandCentreStatus = document.querySelector("#commandCentreStatus");
 const commandCentreShortcutHint = document.querySelector("#commandCentreShortcutHint");
+let commandCentreOptionSequence = 0;
 
 const commandCentrePhases = new Set([
   "closed",
@@ -507,15 +508,17 @@ function commandCentreSetBody(markup) {
     commandCentreBody.insertAdjacentHTML("afterbegin", commandInterpretationMarkup());
   }
   window.CommonGroundTimePicker?.initialize(commandCentreBody);
+  commandCentreSyncOptionSemantics();
 }
 
 function commandCentreIntroMarkup() {
   return `
     <div class="command-centre-intro">
-      <p>Tell CommonGround what you want to do.</p>
+      <p>Create or move an event, find shared time, or navigate the calendar.</p>
       <div class="command-example-list" aria-label="Example commands">
         <button type="button" data-command-example="Find an hour for everyone next week">Find a time for everyone</button>
         <button type="button" data-command-example="Create an event tomorrow at 1">Create an event</button>
+        <button type="button" data-command-example="Move my next event to tomorrow at 3">Move an event</button>
         <button type="button" data-command-example="Open August">Navigate the calendar</button>
       </div>
     </div>
@@ -2615,16 +2618,43 @@ function commandCentreSelectableOptions() {
   return [...commandCentreBody.querySelectorAll("[data-command-option]")];
 }
 
+function commandCentreSyncOptionSemantics({ announceSelection = false } = {}) {
+  const options = commandCentreSelectableOptions();
+  if (!options.length) {
+    commandCentreInput.removeAttribute("aria-activedescendant");
+    return;
+  }
+
+  const normalized = Math.min(Math.max(0, commandCentreState.selectedIndex), options.length - 1);
+  commandCentreState.selectedIndex = normalized;
+  options.forEach((option, index) => {
+    if (!option.id) {
+      commandCentreOptionSequence += 1;
+      option.id = `command-centre-option-${commandCentreOptionSequence}`;
+    }
+    option.setAttribute("aria-posinset", String(index + 1));
+    option.setAttribute("aria-setsize", String(options.length));
+    const selected = index === normalized;
+    option.classList.toggle("is-selected", selected);
+    option.setAttribute("aria-selected", String(selected));
+  });
+
+  const activeOption = options[normalized];
+  commandCentreInput.setAttribute("aria-activedescendant", activeOption.id);
+  if (announceSelection) {
+    const label = String(activeOption.innerText || activeOption.textContent || "")
+      .replace(/\s+/g, " ")
+      .trim();
+    commandCentreStatus.textContent = `${label}. ${normalized + 1} of ${options.length}.`;
+  }
+}
+
 function commandCentreSelectIndex(nextIndex) {
   const options = commandCentreSelectableOptions();
   if (!options.length) return;
   const normalized = ((nextIndex % options.length) + options.length) % options.length;
   commandCentreState.selectedIndex = normalized;
-  options.forEach((option, index) => {
-    const selected = index === normalized;
-    option.classList.toggle("is-selected", selected);
-    option.setAttribute("aria-selected", String(selected));
-  });
+  commandCentreSyncOptionSemantics({ announceSelection: true });
   options[normalized].scrollIntoView({ block: "nearest" });
 }
 

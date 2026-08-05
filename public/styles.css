@@ -12150,16 +12150,6 @@ button.identity-name-button:not(:disabled):active,
   max-height: calc(100dvh - var(--shell-nav-height) - 24px);
 }
 
-/* TODO: Commonground Free Block Rendering - Hidden for current demo
-.free-block {
-  position: absolute;
-  border: 1px solid rgba(218, 165, 32, 0.3);
-  border-radius: 8px;
-  background: linear-gradient(180deg, rgba(218, 165, 32, 0.05) 0%, rgba(218, 165, 32, 0.02) 100%);
-  box-shadow: 0 0 16px rgba(218, 165, 32, 0.12), inset 0 0 24px rgba(218, 165, 32, 0.08);
-}
-*/
-
 @media (max-width: 1240px) {
   #roomPage.calendar-app-shell {
     --shell-sidebar-width: 232px;
@@ -14217,5 +14207,961 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   #eventModal .composer-time-grid .time-picker-input {
     padding-inline: 10px;
     font-size: 14px;
+  }
+}
+
+/* Whole-product responsive consolidation
+   This is the final authoritative responsive layer. It keeps the landing and
+   room-entry flows spacious on larger screens, protects calendar context in
+   the navigation, and makes the calendar's compact states intentional.
+   ========================================================================== */
+
+/* Desktop onboarding uses the available canvas instead of rendering as a
+   narrow mobile rail. Both decisions remain visually equal in height. */
+.home-page,
+.entry-choice-page {
+  min-height: 100dvh;
+  align-items: center;
+  justify-items: center;
+  padding: clamp(28px, 5vw, 64px);
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+.home-shell,
+.entry-choice-shell {
+  width: min(1040px, 100%);
+  margin-inline: auto;
+  gap: clamp(20px, 3vw, 32px);
+}
+
+.entry-choice-shell {
+  width: min(960px, 100%);
+}
+
+.home-grid,
+.entry-choice-grid {
+  grid-template-columns: repeat(2, minmax(280px, 1fr));
+  grid-auto-rows: 1fr;
+  gap: clamp(16px, 2vw, 24px);
+  align-items: stretch;
+}
+
+.home-grid .action-card,
+.entry-choice-grid .choice-card {
+  height: 100%;
+}
+
+.home-grid .action-card {
+  min-height: 250px;
+}
+
+.entry-choice-grid .choice-card {
+  min-height: 236px;
+}
+
+/* Preserve the room and date context first. Lower-priority utilities collapse
+   progressively before either piece of primary context is truncated. */
+#roomPage .calendar-app-nav {
+  gap: 12px;
+}
+
+#roomPage .calendar-nav-primary {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+#roomPage .calendar-nav-actions {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+#roomPage .calendar-product {
+  flex: 0 1 auto;
+  min-width: 94px;
+  margin-right: 4px;
+}
+
+#roomPage .calendar-product-name {
+  display: block;
+  max-width: clamp(120px, 15vw, 220px);
+}
+
+#roomPage .calendar-period-label {
+  flex: 0 0 auto;
+  min-width: max-content;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+@media (max-width: 1320px) {
+  #roomPage .nav-optional-control,
+  #roomPage #commandCentreShortcutHint {
+    display: none;
+  }
+
+  #roomPage .calendar-product-name {
+    max-width: 170px;
+  }
+
+  #roomPage .calendar-google-button {
+    max-width: 168px;
+  }
+}
+
+@media (max-width: 1180px) {
+  #roomPage .calendar-product-name {
+    display: block;
+    max-width: 148px;
+  }
+
+  #roomPage .calendar-period-label {
+    min-width: max-content;
+    max-width: none;
+  }
+
+}
+
+@media (max-width: 1080px) {
+  #roomPage .calendar-nav-actions > #commandCentreButton {
+    width: 40px;
+    min-width: 40px;
+    padding: 0;
+    border-radius: 50%;
+  }
+
+  #roomPage .command-centre-trigger > span,
+  #roomPage .command-centre-trigger kbd {
+    display: none;
+  }
+
+  #roomPage .calendar-product-name {
+    max-width: 126px;
+  }
+}
+
+/* The month/year canvas already provides date navigation. Collapse the
+   duplicate mini calendar while leaving room and member controls available. */
+#roomPage[data-calendar-view="month"] .mini-calendar,
+#roomPage[data-calendar-view="year"] .mini-calendar,
+#roomPage:has(.calendar-grid.month-view) .mini-calendar,
+#roomPage:has(.calendar-grid.year-view) .mini-calendar {
+  display: none;
+}
+
+/* Selected month dates use the shared gold date control only; the entire day
+   cell no longer looks selected or glows. */
+#roomPage .month-cell.selected,
+#roomPage .month-cell.today.selected {
+  background: transparent;
+  box-shadow: none;
+}
+
+#roomPage .month-cell.selected .month-date-number {
+  background: color-mix(in srgb, var(--brand) 18%, transparent);
+  color: var(--brand-strong);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 42%, transparent);
+}
+
+#roomPage .month-cell.today .month-date-number,
+#roomPage .month-cell.today.selected .month-date-number {
+  background: var(--brand);
+  color: #fffaf2;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--brand) 46%, transparent);
+}
+
+/* Year months are independent scan regions. On larger screens their labels
+   remain pinned while the corresponding month is passing through the view. */
+#roomPage .year-month-jump {
+  position: sticky;
+  top: 0;
+  z-index: 12;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(12, minmax(44px, 1fr));
+  gap: 4px;
+  width: 100%;
+  padding: 7px;
+  overflow-x: auto;
+  border: 1px solid var(--shell-line);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--shell-canvas) 94%, transparent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+  scrollbar-width: thin;
+}
+
+#roomPage .calendar-grid.year-view {
+  --year-jump-clearance: 54px;
+  grid-template-rows: auto;
+}
+
+#roomPage .year-month-jump-button {
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--shell-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+#roomPage .year-month-jump-button:hover,
+#roomPage .year-month-jump-button:focus-visible {
+  background: var(--shell-control-bg-hover);
+  color: var(--shell-text);
+}
+
+#roomPage .year-month-jump-button[aria-current="true"] {
+  background: color-mix(in srgb, var(--brand) 18%, transparent);
+  color: var(--brand-strong);
+}
+
+#roomPage .year-month {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 214px;
+  scroll-margin-top: calc(var(--year-jump-clearance, 54px) + 8px);
+}
+
+@media (min-width: 901px) {
+  #roomPage .year-month h3 {
+    position: sticky;
+    top: var(--year-jump-clearance, 54px);
+    z-index: 4;
+    width: fit-content;
+    margin: -6px 0 6px -6px;
+    padding: 6px;
+    border-radius: 7px;
+    background: var(--shell-canvas);
+  }
+}
+
+/* A real drawer begins at tablet widths, avoiding the abrupt 760px layout
+   cliff. The backdrop is an actual button, so click-off is both safe and
+   keyboard discoverable instead of relying on a decorative pseudo-element. */
+@media (max-width: 900px) {
+  #roomPage.calendar-app-shell,
+  #roomPage.calendar-app-shell.sidebar-collapsed {
+    --shell-sidebar-width: 0px;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "nav"
+      "content";
+  }
+
+  #roomPage .sidebar-backdrop {
+    position: fixed;
+    inset: var(--shell-nav-height) 0 0;
+    z-index: 44;
+    display: block;
+    width: auto;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: rgba(0, 0, 0, 0.46);
+    opacity: 0;
+    pointer-events: none;
+    transform: translate3d(0, 0, 0);
+    transition: opacity var(--motion-fast) var(--ease-standard);
+    will-change: opacity;
+  }
+
+  #roomPage .sidebar-backdrop:not(.hidden),
+  #roomPage .sidebar-backdrop.is-visible,
+  #roomPage .sidebar-backdrop[data-open="true"] {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  #roomPage .participants-sidebar {
+    position: fixed;
+    top: var(--shell-nav-height);
+    left: 0;
+    bottom: 0;
+    z-index: 45;
+    width: min(300px, calc(100vw - 48px));
+    height: auto;
+    border: 0;
+    box-shadow: 18px 0 36px rgba(0, 0, 0, 0.38);
+    opacity: 0;
+    transform: translate3d(-100%, 0, 0);
+    pointer-events: none;
+  }
+
+  #roomPage .participants-sidebar.is-open,
+  #roomPage .participants-sidebar[data-open="true"] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    pointer-events: auto;
+  }
+
+  #roomPage .nav-icon-button,
+  #roomPage .date-nav-button,
+  #roomPage .calendar-nav-actions > #commandCentreButton,
+  #roomPage .calendar-google-button,
+  #roomPage .calendar-google-button.needs-connection,
+  #roomPage .calendar-google-button.needs-permission,
+  #roomPage .calendar-google-button.is-connected {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  #roomPage .calendar-utility-overflow-trigger {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  #roomPage .calendar-today-button,
+  #roomPage .calendar-view-menu > summary {
+    min-height: 44px;
+  }
+
+  #roomPage .sidebar-create-button,
+  #roomPage .sidebar-create-popover button,
+  #roomPage .sidebar-section-heading,
+  #roomPage .member-calendar-row,
+  #roomPage .member-calendar-label,
+  #roomPage .sidebar-room-code-row .room-code,
+  #roomPage .sidebar-room-code-row .room-copy-inline {
+    min-height: 44px;
+  }
+
+  #roomPage .mini-calendar-day,
+  #roomPage .mini-calendar-weekday {
+    min-height: 30px;
+    height: 30px;
+  }
+
+  #roomPage .calendar-product-name {
+    max-width: 118px;
+  }
+
+  #roomPage .calendar-period-label {
+    min-width: max-content;
+    font-size: 14px;
+  }
+}
+
+/* Lower-priority header tools share one anchored overflow surface when the
+   navigation cannot accommodate their standalone controls. */
+#roomPage .calendar-utility-actions {
+  position: relative;
+}
+
+#roomPage .calendar-utility-overflow-trigger {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  min-width: 36px;
+  height: 36px;
+  min-height: 36px;
+  padding: 0;
+  border: 1px solid var(--shell-control-border);
+  border-radius: 50%;
+  background: var(--shell-control-bg-quiet);
+  color: var(--shell-muted);
+  font-size: 0;
+}
+
+#roomPage .calendar-utility-overflow-trigger::before {
+  content: "\2022\A0\2022\A0\2022";
+  font-size: 14px;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+#roomPage .calendar-utility-overflow-trigger.hidden,
+#roomPage .calendar-utility-overflow-menu.hidden {
+  display: none !important;
+}
+
+@media (max-width: 1320px) {
+  #roomPage .calendar-utility-overflow-trigger,
+  #roomPage .calendar-utility-overflow-trigger.hidden,
+  #calendarUtilityOverflowButton,
+  #calendarUtilityOverflowButton.hidden {
+    display: grid !important;
+    visibility: visible;
+  }
+}
+
+#roomPage .calendar-utility-overflow-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 125;
+  display: grid;
+  gap: 2px;
+  width: 188px;
+  padding: 6px;
+  border: 1px solid var(--shell-line);
+  border-radius: 10px;
+  background: var(--shell-menu-surface);
+  box-shadow: var(--shell-menu-shadow);
+  transform-origin: 100% 0;
+  animation: panel-enter var(--motion-standard) var(--ease-modal) both;
+  will-change: transform, opacity;
+}
+
+#roomPage .calendar-utility-overflow-menu button {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--shell-text);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: left;
+}
+
+#roomPage .calendar-utility-overflow-menu button:hover,
+#roomPage .calendar-utility-overflow-menu button:focus-visible {
+  background: var(--shell-control-bg-hover);
+}
+
+@media (max-width: 900px) {
+  #roomPage .calendar-utility-overflow-trigger {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  #roomPage .calendar-utility-overflow-menu button {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 760px) {
+  #roomPage.calendar-app-shell,
+  #roomPage.calendar-app-shell.sidebar-collapsed {
+    --shell-nav-height: 58px;
+    --time-width: 48px;
+  }
+
+  #roomPage .calendar-app-nav {
+    min-height: var(--shell-nav-height);
+    height: var(--shell-nav-height);
+  }
+
+  #roomPage .calendar-product {
+    display: none;
+  }
+
+  #roomPage .calendar-period-label {
+    min-width: 0;
+    max-width: none;
+    overflow: hidden;
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  #roomPage .calendar-google-button:disabled {
+    display: none;
+  }
+
+  /* Day is a true fitted view on phones. Week remains deliberately scrollable
+     with a smaller seven-day surface and snap-aligned headers. */
+  #roomPage .calendar-grid.day-view {
+    width: 100%;
+    min-width: 0;
+    grid-template-columns: var(--time-width) minmax(0, 1fr);
+  }
+
+  #roomPage .calendar-wrap:has(.calendar-grid.day-view) {
+    overflow-x: hidden;
+  }
+
+  #roomPage .calendar-grid.week-view {
+    width: auto;
+    min-width: 664px;
+    grid-template-columns: var(--time-width) repeat(var(--day-count), minmax(88px, 1fr));
+  }
+
+  #roomPage .calendar-wrap:has(.calendar-grid.week-view) {
+    overflow-x: auto;
+    scroll-padding-left: var(--time-width);
+    scroll-snap-type: x proximity;
+    scrollbar-gutter: stable;
+  }
+
+  #roomPage .calendar-grid.week-view .day-header {
+    scroll-snap-align: start;
+  }
+
+  /* Month cells use lightweight colour dots and the existing +N control on
+     compact screens instead of clipping full event names into narrow cells. */
+  #roomPage .month-cell .busy-chip,
+  #roomPage .month-cell .event-chip {
+    justify-content: flex-start;
+    width: 100%;
+    min-height: 18px;
+    padding: 0 3px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    box-shadow: none;
+    color: transparent;
+    font-size: 0;
+  }
+
+  #roomPage .month-cell .busy-chip::before,
+  #roomPage .month-cell .event-chip::before {
+    content: "";
+    display: block;
+    flex: 0 0 7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--event-color, var(--brand));
+    box-shadow: none;
+  }
+
+  #roomPage .month-cell .event-chip.is-group-event::before {
+    background: #daa520;
+  }
+
+  #roomPage .month-more-button {
+    min-height: 24px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 720px) {
+  .home-page,
+  .entry-choice-page {
+    align-items: start;
+    padding: 20px 16px 72px;
+  }
+
+  .home-shell,
+  .entry-choice-shell {
+    gap: 18px;
+  }
+
+  .home-grid,
+  .entry-choice-grid {
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: auto;
+    gap: 14px;
+  }
+
+  .home-grid .action-card,
+  .entry-choice-grid .choice-card {
+    min-height: 0;
+  }
+
+  .choice-card {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 520px) {
+  #roomPage .calendar-today-button,
+  #roomPage #settingsButton {
+    display: none;
+  }
+
+  #roomPage .calendar-view-menu > summary {
+    min-width: 64px;
+    padding-inline: 8px;
+  }
+
+  #roomPage .calendar-period-label {
+    font-size: 12px;
+  }
+
+  #roomPage .sidebar-footer a,
+  .legal-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-inline: 5px;
+  }
+
+  .legal-links {
+    min-height: 48px;
+    padding-block: 2px;
+  }
+
+  /* The emoji chooser behaves as a compact bottom sheet on phones. The
+     .emoji-picker-close hook is styled for the explicit close control. */
+  .emoji-picker-popover[popover] {
+    inset: auto 8px max(8px, env(safe-area-inset-bottom)) 8px;
+    width: auto;
+    height: min(400px, 62dvh);
+    max-width: none;
+    max-height: calc(100dvh - 24px);
+    border-radius: 18px;
+    transform: translate3d(0, 0, 0) scale(1) !important;
+    transform-origin: bottom center;
+  }
+
+  .emoji-picker-searchbar {
+    flex-basis: 58px;
+    gap: 8px;
+    padding: 0 10px 0 16px;
+  }
+
+  .emoji-picker-close {
+    display: grid;
+    place-items: center;
+    flex: 0 0 44px;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    padding: 0;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.72);
+  }
+
+  .emoji-picker-grid {
+    padding: 12px 16px max(16px, env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 420px) {
+  /* Date owns the first row; the two time controls share the second. */
+  #eventModal .composer-time-grid,
+  #eventModal.anchored-composer .composer-time-grid {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  #eventModal .composer-date-field,
+  #eventModal.anchored-composer .composer-date-field {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  #eventModal .composer-time-grid > .time-picker-field:first-of-type {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  #eventModal .composer-time-grid > .time-divider {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  #eventModal .composer-time-grid > .time-picker-field:last-of-type {
+    grid-column: 3;
+    grid-row: 2;
+  }
+
+  #eventModal .composer-time-grid > .all-day-toggle {
+    grid-column: 1 / -1;
+    grid-row: 3;
+  }
+
+  #eventModal .composer-time-grid.is-all-day .composer-date-field {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  #eventModal .composer-time-grid.is-all-day .composer-end-date-field {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  #eventModal .composer-time-grid.is-all-day .time-divider {
+    display: none;
+  }
+
+  #eventModal .composer-time-grid.is-all-day > .all-day-toggle {
+    grid-row: 3;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 721px) {
+  .home-page,
+  .entry-choice-page {
+    align-items: start;
+    padding-block: 24px;
+  }
+}
+
+/* Isolate volumetric light to true availability. Calendar containers stay
+   completely flat; scheduled blocks retain crisp colour and borders only. */
+#roomPage .calendar-wrap,
+#roomPage .calendar-grid,
+#roomPage .calendar-cell,
+#roomPage .calendar-corner,
+#roomPage .day-header,
+#roomPage .time-cell {
+  background-image: none;
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+/* Newly exposed close controls use the same quiet, high-contrast control
+   language as the rest of CommonGround. */
+#roomPage .host-panel-head {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+#roomPage #settingsCloseButton,
+.emoji-picker-close {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  min-height: 40px;
+  padding: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+#roomPage #settingsCloseButton:hover,
+#roomPage #settingsCloseButton:focus-visible,
+.emoji-picker-close:hover,
+.emoji-picker-close:focus-visible {
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: var(--text);
+}
+
+.emoji-picker-searchbar > #emojiPickerSearch {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: auto;
+}
+
+/* Delete confirmation shares the discard-dialog geometry, while retaining a
+   clearly destructive final action. */
+#deleteEventConfirmDialog {
+  width: min(360px, calc(100vw - 24px));
+  max-width: none;
+  overflow: visible;
+  color: var(--text);
+}
+
+#deleteEventConfirmDialog::backdrop {
+  background: rgba(7, 9, 13, 0.66);
+}
+
+#deleteEventConfirmDialog .discard-event-draft-card {
+  width: 100%;
+  display: grid;
+  gap: 16px;
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.42);
+  color: var(--text);
+}
+
+:root[data-theme="dark"] #deleteEventConfirmDialog .discard-event-draft-card {
+  background: #252627;
+}
+
+#deleteEventConfirmDialog h2,
+#deleteEventConfirmDialog p {
+  margin: 0;
+}
+
+#deleteEventConfirmDialog h2 {
+  font-size: 20px;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+}
+
+#deleteEventConfirmDialog p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#deleteEventConfirmDialog .discard-event-draft-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+#deleteEventConfirmDialog .discard-event-draft-actions button {
+  min-height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 650;
+  transition:
+    transform var(--motion-fast) var(--ease-standard),
+    opacity var(--motion-fast) var(--ease-standard);
+  will-change: transform, opacity;
+}
+
+#deleteEventConfirmDialog .discard-event-draft-cancel {
+  background: transparent;
+  color: var(--muted);
+}
+
+#deleteEventConfirmDialog .discard-event-draft-cancel:hover,
+#deleteEventConfirmDialog .discard-event-draft-cancel:focus-visible {
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  color: var(--text);
+}
+
+#deleteEventConfirmDialog .discard-event-draft-confirm {
+  background: var(--danger);
+  color: #fff;
+}
+
+#deleteEventConfirmDialog .discard-event-draft-actions button:active {
+  transition-duration: var(--motion-press);
+  transform: scale(0.96);
+}
+
+#deleteEventConfirmDialog .discard-event-draft-actions button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--danger) 72%, white);
+  outline-offset: 2px;
+}
+
+#roomPage .free-block,
+#roomPage .free-glow-block {
+  border: 1px solid rgba(218, 165, 32, 0.3);
+  border-radius: 8px;
+  background: linear-gradient(
+    180deg,
+    rgba(218, 165, 32, 0.05) 0%,
+    rgba(218, 165, 32, 0.02) 100%
+  );
+  box-shadow:
+    0 0 16px rgba(218, 165, 32, 0.12),
+    inset 0 0 24px rgba(218, 165, 32, 0.08);
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  isolation: isolate;
+  mix-blend-mode: normal;
+}
+
+#roomPage .event-card,
+#roomPage .busy-card,
+#roomPage .busy-stack,
+#roomPage .busy-stack-summary,
+#roomPage .busy-stack-item,
+#roomPage .event-chip.is-group-event {
+  box-shadow: none;
+  filter: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  mix-blend-mode: normal;
+}
+
+#roomPage .event-card.is-group-event,
+#roomPage .event-card.is-group-event.invitee,
+#roomPage .event-chip.is-group-event {
+  border-color: rgba(218, 165, 32, 0.3);
+  background: rgba(218, 165, 32, 0.075);
+  box-shadow: none;
+}
+
+/* Overlap cards still need a small separation shadow to remain individually
+   legible; this is neutral elevation, not the golden availability glow. */
+#roomPage .event-card.event-overlap-lane,
+#roomPage .busy-card.busy-overlap-lane,
+#roomPage .busy-stack.busy-overlap-lane {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.34);
+}
+
+/* The renderer may provide --event-ink directly or the semantic data hook.
+   All descendant text follows the resolved ink rather than assuming white. */
+#roomPage .event-card,
+#roomPage .busy-card {
+  --resolved-event-ink: var(--event-ink, #ffffff);
+  color: var(--resolved-event-ink);
+}
+
+#roomPage :is(.event-card, .busy-card)[data-event-ink="dark"] {
+  --resolved-event-ink: #17130f;
+}
+
+#roomPage :is(.event-card, .busy-card)[data-event-ink="light"] {
+  --resolved-event-ink: #ffffff;
+}
+
+#roomPage .event-card.is-group-event {
+  --resolved-event-ink: #f4ddb1;
+}
+
+:root:not([data-theme="dark"]) #roomPage .event-card.is-group-event {
+  --resolved-event-ink: #5b3b21;
+  background: rgba(168, 117, 72, 0.12);
+}
+
+#roomPage .event-card .event-line,
+#roomPage .busy-card .busy-line {
+  color: var(--resolved-event-ink);
+}
+
+#roomPage .event-card .event-line-owner,
+#roomPage .busy-card .busy-line-owner {
+  color: color-mix(in srgb, var(--resolved-event-ink) 94%, transparent);
+}
+
+#roomPage .event-card .event-line-meta,
+#roomPage .busy-card .busy-line-time {
+  color: color-mix(in srgb, var(--resolved-event-ink) 84%, transparent);
+}
+
+#roomPage .event-card .event-line-location,
+#roomPage .busy-card .busy-line-title {
+  color: color-mix(in srgb, var(--resolved-event-ink) 76%, transparent);
+}
+
+/* Short 15-minute slots cannot physically hold 12px copy. From 30 minutes
+   upward, primary and time lines meet the 12px readability floor. */
+#roomPage .event-card:not(.event-15) .event-line,
+#roomPage .busy-card:not(.event-15) .busy-line {
+  font-size: max(12px, 0.75rem);
+}
+
+/* Give small legal actions a usable hit area without making the footer loud. */
+#roomPage .sidebar-footer a,
+.legal-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding-inline: 4px;
+}
+
+@media (max-width: 520px) {
+  #roomPage .sidebar-footer a,
+  .legal-links a {
+    min-height: 44px;
+    padding-inline: 5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #roomPage .sidebar-backdrop {
+    transition-duration: 1ms !important;
   }
 }
