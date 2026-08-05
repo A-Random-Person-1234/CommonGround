@@ -1,3 +1,56 @@
+# CommonGround clash rendering - design QA
+
+## Scope
+
+- User reference: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-51cc30f3-903f-43f4-8db7-991eec165ccb.png`
+- Reference asset size: 311 x 746 px
+- Production-style fixture: `C:\Users\aryan\Documents\Codex\2026-07-17\do\publish-event-owner-theme-full-20260805\.tmp-visual\overlap-qa.html`
+- Implementation capture: `C:\Users\aryan\Documents\Codex\2026-07-17\do\publish-event-owner-theme-full-20260805\.tmp-visual\implementation-full.png`
+- Implementation capture size: 1264 x 831 px
+- Side-by-side evidence: `C:\Users\aryan\Documents\Codex\2026-07-17\do\publish-event-owner-theme-full-20260805\.tmp-visual\comparison.png`
+- Side-by-side capture size: 1264 x 935 px
+- Browser viewport: 1280 x 720 CSS px at device-pixel-ratio 1.5
+
+The focused fixture imports the production `public/styles.css` and uses the exact `busy-card`, `event-card`, duration, and overlap-lane classes emitted by the application. Functional source tests separately verify that the live planner sends synced and manual events through the same lane-layout function.
+
+## State and inputs
+
+- Theme: dark
+- View: one-day timed planner representative of day/week rendering
+- Synced event: 9am-5pm
+- Synced/manual mixed clash: two distinct 11am-12pm events
+- Manual/synced mixed clash: two distinct 1pm-1:45pm events
+- Lane count: three, because the long synced event overlaps both shorter pairs
+
+## Acceptance checks
+
+| Check | Evidence | Result |
+| --- | --- | --- |
+| Synced events remain atomic rather than being sliced at every overlap boundary | The 9am-5pm synced block stays continuous in the visual fixture; `busySegmentsForDate()` returns one segment per source block | Passed |
+| Synced-vs-synced, manual-vs-manual, and mixed clashes use one layout | `renderPlanner()` passes both types into one `layoutEventLanes()` call | Passed |
+| Every clashing event is visibly represented | Five source events render as five independent cards | Passed |
+| No `+1` / `+2` aggregation replaces event details | No aggregate label appears in the implementation capture; the old merge helper is absent from the active segment builder | Passed |
+| Exact-time provider events are not silently deduplicated | Server dedupe key includes each calendar item's `sourceId` | Passed |
+| CommonGround visual language is preserved | Production Bordeaux cards, dark canvas, spacing, type hierarchy, and narrow-lane density are retained | Passed |
+
+## Visual comparison findings
+
+- The reference's essential behavior is matched: a long event remains intact while each collision is visible as its own card.
+- CommonGround intentionally uses equal-width conflict lanes instead of copying the reference's inset cascade. This preserves the app's existing drag, resize, click, and ownership interactions while making synced and manual clashes identical.
+- Card color and typography intentionally remain CommonGround's production design tokens rather than the reference's blue palette.
+- No blocking overflow, clipping, duplicate aggregation, or missing-event defect was observed in the tested state.
+
+## Verification history
+
+1. Rendered the focused production-style clash fixture in the Codex in-app browser.
+2. Captured the implementation and a side-by-side comparison against the supplied reference.
+3. Confirmed distinct accessible button nodes for all five events.
+4. Ran syntax, integration, smoke, command-centre, and weather regression tests successfully.
+
+final result: passed
+
+---
+
 # CommonGround compact invite control QA
 
 - Source visual truth: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-8f38a98d-3d6d-4ea5-8979-07e566eca97c.png`

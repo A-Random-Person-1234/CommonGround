@@ -4594,87 +4594,36 @@ function buildBusyDayBlocks() {
   return byDay;
 }
 
-function mergeParticipantEntries(blocks) {
-  const merged = new Map();
-  for (const block of blocks) {
-    const existing = merged.get(block.participantId);
-    if (!existing) {
-      merged.set(block.participantId, {
-        participantId: block.participantId,
-        ownerId: block.ownerId,
-        ownerName: block.ownerName,
-        color: block.color,
-        start: block.start,
-        end: block.end,
-        items: dedupeBusyItems(block.items || [])
-      });
-      continue;
-    }
-    existing.start = existing.start < block.start ? existing.start : block.start;
-    existing.end = existing.end > block.end ? existing.end : block.end;
-    existing.items = dedupeBusyItems([...(existing.items || []), ...(block.items || [])]);
-  }
-  return [...merged.values()];
-}
-
 function busySegmentsForDate(date) {
   const blocks = (buildBusyDayBlocks().get(dateKey(date)) || [])
     .slice()
     .sort((a, b) => {
       if (a.startHour !== b.startHour) return a.startHour - b.startHour;
-      if (a.endHour !== b.endHour) return a.endHour - b.endHour;
-      return String(a.participantId).localeCompare(String(b.participantId));
+      if (a.endHour !== b.endHour) return b.endHour - a.endHour;
+      return String(a.sourceKey || a.participantId).localeCompare(String(b.sourceKey || b.participantId));
     });
-  if (!blocks.length) return [];
 
-  const dayStart = startOfDay(date);
-  const dateAtHour = (hour) => {
-    const value = new Date(dayStart);
-    value.setMinutes(Math.round(hour * 60), 0, 0);
-    return value;
-  };
-  const boundaries = [...new Set(
-    blocks.flatMap((block) => [block.startHour, block.endHour])
-  )].sort((a, b) => a - b);
-  const segments = [];
-  for (let index = 0; index < boundaries.length - 1; index += 1) {
-    const startHour = boundaries[index];
-    const endHour = boundaries[index + 1];
-    if (endHour <= startHour) continue;
-    const activeBlocks = blocks.filter((block) => block.startHour < endHour && block.endHour > startHour);
-    if (!activeBlocks.length) continue;
-
-    const start = dateAtHour(startHour).toISOString();
-    const end = dateAtHour(endHour).toISOString();
-    const participants = mergeParticipantEntries(activeBlocks.map((block) => ({ ...block, start, end })));
-    const participantKey = participants
-      .map((participant) => {
-        const itemKey = dedupeBusyItems(participant.items || [])
-          .map((item) => item.sourceId || busyItemStableKey(item))
-          .sort()
-          .join(",");
-        return `${participant.participantId}:${itemKey}`;
-      })
-      .sort()
-      .join("|");
-    const previous = segments[segments.length - 1];
-    if (previous && previous.participantKey === participantKey && Math.abs(previous.endHour - startHour) < 0.001) {
-      previous.endHour = endHour;
-      for (const participant of previous.participants) {
-        const nextParticipant = participants.find((entry) => entry.participantId === participant.participantId);
-        participant.end = end;
-        participant.items = dedupeBusyItems([...(participant.items || []), ...(nextParticipant?.items || [])]);
-      }
-      continue;
-    }
-
-    segments.push({ date, startHour, endHour, participants, participantKey });
-  }
-
-  return segments.map((segment, index) => ({
-    ...segment,
-    id: `${dateKey(date)}-${index}-${segment.startHour}-${segment.endHour}-${segment.participantKey}`
-  }));
+  return blocks.map((block, index) => {
+    const items = dedupeBusyItems(block.items || []);
+    const sourceKey = block.sourceKey || busyBlockSourceKey(block);
+    const participant = {
+      participantId: block.participantId,
+      ownerId: block.ownerId,
+      ownerName: block.ownerName,
+      color: block.color,
+      start: block.start,
+      end: block.end,
+      items
+    };
+    return {
+      id: `${dateKey(date)}-busy-${index}-${block.participantId}-${sourceKey}`,
+      date,
+      startHour: block.startHour,
+      endHour: block.endHour,
+      participants: [participant],
+      participantKey: `${block.participantId}:${sourceKey}`
+    };
+  });
 }
 
 function mergeTimeSegments(segments = []) {
@@ -6915,10 +6864,7 @@ function renderPlanner(days) {
     */
 
     for (const segment of dayBusySegments) {
-      const node = segment.participants.length === 1
-        ? createSingleBusyCard(segment, dayIndex)
-        : createBusyStack(segment, dayIndex);
-      eventsLayer.appendChild(node);
+      eventsLayer.appendChild(createSingleBusyCard(segment, dayIndex));
     }
 
     for (const eventBlock of dayEventBlocks) {

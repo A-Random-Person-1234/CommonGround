@@ -3608,7 +3608,11 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
   const uniqueBusy = [];
   const seenBusyKeys = new Set();
   for (const entry of busy) {
-    const key = `${entry.participantId}|${entry.start}|${entry.end}|${entry.items?.[0]?.provider || "calendar"}`;
+    const itemSourceKey = (entry.items || [])
+      .map((item) => item.sourceId || [item.provider || "calendar", item.start || entry.start, item.end || entry.end].join(":"))
+      .sort()
+      .join(",");
+    const key = `${entry.participantId}|${entry.start}|${entry.end}|${itemSourceKey || "calendar"}`;
     if (seenBusyKeys.has(key)) continue;
     seenBusyKeys.add(key);
     uniqueBusy.push(entry);

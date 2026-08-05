@@ -1977,8 +1977,23 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /const participantKey = participants[\s\S]*?item\.sourceId \|\| busyItemStableKey\(item\)[\s\S]*?return `\$\{participant\.participantId\}:\$\{itemKey\}`;/,
-    "Adjacent Google events must retain distinct busy blocks so each event remains draggable"
+    /function busySegmentsForDate\(date\)[\s\S]*?buildBusyDayBlocks\(\)\.get\(dateKey\(date\)\)[\s\S]*?const sourceKey = block\.sourceKey \|\| busyBlockSourceKey\(block\)[\s\S]*?participants: \[participant\][\s\S]*?participantKey: `\$\{block\.participantId\}:\$\{sourceKey\}`/,
+    "Each synced provider event must remain an individual visual lane instead of collapsing into a +N summary"
+  );
+  assert.doesNotMatch(
+    eventComposerScript.text,
+    /function busySegmentsForDate\(date\)[\s\S]*?mergeParticipantEntries[\s\S]*?function mergeTimeSegments/,
+    "Synced provider events must never be boundary-split and merged into participant +N stacks"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function renderPlanner\(days\)[\s\S]*?const rawBusySegments = busySegmentsForDate\(day\.date\);[\s\S]*?const laneItems = layoutEventLanes\(\[[\s\S]*?\.\.\.rawBusySegments\.map[\s\S]*?\.\.\.rawEventBlocks\.map[\s\S]*?eventsLayer\.appendChild\(createSingleBusyCard\(segment, dayIndex\)\);/,
+    "Synced and manual events must share one overlap-lane calculation and render as visible individual cards"
+  );
+  assert.match(
+    serverSource,
+    /const itemSourceKey = \(entry\.items \|\| \[\]\)[\s\S]*?item\.sourceId[\s\S]*?const key = `\$\{entry\.participantId\}\|\$\{entry\.start\}\|\$\{entry\.end\}\|\$\{itemSourceKey \|\| "calendar"\}`/,
+    "Identical-time synced events must retain distinct provider source IDs during server deduplication"
   );
   assert.match(
     eventComposerScript.text,
