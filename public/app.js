@@ -4800,35 +4800,36 @@ function calendarLaneGeometry(laneCount = 1, laneIndex = 0) {
     };
   }
 
-  const overlayLaneCount = safeLaneCount - 1;
-  const progress = overlayLaneCount === 1
-    ? 1
-    : (safeLaneIndex - 1) / (overlayLaneCount - 1);
-  const leftFraction = overlayLaneCount === 1
-    ? 0.05
-    : 0.05 + (0.45 * progress);
-  const rightFraction = overlayLaneCount === 1
-    ? 0
-    : 0.17 * (1 - progress);
+  const widthFraction = 1 / safeLaneCount;
+  const leftFraction = widthFraction * safeLaneIndex;
+  const rightFraction = Math.max(0, 1 - leftFraction - widthFraction);
 
   return {
     laneCount: safeLaneCount,
     laneIndex: safeLaneIndex,
     leftFraction,
     rightFraction,
-    widthFraction: Math.max(0.5, 1 - leftFraction - rightFraction)
+    widthFraction
   };
 }
 
-function applyCalendarLanePosition(block, dayIndex, laneCount = 1, laneIndex = 0) {
+function applyCalendarLanePosition(
+  block,
+  dayIndex,
+  laneCount = 1,
+  laneIndex = 0,
+  clusterLaneCount = laneCount
+) {
   const dayCount = Number(calendarGrid.style.getPropertyValue("--day-count")) || (currentView === "day" ? 1 : 7);
   const lane = calendarLaneGeometry(laneCount, laneIndex);
+  const safeClusterLaneCount = Math.max(lane.laneCount, Number(clusterLaneCount || lane.laneCount));
   const columnWidthPercent = 100 / dayCount;
   const laneLeftPercent = columnWidthPercent * (dayIndex + lane.leftFraction);
   const laneWidthPercent = columnWidthPercent * lane.widthFraction;
   block.style.left = `calc(${laneLeftPercent}% + var(--calendar-block-gap))`;
   block.style.width = `calc(${laneWidthPercent}% - var(--calendar-block-double-gap))`;
   block.style.setProperty("--event-stack-order", lane.laneIndex);
+  block.style.setProperty("--event-readable-lane-width", `${100 / safeClusterLaneCount}%`);
 }
 
 function eventBlocksForDate(date) {
@@ -5134,7 +5135,13 @@ function createSingleBusyCard(segment, dayIndex) {
   block.style.setProperty("--start", segment.startHour - calendarStartHour);
   block.style.setProperty("--duration", duration);
   block.style.setProperty("--event-color", participant.color);
-  applyCalendarLanePosition(block, dayIndex, segment.laneCount, segment.laneIndex);
+  applyCalendarLanePosition(
+    block,
+    dayIndex,
+    segment.laneCount,
+    segment.laneIndex,
+    segment.clusterLaneCount
+  );
   const coversVisibleDay = duration >= (calendarEndHour - calendarStartHour) - 0.001;
   const timeRange = coversVisibleDay ? "All day" : formatEventRange(segment.startHour, segment.endHour);
   const titleLabel = normalizedTextKey(visibilityLabel) === normalizedTextKey(ownerLabel) ? "" : visibilityLabel;
@@ -5192,7 +5199,13 @@ function createBusyStack(segment, dayIndex) {
   stack.style.setProperty("--day-index", dayIndex);
   stack.style.setProperty("--start", segment.startHour - calendarStartHour);
   stack.style.setProperty("--duration", duration);
-  applyCalendarLanePosition(stack, dayIndex, segment.laneCount, segment.laneIndex);
+  applyCalendarLanePosition(
+    stack,
+    dayIndex,
+    segment.laneCount,
+    segment.laneIndex,
+    segment.clusterLaneCount
+  );
   stack.dataset.stackId = segment.id;
   stack.classList.add(sizeClass, durationClass);
   stack.classList.toggle("opens-upward", busyStackOpensUpward(segment));
@@ -5378,7 +5391,7 @@ function createEventBlock(item, dayIndex, dayDate) {
   block.style.setProperty("--event-owner-color", item.participantColor);
   block.style.setProperty("--event-lane-count", laneCount);
   block.style.setProperty("--event-lane-index", laneIndex);
-  applyCalendarLanePosition(block, dayIndex, laneCount, laneIndex);
+  applyCalendarLanePosition(block, dayIndex, laneCount, laneIndex, item.clusterLaneCount);
   const timeRange = formatEventRange(item.startHour, item.endHour);
   const ownerLabel = calendarEventOwnerLabel(item);
   block.setAttribute("aria-label", `${ownerLabel}, ${item.title || "Event"}, ${timeRange}`);

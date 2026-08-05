@@ -1,3 +1,58 @@
+# CommonGround readable clash lanes - design QA
+
+## Evidence and normalization
+
+- Source visual truth: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-e8531259-fd81-4c1d-97bc-527f9f47222f.png`
+- Earlier unreadable state: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-19955166-5273-4028-8b02-1acb03075219.png`
+- Production-style implementation fixture: `C:\Users\aryan\Documents\Codex\2026-07-17\do\publish-event-owner-theme-full-20260805\.tmp-visual\readable-overlap-qa.html`
+- Combined comparison: `C:\Users\aryan\Documents\Codex\2026-07-17\do\publish-event-owner-theme-full-20260805\.tmp-visual\readable-overlap-comparison.png`
+- Source image: 471 x 128 px
+- Implementation region: 471 x 128 CSS px
+- Comparison capture: 1280 x 720 px at device-pixel-ratio 1
+- Normalization: the source and implementation regions are displayed at the same 471 x 128 size and state.
+
+## State
+
+- Dark-mode two-day timed calendar region representative of day and week views.
+- First day: one long background event and one shorter event starting at the same time.
+- Second day: one unclashed long event as a control.
+- The clash intentionally mixes a provider-style busy card and a manual event card.
+
+## Findings
+
+- No actionable P0, P1, or P2 differences remain.
+- The shorter card begins at the day midpoint and occupies the right half, matching the target behavior.
+- The longest event remains physically full-width underneath, while its owner, title, and time are constrained to the exposed left lane.
+- Longer titles use the existing ellipsis and full tooltip behavior rather than spilling beneath another event.
+- Mixed Google/manual identity has no effect on geometry or stacking.
+
+## Full-view comparison evidence
+
+The combined image shows the target and production-class implementation at the same size. Both preserve the long event as the background surface and shift the shorter event into a separate right-side card. The unclashed control event remains full width.
+
+## Focused region comparison evidence
+
+The full source is already a focused 471 x 128 calendar crop, so no additional crop is necessary. In the implementation region, the long event's three text lines remain visible in the left half and the shorter event's owner, title, and time remain visible in the right half without intersecting.
+
+## Required fidelity surfaces
+
+- Fonts and typography: passed. Production CommonGround typography, compact event hierarchy, ellipsis, weights, and line heights remain intact.
+- Spacing and layout rhythm: passed. The target's effective 50/50 split is reproduced with the existing calendar card gutters and radii.
+- Colors and visual tokens: passed. CommonGround's Bordeaux event color and dark calendar canvas are preserved rather than copying the reference blue.
+- Image quality and asset fidelity: passed. No raster or icon assets are required for this card-only state; the supplied reference remains unmodified.
+- Copy and content: passed. Both cards expose owner, title, and time as independent accessible buttons.
+
+## Comparison history
+
+1. P1 before state: the single foreground card used a 5% inset and 95% width, obscuring nearly all of the anchor's left-aligned content.
+2. Fix: changed foreground geometry to distinct equal lanes, reserved anchor copy width using the cluster's maximum collision depth, and excluded anchors from the narrow-card rule that expanded time text beneath overlays.
+3. Post-fix evidence: the 471 x 128 comparison shows separate left and right reading lanes with no intersecting text.
+4. Functional regression checks cover one clash, multiple simultaneous clashes, source swapping, and touching non-overlapping events.
+
+final result: passed
+
+---
+
 # CommonGround clash rendering - design QA
 
 ## Scope

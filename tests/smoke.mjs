@@ -1995,20 +1995,91 @@ try {
     /function layoutEventLanes\(events = \[\]\)[\s\S]*?const anchor = cluster[\s\S]*?durationDifference[\s\S]*?laneIndex: 0, overlapRole: "anchor"[\s\S]*?overlayLaneIndex \+ 1, overlapRole: "overlay"[\s\S]*?overlayLaneEnds\.length \+ 1/,
     "Each clash cluster must keep its longest event as the full-width anchor and layer the remaining events above it"
   );
+
+  const overlapFunctionStart = eventComposerScript.text.indexOf("function layoutEventLanes");
+  const overlapFunctionEnd = eventComposerScript.text.indexOf("function eventBlocksForDate", overlapFunctionStart);
+  assert.ok(overlapFunctionStart >= 0 && overlapFunctionEnd > overlapFunctionStart, "Overlap layout helpers must remain extractable for behavior checks");
+  const overlapHelpers = new Function(
+    `${eventComposerScript.text.slice(overlapFunctionStart, overlapFunctionEnd)}\nreturn { layoutEventLanes, calendarLaneGeometry };`
+  )();
+  const assertLaneGeometry = (laneCount, laneIndex, expectedLeft, expectedWidth, label) => {
+    const geometry = overlapHelpers.calendarLaneGeometry(laneCount, laneIndex);
+    assert.ok(Math.abs(geometry.leftFraction - expectedLeft) < 0.000001, `${label} left edge must be ${expectedLeft}`);
+    assert.ok(Math.abs(geometry.widthFraction - expectedWidth) < 0.000001, `${label} width must be ${expectedWidth}`);
+  };
+
+  const singleClashLayout = overlapHelpers.layoutEventLanes([
+    { id: "long-busy", laneKind: "busy", startHour: 9, endHour: 17 },
+    { id: "short-manual", laneKind: "event", startHour: 9, endHour: 10.5 }
+  ]);
+  assert.deepEqual(
+    singleClashLayout.map(({ id, laneIndex, laneCount, overlapRole }) => ({ id, laneIndex, laneCount, overlapRole })),
+    [
+      { id: "long-busy", laneIndex: 0, laneCount: 2, overlapRole: "anchor" },
+      { id: "short-manual", laneIndex: 1, laneCount: 2, overlapRole: "overlay" }
+    ],
+    "A short clash must sit in a separate lane above the full-width long event"
+  );
+  assertLaneGeometry(2, 0, 0, 1, "Two-event anchor");
+  assertLaneGeometry(2, 1, 0.5, 0.5, "Two-event foreground card");
+
+  const denseClashLayout = overlapHelpers.layoutEventLanes([
+    { id: "long", laneKind: "event", startHour: 9, endHour: 17 },
+    { id: "short-google", laneKind: "busy", startHour: 11, endHour: 12 },
+    { id: "short-manual", laneKind: "event", startHour: 11, endHour: 12 }
+  ]);
+  assert.deepEqual(
+    denseClashLayout.map(({ id, laneIndex, laneCount, overlapRole }) => ({ id, laneIndex, laneCount, overlapRole })),
+    [
+      { id: "long", laneIndex: 0, laneCount: 3, overlapRole: "anchor" },
+      { id: "short-google", laneIndex: 1, laneCount: 3, overlapRole: "overlay" },
+      { id: "short-manual", laneIndex: 2, laneCount: 3, overlapRole: "overlay" }
+    ],
+    "Simultaneous foreground clashes must receive separate readable lanes"
+  );
+  assertLaneGeometry(3, 1, 1 / 3, 1 / 3, "First three-event foreground card");
+  assertLaneGeometry(3, 2, 2 / 3, 1 / 3, "Second three-event foreground card");
+
+  const sourceNeutralSnapshot = (items) => overlapHelpers.layoutEventLanes(items)
+    .map(({ id, laneIndex, laneCount, overlapRole }) => ({ id, laneIndex, laneCount, overlapRole }));
+  assert.deepEqual(
+    sourceNeutralSnapshot([
+      { id: "long", laneKind: "busy", startHour: 9, endHour: 17 },
+      { id: "short", laneKind: "event", startHour: 9, endHour: 10.5 }
+    ]),
+    sourceNeutralSnapshot([
+      { id: "long", laneKind: "event", startHour: 9, endHour: 17 },
+      { id: "short", laneKind: "busy", startHour: 9, endHour: 10.5 }
+    ]),
+    "Swapping Google and manual sources must not change clash geometry"
+  );
+
+  const touchingLayout = overlapHelpers.layoutEventLanes([
+    { id: "first", laneKind: "busy", startHour: 9, endHour: 10 },
+    { id: "second", laneKind: "event", startHour: 10, endHour: 11 }
+  ]);
+  assert.deepEqual(
+    touchingLayout.map(({ id, laneIndex, laneCount, overlapRole }) => ({ id, laneIndex, laneCount, overlapRole })),
+    [
+      { id: "first", laneIndex: 0, laneCount: 1, overlapRole: "single" },
+      { id: "second", laneIndex: 0, laneCount: 1, overlapRole: "single" }
+    ],
+    "Events that only touch at an endpoint must remain independent full-width cards"
+  );
   assert.match(
     eventComposerScript.text,
     /const clusterLaneCount = Math\.max\(1, overlayLaneEnds\.length \+ 1\);[\s\S]*?candidate\.startHour < item\.endHour[\s\S]*?candidate\.endHour > item\.startHour[\s\S]*?candidate\.laneIndex \+ 1[\s\S]*?clusterLaneCount/,
-    "A lone foreground event must keep the full right edge while simultaneous foreground clashes use the deeper cascade"
+    "Each event must use the local simultaneous clash depth rather than unrelated overlaps elsewhere in the cluster"
   );
   assert.match(
     eventComposerScript.text,
-    /function calendarLaneGeometry\(laneCount = 1, laneIndex = 0\)[\s\S]*?leftFraction: 0,[\s\S]*?widthFraction: 1[\s\S]*?0\.05 \+ \(0\.45 \* progress\)[\s\S]*?0\.17 \* \(1 - progress\)[\s\S]*?Math\.max\(0\.5, 1 - leftFraction - rightFraction\)/,
-    "Foreground clashes must cascade from a five-percent inset while keeping at least half of the day column visible"
+    /function calendarLaneGeometry\(laneCount = 1, laneIndex = 0\)[\s\S]*?leftFraction: 0,[\s\S]*?widthFraction: 1[\s\S]*?const widthFraction = 1 \/ safeLaneCount;[\s\S]*?const leftFraction = widthFraction \* safeLaneIndex;[\s\S]*?1 - leftFraction - widthFraction/,
+    "Foreground clashes must shift into distinct equal lanes so the full-width anchor copy remains readable on the left"
   );
   assert.match(
     eventComposerScript.text,
-    /function applyCalendarLanePosition\(block, dayIndex, laneCount = 1, laneIndex = 0\)[\s\S]*?calendarLaneGeometry\(laneCount, laneIndex\)[\s\S]*?dayIndex \+ lane\.leftFraction[\s\S]*?lane\.widthFraction[\s\S]*?--event-stack-order/,
-    "Synced and manual cards must use the same cascade geometry and stacking order"
+    /function applyCalendarLanePosition\([\s\S]*?clusterLaneCount = laneCount[\s\S]*?calendarLaneGeometry\(laneCount, laneIndex\)[\s\S]*?safeClusterLaneCount[\s\S]*?dayIndex \+ lane\.leftFraction[\s\S]*?lane\.widthFraction[\s\S]*?--event-stack-order[\s\S]*?--event-readable-lane-width/,
+    "Synced and manual cards must share geometry while reserving anchor copy space for the cluster's deepest clash"
   );
   assert.match(
     eventComposerScript.text,
@@ -2128,8 +2199,8 @@ try {
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
   assert.match(
     eventComposerStyles.text,
-    /\.event-card\.event-overlap-anchor,[\s\S]*?\.busy-card\.busy-overlap-lane[\s\S]*?z-index: calc\(6 \+ var\(--event-stack-order, 0\)\);[\s\S]*?\.event-card\.event-overlap-lane,[\s\S]*?border-color: rgba\(8, 8, 9, 0\.72\);[\s\S]*?0 8px 20px rgba\(0, 0, 0, 0\.36\)/,
-    "Inset clash cards must stack above the full-width anchor with a crisp separating edge and shadow"
+    /\.event-card\.event-overlap-anchor,[\s\S]*?\.busy-card\.busy-overlap-lane[\s\S]*?z-index: calc\(6 \+ var\(--event-stack-order, 0\)\);[\s\S]*?\.event-card\.event-overlap-anchor \.event-line,[\s\S]*?width: var\(--event-readable-lane-width, 50%\);[\s\S]*?\.event-card\.event-overlap-lane,[\s\S]*?border-color: rgba\(8, 8, 9, 0\.72\);[\s\S]*?0 8px 20px rgba\(0, 0, 0, 0\.36\)/,
+    "Shifted clash cards must leave the full-width anchor a readable text lane and keep a crisp separating edge"
   );
   assert.match(
     eventComposerStyles.text,
@@ -2652,8 +2723,8 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /@container \(max-width: 190px\)\s*\{[\s\S]*?\.event-card \.event-line:not\(\.event-line-meta\),\s*\.busy-card \.busy-line:not\(\.busy-line-time\)\s*\{[^}]*padding-right:\s*0;[^}]*\}[\s\S]*?\.event-card\.event-15 \.event-line-compact,\s*\.busy-card\.event-15 \.busy-line-compact\s*\{[^}]*padding-right:\s*calc\(var\(--inline-time-space\) \+ 4px\);[^}]*\}[\s\S]*?\.event-card:not\(\.event-15\):not\(\.event-30\) \.event-line-meta,\s*\.busy-card:not\(\.event-15\):not\(\.event-30\) \.busy-line-time\s*\{[^}]*position:\s*static;[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*text-align:\s*left;[^}]*\}[\s\S]*?\.event-card\.event-30 \.event-line-meta,\s*\.busy-card\.event-30 \.busy-line-title,\s*\.busy-card\.event-30 \.busy-line-time\s*\{[^}]*display:\s*none;/s,
-    "Narrow cards must preserve 15-minute time separation while stacking longer ranges safely"
+    /@container \(max-width: 190px\)\s*\{[\s\S]*?\.event-card \.event-line:not\(\.event-line-meta\),\s*\.busy-card \.busy-line:not\(\.busy-line-time\)\s*\{[^}]*padding-right:\s*0;[^}]*\}[\s\S]*?\.event-card\.event-15 \.event-line-compact,\s*\.busy-card\.event-15 \.busy-line-compact\s*\{[^}]*padding-right:\s*calc\(var\(--inline-time-space\) \+ 4px\);[^}]*\}[\s\S]*?\.event-card:not\(\.event-15\):not\(\.event-30\):not\(\.event-overlap-anchor\) \.event-line-meta,\s*\.busy-card:not\(\.event-15\):not\(\.event-30\):not\(\.busy-overlap-anchor\) \.busy-line-time\s*\{[^}]*position:\s*static;[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*text-align:\s*left;[^}]*\}[\s\S]*?\.event-card\.event-30 \.event-line-meta,\s*\.busy-card\.event-30 \.busy-line-title,\s*\.busy-card\.event-30 \.busy-line-time\s*\{[^}]*display:\s*none;/s,
+    "Narrow cards must stack longer ranges safely without expanding overlap-anchor text beneath a foreground card"
   );
   assert.match(
     eventComposerStyles.text,
