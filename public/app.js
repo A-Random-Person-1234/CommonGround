@@ -4706,12 +4706,13 @@ function freeSegmentsForDate(date, occupiedSegments = occupiedSegmentsForDate(da
 }
 
 function layoutEventLanes(events = []) {
+  const sourceOrder = new Map(events.map((eventBlock, index) => [eventBlock, index]));
   const sorted = events
     .slice()
     .sort((a, b) => {
       if (a.startHour !== b.startHour) return a.startHour - b.startHour;
       if (a.endHour !== b.endHour) return b.endHour - a.endHour;
-      return String(a.id).localeCompare(String(b.id));
+      return (sourceOrder.get(a) || 0) - (sourceOrder.get(b) || 0);
     });
   const laidOut = [];
   let cluster = [];
@@ -4719,23 +4720,46 @@ function layoutEventLanes(events = []) {
 
   const flushCluster = () => {
     if (!cluster.length) return;
-    const lanes = [];
-    const clusterItems = [];
+    const anchor = cluster
+      .slice()
+      .sort((a, b) => {
+        const durationDifference = (b.endHour - b.startHour) - (a.endHour - a.startHour);
+        if (Math.abs(durationDifference) > 0.001) return durationDifference;
+        if (a.startHour !== b.startHour) return a.startHour - b.startHour;
+        return (sourceOrder.get(a) || 0) - (sourceOrder.get(b) || 0);
+      })[0];
+    const overlayLaneEnds = [];
+    const clusterItems = [{ ...anchor, laneIndex: 0, overlapRole: "anchor" }];
 
     for (const eventBlock of cluster) {
-      let laneIndex = lanes.findIndex((laneEnd) => eventBlock.startHour >= laneEnd);
-      if (laneIndex === -1) {
-        laneIndex = lanes.length;
-        lanes.push(eventBlock.endHour);
+      if (eventBlock === anchor) continue;
+      let overlayLaneIndex = overlayLaneEnds.findIndex((laneEnd) => eventBlock.startHour >= laneEnd);
+      if (overlayLaneIndex === -1) {
+        overlayLaneIndex = overlayLaneEnds.length;
+        overlayLaneEnds.push(eventBlock.endHour);
       } else {
-        lanes[laneIndex] = eventBlock.endHour;
+        overlayLaneEnds[overlayLaneIndex] = eventBlock.endHour;
       }
-      clusterItems.push({ ...eventBlock, laneIndex });
+      clusterItems.push({ ...eventBlock, laneIndex: overlayLaneIndex + 1, overlapRole: "overlay" });
     }
 
-    const laneCount = Math.max(1, lanes.length);
+    const clusterLaneCount = Math.max(1, overlayLaneEnds.length + 1);
     for (const item of clusterItems) {
-      laidOut.push({ ...item, laneCount });
+      const laneCount = Math.max(
+        1,
+        ...clusterItems
+          .filter((candidate) => (
+            candidate.startHour < item.endHour &&
+            candidate.endHour > item.startHour
+          ))
+          .map((candidate) => candidate.laneIndex + 1)
+      );
+      laidOut.push({
+        ...item,
+        laneCount,
+        clusterLaneCount,
+        overlapRole: clusterItems.length > 1 ? item.overlapRole : "single"
+      });
     }
 
     cluster = [];
@@ -4755,20 +4779,56 @@ function layoutEventLanes(events = []) {
   }
 
   flushCluster();
-  return laidOut;
+  return laidOut.sort((a, b) => {
+    if (a.startHour !== b.startHour) return a.startHour - b.startHour;
+    if (a.endHour !== b.endHour) return b.endHour - a.endHour;
+    if (a.laneIndex !== b.laneIndex) return a.laneIndex - b.laneIndex;
+    return String(a.id).localeCompare(String(b.id));
+  });
+}
+
+function calendarLaneGeometry(laneCount = 1, laneIndex = 0) {
+  const safeLaneCount = Math.max(1, Number(laneCount || 1));
+  const safeLaneIndex = Math.max(0, Math.min(safeLaneCount - 1, Number(laneIndex || 0)));
+  if (safeLaneCount === 1 || safeLaneIndex === 0) {
+    return {
+      laneCount: safeLaneCount,
+      laneIndex: safeLaneIndex,
+      leftFraction: 0,
+      rightFraction: 0,
+      widthFraction: 1
+    };
+  }
+
+  const overlayLaneCount = safeLaneCount - 1;
+  const progress = overlayLaneCount === 1
+    ? 1
+    : (safeLaneIndex - 1) / (overlayLaneCount - 1);
+  const leftFraction = overlayLaneCount === 1
+    ? 0.05
+    : 0.05 + (0.45 * progress);
+  const rightFraction = overlayLaneCount === 1
+    ? 0
+    : 0.17 * (1 - progress);
+
+  return {
+    laneCount: safeLaneCount,
+    laneIndex: safeLaneIndex,
+    leftFraction,
+    rightFraction,
+    widthFraction: Math.max(0.5, 1 - leftFraction - rightFraction)
+  };
 }
 
 function applyCalendarLanePosition(block, dayIndex, laneCount = 1, laneIndex = 0) {
   const dayCount = Number(calendarGrid.style.getPropertyValue("--day-count")) || (currentView === "day" ? 1 : 7);
-  const safeLaneCount = Math.max(1, Number(laneCount || 1));
-  const safeLaneIndex = Math.max(0, Math.min(safeLaneCount - 1, Number(laneIndex || 0)));
+  const lane = calendarLaneGeometry(laneCount, laneIndex);
   const columnWidthPercent = 100 / dayCount;
-  const laneWidthPercent = columnWidthPercent / safeLaneCount;
-  const laneLeftPercent = columnWidthPercent * dayIndex + laneWidthPercent * safeLaneIndex;
+  const laneLeftPercent = columnWidthPercent * (dayIndex + lane.leftFraction);
+  const laneWidthPercent = columnWidthPercent * lane.widthFraction;
   block.style.left = `calc(${laneLeftPercent}% + var(--calendar-block-gap))`;
-  block.style.width = safeLaneCount > 1
-    ? `calc(${laneWidthPercent}% - var(--calendar-block-lane-gap))`
-    : `calc(${laneWidthPercent}% - var(--calendar-block-double-gap))`;
+  block.style.width = `calc(${laneWidthPercent}% - var(--calendar-block-double-gap))`;
+  block.style.setProperty("--event-stack-order", lane.laneIndex);
 }
 
 function eventBlocksForDate(date) {
@@ -5044,6 +5104,9 @@ function createSingleBusyCard(segment, dayIndex) {
   const isCompact = duration < 1;
   const hasInvitedOverlap = invitedEventOverlap(participant.participantId, segment.date, segment.startHour, segment.endHour);
   const hasLaneOverlap = Number(segment.laneCount || 1) > 1;
+  const laneIndex = Math.max(0, Number(segment.laneIndex || 0));
+  const isOverlapAnchor = hasLaneOverlap && laneIndex === 0;
+  const isOverlapOverlay = hasLaneOverlap && laneIndex > 0;
   const laneSizeClass = hasLaneOverlap ? `event-lanes-${Math.min(Number(segment.laneCount || 1), 4)}` : "";
   block.className = [
     "busy-card",
@@ -5051,11 +5114,13 @@ function createSingleBusyCard(segment, dayIndex) {
     isCompact ? "compact" : "",
     isTiny ? "tiny" : "",
     hasInvitedOverlap ? "invited-overlap" : "",
-    hasLaneOverlap ? "busy-overlap-lane" : "",
+    isOverlapAnchor ? "busy-overlap-anchor" : "",
+    isOverlapOverlay ? "busy-overlap-lane" : "",
     laneSizeClass,
     canMove ? "can-move" : ""
   ].filter(Boolean).join(" ");
   block.dataset.canMove = String(canMove);
+  block.dataset.overlapRole = hasLaneOverlap ? (isOverlapAnchor ? "anchor" : "overlay") : "single";
   block.dataset.googleCalendarId = googleItem?.googleCalendarId || "";
   block.dataset.googleEventId = googleItem?.googleEventId || "";
   block.dataset.eventDate = dateKey(segment.date);
@@ -5114,12 +5179,16 @@ function createBusyStack(segment, dayIndex) {
   const duration = segment.endHour - segment.startHour;
   const { sizeClass, durationClass } = eventCardMetrics(duration);
   const hasLaneOverlap = Number(segment.laneCount || 1) > 1;
+  const laneIndex = Math.max(0, Number(segment.laneIndex || 0));
+  const isOverlapAnchor = hasLaneOverlap && laneIndex === 0;
+  const isOverlapOverlay = hasLaneOverlap && laneIndex > 0;
   const isFifteen = durationClass === "event-15";
   const hasInvitedOverlap = segment.participants.some((participant) => (
     invitedEventOverlap(participant.participantId, segment.date, segment.startHour, segment.endHour)
   ));
   const stack = document.createElement("div");
-  stack.className = `busy-stack ${hasLaneOverlap ? "busy-overlap-lane" : ""} ${hasInvitedOverlap ? "invited-overlap" : ""}`.trim();
+  stack.className = `busy-stack ${isOverlapAnchor ? "busy-overlap-anchor" : ""} ${isOverlapOverlay ? "busy-overlap-lane" : ""} ${hasInvitedOverlap ? "invited-overlap" : ""}`.trim();
+  stack.dataset.overlapRole = hasLaneOverlap ? (isOverlapAnchor ? "anchor" : "overlay") : "single";
   stack.style.setProperty("--day-index", dayIndex);
   stack.style.setProperty("--start", segment.startHour - calendarStartHour);
   stack.style.setProperty("--duration", duration);
@@ -5255,6 +5324,8 @@ function createEventBlock(item, dayIndex, dayDate) {
   const { sizeClass, durationClass } = eventCardMetrics(duration);
   const laneCount = Math.max(1, Number(item.laneCount || 1));
   const laneIndex = Math.max(0, Number(item.laneIndex || 0));
+  const isOverlapAnchor = laneCount > 1 && laneIndex === 0;
+  const isOverlapOverlay = laneCount > 1 && laneIndex > 0;
   const laneSizeClass = laneCount > 1 ? `event-lanes-${Math.min(laneCount, 4)}` : "";
   const isEditable = canManageEvent(item.originalEvent || {});
   const isOwnedByViewer = Boolean(
@@ -5276,7 +5347,8 @@ function createEventBlock(item, dayIndex, dayDate) {
     "event-card",
     sizeClass,
     durationClass,
-    laneCount > 1 ? "event-overlap-lane" : "",
+    isOverlapAnchor ? "event-overlap-anchor" : "",
+    isOverlapOverlay ? "event-overlap-lane" : "",
     laneSizeClass,
     isEditable ? "can-resize" : "",
     canMove ? "can-move" : "",
@@ -5288,6 +5360,7 @@ function createEventBlock(item, dayIndex, dayDate) {
     item.id === selectedEventId ? "is-selected" : ""
   ].filter(Boolean).join(" ");
   block.dataset.eventId = item.id;
+  block.dataset.overlapRole = laneCount > 1 ? (isOverlapAnchor ? "anchor" : "overlay") : "single";
   block.dataset.eventDate = dayDate ? dateKey(dayDate) : "";
   block.dataset.eventStart = item.eventStart || "";
   block.dataset.eventEnd = item.eventEnd || "";
@@ -6852,8 +6925,6 @@ function renderPlanner(days) {
       ...rawBusySegments.map((segment) => ({ ...segment, laneKind: "busy" })),
       ...rawEventBlocks.map((eventBlock) => ({ ...eventBlock, laneKind: "event" }))
     ]);
-    const dayBusySegments = laneItems.filter((item) => item.laneKind === "busy");
-    const dayEventBlocks = laneItems.filter((item) => item.laneKind === "event");
     const occupiedSegments = occupiedSegmentsForDate(day.date, rawBusySegments, rawEventBlocks);
 
     /*
@@ -6863,12 +6934,11 @@ function renderPlanner(days) {
       }
     */
 
-    for (const segment of dayBusySegments) {
-      eventsLayer.appendChild(createSingleBusyCard(segment, dayIndex));
-    }
-
-    for (const eventBlock of dayEventBlocks) {
-      eventsLayer.appendChild(createEventBlock(eventBlock, dayIndex, day.date));
+    for (const item of laneItems) {
+      const node = item.laneKind === "busy"
+        ? createSingleBusyCard(item, dayIndex)
+        : createEventBlock(item, dayIndex, day.date);
+      eventsLayer.appendChild(node);
     }
   });
 

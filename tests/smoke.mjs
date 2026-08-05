@@ -1987,8 +1987,33 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function renderPlanner\(days\)[\s\S]*?const rawBusySegments = busySegmentsForDate\(day\.date\);[\s\S]*?const laneItems = layoutEventLanes\(\[[\s\S]*?\.\.\.rawBusySegments\.map[\s\S]*?\.\.\.rawEventBlocks\.map[\s\S]*?eventsLayer\.appendChild\(createSingleBusyCard\(segment, dayIndex\)\);/,
-    "Synced and manual events must share one overlap-lane calculation and render as visible individual cards"
+    /function renderPlanner\(days\)[\s\S]*?const rawBusySegments = busySegmentsForDate\(day\.date\);[\s\S]*?const laneItems = layoutEventLanes\(\[[\s\S]*?\.\.\.rawBusySegments\.map[\s\S]*?\.\.\.rawEventBlocks\.map[\s\S]*?for \(const item of laneItems\)[\s\S]*?item\.laneKind === "busy"[\s\S]*?createSingleBusyCard\(item, dayIndex\)[\s\S]*?createEventBlock\(item, dayIndex, day\.date\)/,
+    "Synced and manual events must share one overlap layout and one source-neutral render order"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function layoutEventLanes\(events = \[\]\)[\s\S]*?const anchor = cluster[\s\S]*?durationDifference[\s\S]*?laneIndex: 0, overlapRole: "anchor"[\s\S]*?overlayLaneIndex \+ 1, overlapRole: "overlay"[\s\S]*?overlayLaneEnds\.length \+ 1/,
+    "Each clash cluster must keep its longest event as the full-width anchor and layer the remaining events above it"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /const clusterLaneCount = Math\.max\(1, overlayLaneEnds\.length \+ 1\);[\s\S]*?candidate\.startHour < item\.endHour[\s\S]*?candidate\.endHour > item\.startHour[\s\S]*?candidate\.laneIndex \+ 1[\s\S]*?clusterLaneCount/,
+    "A lone foreground event must keep the full right edge while simultaneous foreground clashes use the deeper cascade"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function calendarLaneGeometry\(laneCount = 1, laneIndex = 0\)[\s\S]*?leftFraction: 0,[\s\S]*?widthFraction: 1[\s\S]*?0\.05 \+ \(0\.45 \* progress\)[\s\S]*?0\.17 \* \(1 - progress\)[\s\S]*?Math\.max\(0\.5, 1 - leftFraction - rightFraction\)/,
+    "Foreground clashes must cascade from a five-percent inset while keeping at least half of the day column visible"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function applyCalendarLanePosition\(block, dayIndex, laneCount = 1, laneIndex = 0\)[\s\S]*?calendarLaneGeometry\(laneCount, laneIndex\)[\s\S]*?dayIndex \+ lane\.leftFraction[\s\S]*?lane\.widthFraction[\s\S]*?--event-stack-order/,
+    "Synced and manual cards must use the same cascade geometry and stacking order"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /isOverlapAnchor \? "busy-overlap-anchor"[\s\S]*?isOverlapOverlay \? "busy-overlap-lane"[\s\S]*?isOverlapAnchor \? "event-overlap-anchor"[\s\S]*?isOverlapOverlay \? "event-overlap-lane"/,
+    "Both provider and manual cards must distinguish the readable background anchor from inset overlay cards"
   );
   assert.match(
     serverSource,
@@ -2101,6 +2126,11 @@ try {
     "Resize cancellation must be able to restore the original start and duration"
   );
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
+  assert.match(
+    eventComposerStyles.text,
+    /\.event-card\.event-overlap-anchor,[\s\S]*?\.busy-card\.busy-overlap-lane[\s\S]*?z-index: calc\(6 \+ var\(--event-stack-order, 0\)\);[\s\S]*?\.event-card\.event-overlap-lane,[\s\S]*?border-color: rgba\(8, 8, 9, 0\.72\);[\s\S]*?0 8px 20px rgba\(0, 0, 0, 0\.36\)/,
+    "Inset clash cards must stack above the full-width anchor with a crisp separating edge and shadow"
+  );
   assert.match(
     eventComposerStyles.text,
     /@font-face\s*\{[^}]*font-family:\s*"SF Pro Display";[^}]*SFProDisplay-Regular\.otf\?v=20260805-sf-pro-display[^}]*font-style:\s*normal;[^}]*font-weight:\s*400;[^}]*font-display:\s*swap;/s,

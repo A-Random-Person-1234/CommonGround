@@ -8287,8 +8287,40 @@ button.free-block:not(:disabled):active {
   text-overflow: clip;
 }
 
-/* Narrow overlap lanes need intentionally smaller type instead of the normal
-   full-width card hierarchy. */
+/* Overlap clusters use a full-width anchor with progressively inset cards on
+   top. This keeps the main event readable while every clash remains distinct. */
+.event-card.event-overlap-anchor,
+.busy-card.busy-overlap-anchor,
+.busy-stack.busy-overlap-anchor,
+.event-card.event-overlap-lane,
+.busy-card.busy-overlap-lane,
+.busy-stack.busy-overlap-lane {
+  z-index: calc(6 + var(--event-stack-order, 0));
+}
+
+.event-card.event-overlap-lane,
+.busy-card.busy-overlap-lane,
+.busy-stack.busy-overlap-lane {
+  border-color: rgba(8, 8, 9, 0.72);
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.36),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.045);
+}
+
+.event-card.event-overlap-anchor.is-moving,
+.event-card.event-overlap-lane.is-moving,
+.event-card.event-overlap-anchor.is-move-committing,
+.event-card.event-overlap-lane.is-move-committing,
+.event-card.event-overlap-anchor.is-resizing,
+.event-card.event-overlap-lane.is-resizing,
+.busy-card.busy-overlap-anchor.is-moving,
+.busy-card.busy-overlap-lane.is-moving,
+.busy-card.busy-overlap-anchor.is-move-committing,
+.busy-card.busy-overlap-lane.is-move-committing {
+  z-index: 20;
+}
+
+/* Inset overlay cards need a denser hierarchy than their full-width anchor. */
 .event-card.event-overlap-lane,
 .busy-card.busy-overlap-lane {
   --inline-time-space: 0px;
@@ -8311,20 +8343,20 @@ button.free-block:not(:disabled):active {
 .event-card.event-overlap-lane .event-line-compact,
 .busy-card.busy-overlap-lane .busy-line-owner,
 .busy-card.busy-overlap-lane .busy-line-compact {
-  font-size: 10px;
-  line-height: 1.05;
+  font-size: 10.5px;
+  line-height: 1.08;
 }
 
 .event-card.event-overlap-lane .event-line-meta,
 .busy-card.busy-overlap-lane .busy-line-time {
-  font-size: 8.8px;
-  line-height: 1.05;
+  font-size: 9.2px;
+  line-height: 1.08;
 }
 
 .event-card.event-overlap-lane .event-line-location,
 .busy-card.busy-overlap-lane .busy-line-title {
-  font-size: 8px;
-  line-height: 1;
+  font-size: 8.8px;
+  line-height: 1.05;
 }
 
 .event-card.event-overlap-lane.event-lanes-3 .event-line-owner,
@@ -8337,16 +8369,16 @@ button.free-block:not(:disabled):active {
 .busy-card.busy-overlap-lane.event-lanes-3 .busy-line-compact,
 .busy-card.busy-overlap-lane.event-lanes-4 .busy-line-owner,
 .busy-card.busy-overlap-lane.event-lanes-4 .busy-line-compact {
-  font-size: 8.4px;
-  line-height: 1;
+  font-size: 9.5px;
+  line-height: 1.04;
 }
 
 .event-card.event-overlap-lane.event-lanes-3 .event-line-meta,
 .event-card.event-overlap-lane.event-lanes-4 .event-line-meta,
 .busy-card.busy-overlap-lane.event-lanes-3 .busy-line-time,
 .busy-card.busy-overlap-lane.event-lanes-4 .busy-line-time {
-  font-size: 7.6px;
-  line-height: 1;
+  font-size: 8.5px;
+  line-height: 1.04;
 }
 
 .event-card.event-overlap-lane.event-15,
