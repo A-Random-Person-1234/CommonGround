@@ -1,9 +1,3 @@
 "use strict";
 
-document.addEventListener(
-  "contextmenu",
-  (event) => {
-    event.preventDefault();
-  },
-  { capture: true }
-);
+// This file intentionally leaves native browser interactions untouched.

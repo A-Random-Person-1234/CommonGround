@@ -1,3 +1,34 @@
+# CommonGround whole-product refactor - design QA
+
+## Scope and evidence
+
+- Review date: 2026-08-05
+- Desktop and state fixtures: `.tmp-audit/whole-product-20260805`
+- Responsive fixtures: `.tmp-audit/whole-responsive`
+- Verified surfaces: landing, deferred room entry, week/day/month/year views, Members navigation, Settings, event creation and detail, Command Centre, notifications, and light/dark themes.
+
+## Acceptance checks
+
+- Landing and onboarding: the Host and Join paths are balanced, room creation is deferred until the user confirms how they will enter, and room previews do not mutate membership.
+- Navigation and state: the selected calendar view, sidebar state, per-view scroll position, and theme preference persist without delaying view changes.
+- Calendar clarity: free-time overlays are restored, scheduled events remain flat, current/selected dates use the gold system accent, overlapping synced and manual events share the same readable lane model, and Year view has a compact month jump bar.
+- Event workflows: the compact composer autofocuses the title, manual events expose their owner, details remain read-only until Edit, deletion uses a dedicated confirmation, and keyboard move/resize actions snap to 15 minutes.
+- Connected services: Google-connected and disconnected states use distinct header actions, syncing feedback is visible without a permanent success badge, and duplicate notification actions are suppressed unless an event identifier exists.
+- Responsive behavior: the Members sidebar becomes a drawer below 900px, touch targets remain at least 44px, Day view avoids horizontal scrolling, Week view uses a constrained snap surface, and the emoji picker becomes a mobile bottom sheet.
+- Accessibility: semantic labels expose full dates and list position, dialogs restore focus, overflow/settings controls remain keyboard reachable, and the Command Centre publishes active-descendant state.
+- Themes: dark remains the default; the complete calendar surface follows the persisted light-mode preference when selected.
+
+## Verification
+
+- `npm run check`: passed.
+- `npm test`: passed, including weather, Command Centre unit/integration, API mutation safety, and whole-product smoke checks.
+- `git diff --check`: passed.
+- Browser QA covered desktop landing/onboarding, calendar creation, month/year navigation, utility overflow, settings focus, toast feedback, and both theme surfaces.
+
+final result: passed
+
+---
+
 # CommonGround readable clash lanes - design QA
 
 ## Evidence and normalization
