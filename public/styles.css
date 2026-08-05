@@ -13770,3 +13770,226 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   font-variant-numeric: normal;
   font-feature-settings: "kern" 1;
 }
+
+/* Compact Google-Calendar-inspired schedule structure. The custom date picker
+   remains attached to the real date input; its visible label simply provides a
+   human-friendly date string instead of a browser-dependent numeric format. */
+#eventModal .event-composer,
+#eventModal.anchored-composer .modal-card,
+#eventModal.anchored-composer .event-composer {
+  width: min(520px, calc(100vw - 24px));
+}
+
+#eventModal .event-composer {
+  gap: 20px;
+  padding: 24px;
+}
+
+#eventModal .composer-heading-section {
+  min-height: 54px;
+  padding-right: 38px;
+  border-bottom: 2px solid color-mix(in srgb, var(--composer-ink) 24%, transparent);
+}
+
+#eventModal .composer-title {
+  min-height: 52px;
+  padding: 0;
+  color: var(--composer-ink);
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.025em;
+}
+
+#eventModal .composer-close {
+  top: 9px;
+  right: 0;
+}
+
+#eventModal .composer-schedule-section {
+  grid-template-columns: 40px minmax(0, 1fr);
+  margin: 0;
+}
+
+#eventModal .composer-row-icon,
+#eventModal .composer-row-icon.ui-icon {
+  width: 24px;
+  height: 24px;
+  margin-top: 10px;
+  justify-self: start;
+}
+
+#eventModal .composer-time-grid,
+#eventModal.anchored-composer .composer-time-grid {
+  grid-template-columns: minmax(0, 1.55fr) minmax(84px, 0.88fr) auto minmax(84px, 0.88fr);
+  gap: 8px;
+}
+
+#eventModal .composer-date-field,
+#eventModal .composer-end-date-field {
+  position: relative;
+  display: grid;
+  align-items: center;
+  min-width: 0;
+  min-height: 44px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--composer-control);
+  color: var(--composer-ink);
+  cursor: pointer;
+}
+
+#eventModal .composer-end-date-field {
+  display: none;
+}
+
+#eventModal .composer-time-grid.is-all-day .composer-end-date-field {
+  display: grid;
+}
+
+#eventModal .composer-date-field::after,
+#eventModal .composer-end-date-field::after {
+  content: attr(data-date-label);
+  display: block;
+  min-width: 0;
+  padding: 0 14px;
+  overflow: hidden;
+  color: inherit;
+  font-family: var(--font-numeric);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+  line-height: 44px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+#eventModal .composer-date-field input,
+#eventModal .composer-end-date-field input {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+#eventModal .composer-date-field input::-webkit-calendar-picker-indicator,
+#eventModal .composer-end-date-field input::-webkit-calendar-picker-indicator {
+  display: none;
+}
+
+#eventModal .composer-date-field:focus-within,
+#eventModal .composer-end-date-field:focus-within {
+  outline: 2px solid color-mix(in srgb, var(--composer-accent) 70%, transparent);
+  outline-offset: 2px;
+}
+
+#eventModal .composer-time-grid .time-picker-input {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 8px;
+  background: var(--composer-control);
+  font-family: var(--font-numeric);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+#eventModal .composer-time-grid .time-picker-input:hover,
+#eventModal .composer-time-grid .time-picker-input:focus,
+#eventModal .composer-time-grid .time-picker-input[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--composer-control) 84%, var(--composer-ink));
+}
+
+#eventModal .time-divider {
+  padding: 0 4px;
+  font-family: var(--font-numeric);
+  font-size: 17px;
+  font-weight: 600;
+}
+
+#eventModal .all-day-toggle {
+  min-height: 40px;
+  margin-top: 6px;
+  padding: 0 6px;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+#eventModal .all-day-toggle input {
+  width: 22px;
+  height: 22px;
+  border: 2px solid color-mix(in srgb, var(--composer-ink) 62%, transparent);
+  border-radius: 3px;
+  background: transparent;
+}
+
+#eventModal .all-day-toggle input:checked {
+  border-color: var(--composer-accent);
+  background: var(--composer-accent);
+}
+
+@media (max-width: 820px) {
+  #eventModal .event-composer,
+  #eventModal.anchored-composer .modal-card,
+  #eventModal.anchored-composer .event-composer {
+    width: min(calc(100vw - 16px), 460px);
+    padding: 20px;
+  }
+
+  #eventModal .composer-time-grid,
+  #eventModal.anchored-composer .composer-time-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 0.78fr) auto minmax(0, 0.78fr);
+  }
+
+  #eventModal .composer-date-field,
+  #eventModal.anchored-composer .composer-date-field {
+    grid-column: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  #eventModal .event-composer {
+    gap: 16px;
+    padding: 18px;
+  }
+
+  #eventModal .composer-heading-section {
+    min-height: 48px;
+  }
+
+  #eventModal .composer-title {
+    min-height: 46px;
+    font-size: 26px;
+  }
+
+  #eventModal .composer-schedule-section {
+    grid-template-columns: 32px minmax(0, 1fr);
+  }
+
+  #eventModal .composer-row-icon,
+  #eventModal .composer-row-icon.ui-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  #eventModal .composer-time-grid,
+  #eventModal.anchored-composer .composer-time-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(68px, 0.72fr) auto minmax(68px, 0.72fr);
+    gap: 5px;
+  }
+
+  #eventModal .composer-date-field::after,
+  #eventModal .composer-end-date-field::after,
+  #eventModal .composer-time-grid .time-picker-input {
+    padding-inline: 10px;
+    font-size: 14px;
+  }
+}

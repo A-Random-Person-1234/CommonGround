@@ -61,6 +61,49 @@ final result: passed
 
 ---
 
+# CommonGround event composer schedule structure QA
+
+- Source visual truth: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-a3b5ae88-a72b-43bf-b64d-95287609ff5a.png`
+- Implementation screenshot: `C:\Users\aryan\.codex\visualizations\2026\07\16\019f6cbd-b495-7901-9098-72138f0a387b\commonground-event-composer-implementation.png`
+- Combined comparison: `C:\Users\aryan\.codex\visualizations\2026\07\16\019f6cbd-b495-7901-9098-72138f0a387b\commonground-event-composer-comparison.png`
+- Viewport: 1280 x 720 CSS px, desktop dark weekly room view, device pixel ratio 1.
+- Source pixels: 997 x 465. Implementation pixels: 1280 x 720. The combined comparison preserves each native capture; review is scoped to the event composer region rather than browser chrome.
+- State: new event composer, All day off, date picker closed.
+
+## Full-view comparison evidence
+
+The combined image places the source reference and browser-rendered composer in one canvas. The implementation reproduces the requested title-underlined schedule hierarchy: a large frameless title, one clock-led row, human-readable date control, start/end time fields, and an All day control below. The reference-only Event/Task/Appointment controls and Time zone link are intentionally omitted at the user’s request. Existing invite, sync, location, description, and action controls remain beneath this matched section.
+
+## Focused region comparison evidence
+
+The schedule row was checked at the same desktop state. The full weekday/month/day date is visible without truncation at the normal composer width; start time, dash, and end time remain on one line. Clicking the visible date control opened the existing accessible CommonGround date picker. The browser console contained no errors.
+
+## Required fidelity surfaces
+
+- Fonts and typography: passed. SF Pro Display remains the explicit font for the date and time controls with tabular lining numerals; title hierarchy is visually distinct without introducing a competing font.
+- Spacing and layout rhythm: passed. The 24 px composer padding, title baseline/underline, 44 px schedule controls, clock column, and second-row All day alignment match the reference’s compact rhythm. No control clips at the verified desktop width.
+- Colors and visual tokens: passed. The source’s neutral dark controls are adapted to CommonGround’s existing dark surface and gold focus/accent system; no unnecessary blue state is introduced.
+- Image quality and asset fidelity: passed. The existing supplied clock icon is used; no visual source asset was replaced with a fabricated image or glyph.
+- Copy and content: passed. “Add title,” the readable date, times, and “All day” match the intended structure. The user explicitly excluded the type selector and Time zone copy.
+
+## Findings
+
+No actionable P0, P1, or P2 differences remain.
+
+## Comparison history
+
+1. Initial browser capture exposed the hidden end-date control as an extra visible schedule cell, breaking the single-line date/start/end layout.
+2. Fix: restored the end-date control’s hidden default and only reveal it in All day mode.
+3. Post-fix browser capture shows a single readable date field and one complete start/end time row; date-picker interaction and console checks passed.
+
+## Follow-up polish
+
+No P3 follow-up is required for this scoped change.
+
+final result: passed
+
+---
+
 # Archived QA: CommonGround topbar identity alignment
 
 - Source visual truth: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-2d61a6c3-e102-4bb2-9b52-d0544c33af6e.png`

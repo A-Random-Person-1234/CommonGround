@@ -114,6 +114,8 @@ const eventModalTitle = document.querySelector("#eventComposerTitle");
 const eventTitleInput = document.querySelector("#eventTitleInput");
 const eventDateInput = document.querySelector("#eventDateInput");
 const eventEndDateInput = document.querySelector("#eventEndDateInput");
+const eventDateField = document.querySelector(".composer-date-field");
+const eventEndDateField = document.querySelector(".composer-end-date-field");
 const eventStartInput = document.querySelector("#eventStartInput");
 const eventEndInput = document.querySelector("#eventEndInput");
 const eventStartTimeInput = document.querySelector("#eventStartTimeInput");
@@ -8109,6 +8111,32 @@ async function removeParticipant(participantId) {
   }
 }
 
+function formatEventComposerDateLabel(value, fallback) {
+  if (!value) return fallback;
+  const date = new Date(`${value}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return fallback;
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric"
+  }).format(date);
+}
+
+function syncEventComposerDateLabels() {
+  if (eventDateField) {
+    eventDateField.dataset.dateLabel = formatEventComposerDateLabel(
+      eventDateInput?.value,
+      "Select date"
+    );
+  }
+  if (eventEndDateField) {
+    eventEndDateField.dataset.dateLabel = formatEventComposerDateLabel(
+      eventEndDateInput?.value,
+      "End date"
+    );
+  }
+}
+
 function positionEventModal() {
   if (!eventModal?.classList.contains("anchored-composer") || !eventModalAnchorRect) return;
   const card = eventModal.querySelector(".modal-card");
@@ -8317,6 +8345,7 @@ function openEventModal(mode = "create", options = {}) {
     }
   }
 
+  syncEventComposerDateLabels();
   syncEventTimePickerDisplays();
   updateEventGoogleSyncControl();
   prepareDialogForOpen(eventModal);
@@ -9132,11 +9161,14 @@ eventAllDayInput?.addEventListener("change", () => {
   requestAnimationFrame(positionEventModal);
 });
 eventDateInput?.addEventListener("change", () => {
+  syncEventComposerDateLabels();
   if (!eventAllDayInput?.checked || !eventEndDateInput) return;
   if (!eventEndDateInput.value || eventEndDateInput.value < eventDateInput.value) {
     eventEndDateInput.value = eventDateInput.value;
+    syncEventComposerDateLabels();
   }
 });
+eventEndDateInput?.addEventListener("change", syncEventComposerDateLabels);
 cancelEventButton.addEventListener("click", attemptCloseEventModal);
 cancelEventSecondary.addEventListener("click", attemptCloseEventModal);
 cancelDiscardEventDraftButton?.addEventListener("click", () => {
