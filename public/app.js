@@ -3776,12 +3776,14 @@ function renderInviteePicker(selectedIds = defaultInviteeIds(), options = {}) {
 
   if (!invitees.length) {
     inviteePicker.innerHTML = `<p class="muted">No participants are in this room yet.</p>`;
+    eventInviteDropdown?.classList.add("is-empty");
     updateInviteeCountText();
     return;
   }
 
   const optionList = document.createElement("div");
   optionList.className = "invitee-options";
+  let visibleInviteeCount = 0;
   for (const participant of invitees) {
     const label = document.createElement("label");
     label.className = "invitee-option";
@@ -3790,6 +3792,11 @@ function renderInviteePicker(selectedIds = defaultInviteeIds(), options = {}) {
     const isCreator = participant.id === options.creatorParticipantId;
     const isLocked = lockedIds.has(participant.id);
     const suffix = isCreator ? " (Creator)" : (isSelf ? " (You)" : "");
+    if (isSelf) {
+      label.classList.add("is-self");
+    } else {
+      visibleInviteeCount += 1;
+    }
     label.innerHTML = `
       <input type="checkbox" value="${escapeAttribute(participant.id)}" ${selected.has(participant.id) || isLocked ? "checked" : ""} ${isLocked ? "disabled" : ""} />
       <span class="invitee-color-dot"></span>
@@ -3798,6 +3805,13 @@ function renderInviteePicker(selectedIds = defaultInviteeIds(), options = {}) {
     label.querySelector("input")?.addEventListener("change", updateInviteeCountText);
     optionList.appendChild(label);
   }
+  if (visibleInviteeCount === 0) {
+    const emptyState = document.createElement("p");
+    emptyState.className = "invitee-empty-state";
+    emptyState.textContent = "No other members to invite";
+    optionList.appendChild(emptyState);
+  }
+  eventInviteDropdown?.classList.toggle("is-empty", visibleInviteeCount === 0);
   inviteePicker.appendChild(optionList);
   updateInviteeCountText();
 }
@@ -4997,6 +5011,11 @@ function dismissOutsideFloatingSurfaces(target) {
 
   if (calendarViewMenu?.open && !calendarViewMenu.contains(target)) {
     calendarViewMenu.open = false;
+    dismissed = true;
+  }
+
+  if (eventInviteDropdown?.open && !eventInviteDropdown.contains(target)) {
+    eventInviteDropdown.open = false;
     dismissed = true;
   }
 
@@ -9130,6 +9149,11 @@ eventGoogleSyncRow?.addEventListener("keydown", (event) => {
 });
 eventInviteDropdown?.addEventListener("toggle", () => {
   requestAnimationFrame(positionEventModal);
+});
+eventInviteDropdown?.querySelector("summary")?.addEventListener("click", (event) => {
+  if (!eventInviteDropdown.classList.contains("is-empty")) return;
+  event.preventDefault();
+  eventInviteDropdown.open = false;
 });
 const eventComposerPreviewInput = (target) => (
   target === eventTitleInput ||

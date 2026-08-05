@@ -12845,6 +12845,174 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   }
 }
 
+/* Invitees use a compact anchored menu so expanding the list does not make the
+   event composer jump in size. The current participant remains selected in the
+   form data but is omitted from the list because they are already included. */
+#eventModal .composer-invite-row {
+  z-index: 12;
+  align-items: center;
+  isolation: auto;
+}
+
+#eventModal .composer-invite-row > .composer-row-icon,
+#eventModal .composer-invite-row > .composer-row-icon.ui-icon {
+  margin-top: 0;
+}
+
+#eventModal .invite-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+#eventModal .invite-dropdown summary {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition:
+    transform 150ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 150ms cubic-bezier(0.32, 0.72, 0, 1);
+  will-change: transform, opacity;
+}
+
+#eventModal .invite-dropdown summary:hover,
+#eventModal .invite-dropdown[open] summary {
+  background: color-mix(in srgb, var(--composer-ink) 4%, transparent);
+}
+
+#eventModal .invite-dropdown summary:active {
+  transform: translate3d(0, 0, 0) scale(0.98);
+}
+
+#eventModal .invite-dropdown summary:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--composer-accent) 68%, transparent);
+  outline-offset: 2px;
+}
+
+#eventModal .invite-dropdown.is-empty summary {
+  cursor: default;
+}
+
+#eventModal .invite-dropdown.is-empty summary:hover {
+  background: transparent;
+}
+
+#eventModal .invite-dropdown.is-empty summary:active {
+  transform: none;
+}
+
+#eventModal .invite-dropdown.is-empty summary::after,
+#eventModal .invite-dropdown.is-empty .invite-dropdown-panel {
+  display: none;
+}
+
+#eventModal .invite-dropdown summary span {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+#eventModal .invite-dropdown summary small {
+  margin-left: auto;
+  color: var(--composer-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+#eventModal .invite-dropdown summary::after {
+  margin: 0 3px 4px 10px;
+}
+
+#eventModal .invite-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  left: auto;
+  z-index: 110;
+  display: block;
+  width: min(304px, 100%);
+  max-height: min(208px, 32dvh);
+  margin: 0;
+  padding: 6px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  border: 1px solid var(--composer-faint);
+  border-radius: 10px;
+  background: var(--composer-popover);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
+  transform-origin: top right;
+  scrollbar-color: var(--composer-scrollbar) transparent;
+  scrollbar-width: thin;
+}
+
+#eventModal .invite-dropdown[open] .invite-dropdown-panel {
+  animation: event-invite-members-in 250ms cubic-bezier(0.32, 0.72, 0, 1) both;
+}
+
+#eventModal .invitee-picker,
+#eventModal .invitee-options {
+  display: grid;
+  gap: 2px;
+  padding: 0;
+}
+
+#eventModal .invitee-option {
+  grid-template-columns: 16px 8px minmax(0, 1fr);
+  gap: 8px;
+  min-height: 34px;
+  padding: 5px 7px;
+  border-radius: 7px;
+}
+
+#eventModal .invitee-option.is-self {
+  display: none;
+}
+
+#eventModal .invitee-option:hover,
+#eventModal .invitee-option:focus-within {
+  background: color-mix(in srgb, var(--composer-ink) 5%, transparent);
+}
+
+#eventModal .invitee-option:has(input:checked) {
+  background: color-mix(in srgb, var(--invitee-color) 8%, transparent);
+}
+
+#eventModal .invitee-option input {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+#eventModal .invitee-option strong {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+#eventModal .invitee-color-dot {
+  width: 7px;
+  height: 7px;
+  box-shadow: none;
+}
+
+#eventModal .invitee-empty-state {
+  margin: 0;
+  padding: 12px 10px;
+  color: var(--composer-muted);
+  font-size: 12px;
+  font-weight: 450;
+  line-height: 1.4;
+  text-align: center;
+}
+
+@media (max-width: 520px) {
+  #eventModal .invite-dropdown-panel {
+    right: auto;
+    left: 0;
+    width: min(280px, calc(100vw - 76px));
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .weather-trigger,
   .weather-high-low-tooltip,

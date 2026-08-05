@@ -1,3 +1,56 @@
+# CommonGround compact invite control QA
+
+- Source visual truth: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-8f38a98d-3d6d-4ea5-8979-07e566eca97c.png`
+- Browser-rendered implementation: `C:\Users\aryan\.codex\visualizations\2026\07\16\019f6cbd-b495-7901-9098-72138f0a387b\commonground-invite-control-full.png`
+- Focused implementation crop: `C:\Users\aryan\.codex\visualizations\2026\07\16\019f6cbd-b495-7901-9098-72138f0a387b\commonground-invite-control-focused.png`
+- Combined comparison: `C:\Users\aryan\.codex\visualizations\2026\07\16\019f6cbd-b495-7901-9098-72138f0a387b\commonground-invite-control-comparison.png`
+- Viewport: 1280 x 720 CSS px, desktop dark-mode event composer, device pixel ratio 1.
+- Source pixels: 377 x 113. Implementation pixels: 1280 x 720 full view and 495 x 60 focused crop. The focused crop was normalized to the source width for the side-by-side comparison.
+- State: new event composer in a one-member room, invite control at rest.
+
+## Full-view comparison evidence
+
+The implementation keeps the invite control aligned with the other event metadata rows and removes the tall selected-self card that previously expanded the modal. The composer remains stable in height and the controls beneath Invite others retain their spacing and alignment.
+
+## Focused region comparison evidence
+
+The combined image places the supplied clunky state and the browser-rendered replacement in one canvas. The original uses a large filled card for `Guest (You)` even though the current participant cannot be removed. The replacement preserves `Only you` as lightweight status copy, omits the redundant self row, and removes the chevron when there is nobody else to invite.
+
+## Required fidelity surfaces
+
+- Fonts and typography: passed. The existing SF Pro Display family and 14/12 px metadata hierarchy remain consistent with the rest of the composer.
+- Spacing and layout rhythm: passed. The control is a single 40 px row with no redundant expanded card. Icon, label, and status share a common vertical centre.
+- Colors and visual tokens: passed. The replacement uses the existing neutral composer text and surface tokens; selected guests in populated rooms use only a low-opacity participant tint.
+- Image quality and asset fidelity: passed. The existing supplied user-plus icon remains in use; no icon was recreated.
+- Copy and content: passed. `Invite others` and `Only you` remain, while redundant `Guest (You)` content is removed from the one-member state.
+
+## Interaction and accessibility verification
+
+- In a one-member room, activating the summary does not open an empty menu.
+- The current participant’s checked form value remains in the DOM, preserving event creation and edit payloads.
+- When other members exist, the menu uses compact 34 px checkbox rows in an anchored popover and closes on outside click.
+- Browser console errors: none.
+- `npm.cmd run check` passed.
+- `npm.cmd test` passed, including weather, Command Centre unit/integration, and smoke suites.
+
+## Findings
+
+No actionable P0, P1, or P2 differences remain.
+
+## Comparison history
+
+1. Initial P1: the first floating-menu pass overlaid its empty state on the Google sync row because the invite row’s isolated stacking context prevented the panel from clearing later siblings.
+2. Fix: empty invite menus no longer open, the redundant current-user option is visually omitted while retained in form state, and populated menus receive a raised stacking context.
+3. Post-fix evidence: the final focused comparison shows a single calm row with no duplicate card, overlap, clipping, or modal jump.
+
+## Follow-up polish
+
+No P3 follow-up is required for this scoped change.
+
+final result: passed
+
+---
+
 # CommonGround sidebar consolidation and SF Pro Display QA
 
 - Source visual truth: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-a6912973-8803-4f2e-b1bb-07eed556a1ac.png`
