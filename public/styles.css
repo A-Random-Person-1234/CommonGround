@@ -8287,8 +8287,9 @@ button.free-block:not(:disabled):active {
   text-overflow: clip;
 }
 
-/* Overlap clusters keep the longest card full-width underneath, but reserve a
-   readable left-side text lane while each shorter clash occupies its own lane. */
+/* Overlap clusters keep the longest card full-width underneath. Shorter cards
+   cascade over it with a small inset, matching the familiar calendar stack
+   while retaining almost the full column width for readable event details. */
 .event-card.event-overlap-anchor,
 .busy-card.busy-overlap-anchor,
 .busy-stack.busy-overlap-anchor,
@@ -8296,26 +8297,6 @@ button.free-block:not(:disabled):active {
 .busy-card.busy-overlap-lane,
 .busy-stack.busy-overlap-lane {
   z-index: calc(6 + var(--event-stack-order, 0));
-}
-
-.event-card.event-overlap-anchor,
-.busy-card.busy-overlap-anchor {
-  --inline-time-space: 0px;
-}
-
-.event-card.event-overlap-anchor .event-line,
-.busy-card.busy-overlap-anchor .busy-line {
-  position: static;
-  width: var(--event-readable-lane-width, 50%);
-  max-width: var(--event-readable-lane-width, 50%);
-  padding-right: 6px !important;
-  text-align: left;
-}
-
-.event-card.event-overlap-anchor .event-line-meta,
-.busy-card.busy-overlap-anchor .busy-line-time {
-  top: auto;
-  right: auto;
 }
 
 .event-card.event-overlap-lane,
@@ -8363,42 +8344,20 @@ button.free-block:not(:disabled):active {
 .event-card.event-overlap-lane .event-line-compact,
 .busy-card.busy-overlap-lane .busy-line-owner,
 .busy-card.busy-overlap-lane .busy-line-compact {
-  font-size: 10.5px;
-  line-height: 1.08;
+  font-size: 11px;
+  line-height: 1.12;
 }
 
 .event-card.event-overlap-lane .event-line-meta,
 .busy-card.busy-overlap-lane .busy-line-time {
-  font-size: 9.2px;
-  line-height: 1.08;
+  font-size: 10px;
+  line-height: 1.1;
 }
 
 .event-card.event-overlap-lane .event-line-location,
 .busy-card.busy-overlap-lane .busy-line-title {
-  font-size: 8.8px;
-  line-height: 1.05;
-}
-
-.event-card.event-overlap-lane.event-lanes-3 .event-line-owner,
-.event-card.event-overlap-lane.event-lanes-3 .event-line-title,
-.event-card.event-overlap-lane.event-lanes-3 .event-line-compact,
-.event-card.event-overlap-lane.event-lanes-4 .event-line-owner,
-.event-card.event-overlap-lane.event-lanes-4 .event-line-title,
-.event-card.event-overlap-lane.event-lanes-4 .event-line-compact,
-.busy-card.busy-overlap-lane.event-lanes-3 .busy-line-owner,
-.busy-card.busy-overlap-lane.event-lanes-3 .busy-line-compact,
-.busy-card.busy-overlap-lane.event-lanes-4 .busy-line-owner,
-.busy-card.busy-overlap-lane.event-lanes-4 .busy-line-compact {
-  font-size: 9.5px;
-  line-height: 1.04;
-}
-
-.event-card.event-overlap-lane.event-lanes-3 .event-line-meta,
-.event-card.event-overlap-lane.event-lanes-4 .event-line-meta,
-.busy-card.busy-overlap-lane.event-lanes-3 .busy-line-time,
-.busy-card.busy-overlap-lane.event-lanes-4 .busy-line-time {
-  font-size: 8.5px;
-  line-height: 1.04;
+  font-size: 10px;
+  line-height: 1.08;
 }
 
 .event-card.event-overlap-lane.event-15,
