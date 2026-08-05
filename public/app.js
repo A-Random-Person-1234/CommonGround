@@ -174,6 +174,11 @@ const settingsButton = document.querySelector("#settingsButton");
 const calendarGoogleButton = document.querySelector("#calendarGoogleButton");
 const themeToggle = document.querySelector("#themeToggle");
 const addEventButton = document.querySelector("#addEventButton");
+const sidebarCreateMenu = document.querySelector("#sidebarCreateMenu");
+const sidebarCreatePopover = document.querySelector("#sidebarCreatePopover");
+const sidebarCreateEventButton = document.querySelector("#sidebarCreateEventButton");
+const sidebarCreateRoomButton = document.querySelector("#sidebarCreateRoomButton");
+const sidebarJoinRoomButton = document.querySelector("#sidebarJoinRoomButton");
 const copyInviteButton = document.querySelector("#copyInviteButton");
 const copyInviteButtonEmpty = document.querySelector("#copyInviteButtonEmpty");
 const dismissInviteButton = document.querySelector("#dismissInviteButton");
@@ -190,6 +195,8 @@ const emojiPickerTriggers = Array.from(document.querySelectorAll(".emoji-trigger
 
 let appConfig = null;
 let sessionInfo = null;
+let themePreferenceSaveVersion = 0;
+let pendingThemePreference = null;
 let currentRoom = null;
 let myRooms = [];
 let roomSwitcherRenderSignature = "";
@@ -3148,9 +3155,10 @@ function renderRoomSwitcher() {
   if (!roomSwitcher) return;
   const rooms = switcherRooms();
   const selectedCode = currentRoom?.code || normalizeRoomCodeInput(sessionInfo?.roomCode || "");
+  const otherRooms = rooms.filter((room) => normalizeRoomCodeInput(room.code) !== selectedCode);
   const renderSignature = JSON.stringify({
     selectedCode,
-    rooms: rooms.map((room) => [
+    rooms: otherRooms.map((room) => [
       normalizeRoomCodeInput(room.code),
       room.name || "Room",
       room.emoji || defaultRoomEmoji,
@@ -3160,14 +3168,14 @@ function renderRoomSwitcher() {
     ])
   });
 
-  roomSwitcher.classList.toggle("hidden", rooms.length === 0);
-  if (!rooms.length) {
+  roomSwitcher.classList.toggle("hidden", otherRooms.length === 0);
+  if (!otherRooms.length) {
     roomSwitcherRenderSignature = renderSignature;
     if (roomSwitcher.childElementCount) roomSwitcher.innerHTML = "";
     return;
   }
 
-  const expectedChildCount = rooms.length + 1;
+  const expectedChildCount = otherRooms.length;
   if (
     renderSignature === roomSwitcherRenderSignature
     && roomSwitcher.childElementCount === expectedChildCount
@@ -3176,18 +3184,16 @@ function renderRoomSwitcher() {
   roomSwitcherRenderSignature = renderSignature;
   roomSwitcher.innerHTML = "";
 
-  for (const room of rooms) {
+  for (const room of otherRooms) {
     const code = normalizeRoomCodeInput(room.code);
     const item = document.createElement("div");
-    const isActive = code === selectedCode;
-    item.className = `room-switch-item ${isActive ? "active" : ""}`.trim();
+    item.className = "room-switch-item";
 
     const button = document.createElement("button");
     button.type = "button";
-    button.className = `room-switch-tab ${isActive ? "active" : ""}`.trim();
+    button.className = "room-switch-tab";
     button.dataset.roomCode = code;
     button.title = `${room.name || "Room"} · ${code}`;
-    button.setAttribute("aria-current", isActive ? "page" : "false");
     button.setAttribute("aria-label", `${room.name || "Room"}, ${room.isHost ? "Host" : "Member"}`);
 
     const mark = document.createElement("span");
@@ -3201,9 +3207,7 @@ function renderRoomSwitcher() {
 
     const meta = document.createElement("span");
     meta.className = "room-switch-meta";
-    meta.textContent = room.isHost
-      ? "Host"
-      : `${room.connectedCount || 0}/${room.participantCount || 0} live`;
+    meta.textContent = room.isHost ? "Host" : "Member";
 
     button.append(mark, label, meta);
     button.addEventListener("click", async () => {
@@ -3214,20 +3218,6 @@ function renderRoomSwitcher() {
     roomSwitcher.appendChild(item);
   }
 
-  const addButton = document.createElement("button");
-  addButton.type = "button";
-  addButton.className = "room-switch-tab room-switch-add";
-  addButton.title = "Create or join another room";
-  addButton.setAttribute("aria-label", "Create or join another room");
-  addButton.innerHTML = `
-    <span class="room-switch-mark" aria-hidden="true">
-      <span class="ui-icon ui-icon-plus"></span>
-    </span>
-    <span class="room-switch-label">New room</span>
-    <span class="room-switch-meta">Join</span>
-  `;
-  addButton.addEventListener("click", openRoomEntryPage);
-  roomSwitcher.appendChild(addButton);
 }
 
 function syncInputValue(input, nextValue) {
@@ -3891,9 +3881,13 @@ function renderParticipants() {
 
     const copy = document.createElement("span");
     copy.className = "participant-copy member-calendar-copy";
+    const participantStatus = participantStatusText(participant);
+    const statusMarkup = ["reconnect needed", "sync issue"].includes(participantStatus)
+      ? `<small class="member-calendar-alert">${escapeHtml(participantStatus)}</small>`
+      : "";
     copy.innerHTML = `
       <strong>${escapeHtml(participant.displayName)}</strong>
-      <small>${escapeHtml(participantStatusText(participant))}</small>
+      ${statusMarkup}
     `;
 
     label.append(checkbox, checkmark, copy);
@@ -7596,6 +7590,7 @@ async function loadConfigAndSession({ signal } = {}) {
   ]);
   appConfig = config;
   sessionInfo = me;
+  applyTheme(pendingThemePreference || me.theme, { persist: true });
 }
 
 async function loadRoom(code, { signal, generation } = {}) {
@@ -7753,6 +7748,23 @@ async function openRoomEntryPage() {
   } catch {
     homeStatus.textContent = "Create a room or enter a code to get started.";
   }
+}
+
+function sidebarCreateMenuItems() {
+  return [sidebarCreateEventButton, sidebarCreateRoomButton, sidebarJoinRoomButton].filter(Boolean);
+}
+
+function setSidebarCreateMenuOpen(open, { focusItem = null } = {}) {
+  if (!sidebarCreatePopover || !addEventButton) return;
+  const isOpen = Boolean(open);
+  sidebarCreatePopover.classList.toggle("hidden", !isOpen);
+  addEventButton.setAttribute("aria-expanded", String(isOpen));
+  sidebarCreateMenu?.classList.toggle("is-open", isOpen);
+
+  if (!isOpen || focusItem === null) return;
+  const items = sidebarCreateMenuItems();
+  const target = focusItem === "last" ? items.at(-1) : items[0];
+  target?.focus({ preventScroll: true });
 }
 
 function openCreateRoomModal() {
@@ -8582,6 +8594,44 @@ function maybeRestoreTheme() {
   applyTheme(storedTheme);
 }
 
+async function saveThemePreference(theme) {
+  const nextTheme = theme === "light" ? "light" : "dark";
+  const previousTheme = sessionInfo?.theme === "light" ? "light" : "dark";
+  const saveVersion = ++themePreferenceSaveVersion;
+  pendingThemePreference = nextTheme;
+  if (themeToggle) themeToggle.disabled = true;
+
+  try {
+    const data = await fetchJson("/api/me/preferences", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ theme: nextTheme })
+    });
+    if (saveVersion !== themePreferenceSaveVersion) return;
+    pendingThemePreference = null;
+    sessionInfo = {
+      ...sessionInfo,
+      theme: data.theme,
+      user: data.user || sessionInfo?.user || null
+    };
+    applyTheme(data.theme, { persist: true });
+  } catch {
+    if (saveVersion !== themePreferenceSaveVersion) return;
+    pendingThemePreference = null;
+    applyTheme(previousTheme, { persist: true });
+    const message = "Could not save the theme preference. Your previous theme was restored.";
+    if (currentRoom && calendarStatus) {
+      calendarStatus.textContent = message;
+    } else if (homeStatus) {
+      setStatus(homeStatus, message, "warn");
+    }
+  } finally {
+    if (saveVersion === themePreferenceSaveVersion && themeToggle) {
+      themeToggle.disabled = false;
+    }
+  }
+}
+
 async function renameRoomByValue(name) {
   if (!currentRoom) return;
   const nextName = String(name || "").trim();
@@ -8769,7 +8819,54 @@ googleEventSyncToggle?.addEventListener("change", async () => {
 });
 refreshButton.addEventListener("click", refreshRoomData);
 addEventButton.addEventListener("click", () => {
+  const isOpen = addEventButton.getAttribute("aria-expanded") === "true";
+  setSidebarCreateMenuOpen(!isOpen);
+});
+addEventButton.addEventListener("keydown", (event) => {
+  if (!["ArrowDown", "ArrowUp", "Escape"].includes(event.key)) return;
+  event.preventDefault();
+  if (event.key === "Escape") {
+    setSidebarCreateMenuOpen(false);
+    return;
+  }
+  setSidebarCreateMenuOpen(true, { focusItem: event.key === "ArrowUp" ? "last" : "first" });
+});
+sidebarCreatePopover?.addEventListener("keydown", (event) => {
+  const items = sidebarCreateMenuItems();
+  const currentIndex = items.indexOf(document.activeElement);
+  if (event.key === "Escape") {
+    event.preventDefault();
+    setSidebarCreateMenuOpen(false);
+    addEventButton.focus({ preventScroll: true });
+    return;
+  }
+  if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key)) return;
+  event.preventDefault();
+  if (event.key === "Home") {
+    items[0]?.focus({ preventScroll: true });
+    return;
+  }
+  if (event.key === "End") {
+    items.at(-1)?.focus({ preventScroll: true });
+    return;
+  }
+  const direction = event.key === "ArrowDown" ? 1 : -1;
+  const nextIndex = currentIndex < 0
+    ? (direction > 0 ? 0 : items.length - 1)
+    : (currentIndex + direction + items.length) % items.length;
+  items[nextIndex]?.focus({ preventScroll: true });
+});
+sidebarCreateEventButton?.addEventListener("click", () => {
+  setSidebarCreateMenuOpen(false);
   void openCalendarEventComposerAt({ date: dateKey(currentFocusDate) });
+});
+sidebarCreateRoomButton?.addEventListener("click", () => {
+  setSidebarCreateMenuOpen(false);
+  openCreateRoomModal();
+});
+sidebarJoinRoomButton?.addEventListener("click", async () => {
+  setSidebarCreateMenuOpen(false);
+  await openRoomEntryPage();
 });
 copyInviteButton.addEventListener("click", copyRoomLink);
 copyInviteButtonEmpty.addEventListener("click", async () => {
@@ -8826,6 +8923,7 @@ themeToggle?.addEventListener("change", () => {
   const theme = themeToggle.checked ? "dark" : "light";
   document.documentElement.classList.add("is-theme-switching");
   applyTheme(theme, { persist: true });
+  void saveThemePreference(theme);
   window.setTimeout(() => {
     document.documentElement.classList.remove("is-theme-switching");
   }, motionDelay(motionStandardMs + 40));
@@ -9065,6 +9163,13 @@ window.addEventListener("popstate", async () => {
 window.addEventListener("message", handleGoogleAuthPopupMessage);
 
 document.addEventListener("click", (event) => {
+  if (
+    addEventButton?.getAttribute("aria-expanded") === "true"
+    && !sidebarCreateMenu?.contains(event.target)
+  ) {
+    setSidebarCreateMenuOpen(false);
+  }
+
   if (hostPopover && !hostPopover.classList.contains("hidden")) {
     if (
       !hostPopover.contains(event.target) &&

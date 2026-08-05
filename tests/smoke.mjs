@@ -261,23 +261,82 @@ try {
   const publicSession = new BrowserSession();
   const home = await publicSession.request("/", { accept: "text/html" });
   const publicConfig = await publicSession.request("/api/config");
+  const initialPreferences = await publicSession.request("/api/me");
+  assert.equal(initialPreferences.payload.theme, "dark", "Fresh sessions must default to dark mode");
+  const isolatedThemeSession = new BrowserSession();
+  const isolatedInitialPreferences = await isolatedThemeSession.request("/api/me");
+  assert.equal(isolatedInitialPreferences.payload.theme, "dark");
+  await publicSession.request("/api/me/preferences", { expected: 405 });
+  await publicSession.request("/api/me/preferences", { method: "PATCH", expected: 415 });
+  await publicSession.request("/api/me/preferences", { method: "PATCH", body: null, expected: 400 });
+  await publicSession.request("/api/me/preferences", { method: "PATCH", body: [], expected: 400 });
+  await publicSession.request("/api/me/preferences", { method: "PATCH", body: "light", expected: 400 });
+  await publicSession.request("/api/me/preferences", {
+    method: "PATCH",
+    body: { theme: "sepia" },
+    expected: 400
+  });
+  await publicSession.request("/api/me/preferences", {
+    method: "PATCH",
+    body: { theme: "light", extra: true },
+    expected: 400
+  });
+  const savedPreferences = await publicSession.request("/api/me/preferences", {
+    method: "PATCH",
+    body: { theme: "light" }
+  });
+  assert.equal(savedPreferences.payload.theme, "light");
+  assert.equal((await publicSession.request("/api/me")).payload.theme, "light");
+  assert.equal(
+    (await isolatedThemeSession.request("/api/me")).payload.theme,
+    "dark",
+    "Theme preferences must remain isolated between browser sessions"
+  );
+  assert.match(
+    serverSource,
+    /function effectiveThemePreference\(user, session\) \{\s*return userThemePreference\(user\) \|\| sessionThemePreference\(session\) \|\| "dark";\s*\}/,
+    "Saved user preferences must win over session preferences, with dark as the final default"
+  );
+  assert.match(
+    serverSource,
+    /function updateUserRecord\(userId, updates = \{\}\)[\s\S]*?preferences: \{\s*\.\.\.existing\.preferences,\s*\.\.\.\(updates\.preferences \|\| \{\}\)\s*\}/,
+    "User preference updates must preserve other profile and preference fields"
+  );
+  assert.match(
+    serverSource,
+    /function migrateSessionThemePreferenceToUser\(userId, session\)[\s\S]*?if \(!user \|\| userThemePreference\(user\)\) return user \|\| null;[\s\S]*?sessionThemePreference\(session\)[\s\S]*?preferences: \{ theme \}/,
+    "OAuth migration must never overwrite an existing user's saved theme"
+  );
+  assert.equal(
+    (serverSource.match(/userRecord = migrateSessionThemePreferenceToUser\(userId, session\) \|\| userRecord;/g) || []).length,
+    2,
+    "Both Google and Microsoft sign-in must migrate a guest preference safely"
+  );
+  assert.match(
+    serverSource,
+    /url\.pathname === "\/api\/me\/preferences"[\s\S]*?enforceRateLimit\(req, res, "theme-preference", 60, 10 \* 60 \* 1000\)[\s\S]*?!body \|\| typeof body !== "object" \|\| Array\.isArray\(body\)[\s\S]*?Object\.keys\(body\)\.some\(\(key\) => key !== "theme"\)/,
+    "The preference endpoint must be bounded, rate-limited, and strict about its JSON shape"
+  );
   assert.equal(publicConfig.payload.placesReady, false);
   assert.equal(publicConfig.payload.weatherReady, false);
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260804-geist-mono"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260805-sf-pro-composer"/);
+  assert.match(home.text, /src="\/theme-bootstrap\.js\?v=20260804-persisted-theme"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260804-room-name-topbar"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260804-persisted-theme"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260726-assistant-input-reset"/);
   assertInOrder(
     home.text,
     [
+      'src="/theme-bootstrap.js?v=20260804-persisted-theme"',
+      'href="/styles.css?v=20260805-sf-pro-composer"',
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260804-room-name-topbar"'
+      'src="/app.js?v=20260804-persisted-theme"'
     ],
-    "The shared date-picker controller must load before the app controller"
+    "The CSP-safe theme bootstrap must precede CSS, and the date picker must precede the app controller"
   );
   assert.doesNotMatch(home.text, /id="roomStatus"|sidebar-room-status/);
   assert.match(home.text, /id="copyInviteButton"[^>]*title="Copy link to join room"[^>]*aria-label="Copy link to join room"/);
@@ -520,6 +579,11 @@ try {
   );
   assert.match(
     home.text,
+    /id="addEventButton"[^>]*aria-haspopup="menu"[^>]*aria-controls="sidebarCreatePopover"[^>]*aria-expanded="false"[\s\S]*?id="sidebarCreatePopover" role="menu"[\s\S]*?id="sidebarCreateEventButton" role="menuitem"[\s\S]*?id="sidebarCreateRoomButton" role="menuitem"[\s\S]*?id="sidebarJoinRoomButton" role="menuitem"/,
+    "The compact Create control must expose event, room, and join actions in one accessible menu"
+  );
+  assert.match(
+    home.text,
     /<section class="room-page calendar-app-shell hidden" id="roomPage" data-google-connected="false" data-google-ready="false">[\s\S]*?<button class="calendar-google-button needs-connection button-with-icon" id="calendarGoogleButton" type="button" title="Connect Google Calendar" aria-label="Connect Google Calendar" aria-busy="true" disabled>[\s\S]*?<span>Connect Google Calendar<\/span>/,
     "The calendar top bar must start with a safe, explicit Google Calendar connection state"
   );
@@ -641,24 +705,49 @@ try {
   assert.equal(emojiDictionaryHead.text, "");
   assert.equal(Number(emojiDictionaryHead.response.headers.get("content-length")), Buffer.byteLength(emojiDictionaryResponse.text));
   for (const [fontPath, expectedLength] of [
-    ["/fonts/geist-mono/GeistMono-VariableFont_wght.ttf", 173204],
-    ["/fonts/geist-mono/GeistMono-Italic-VariableFont_wght.ttf", 183484]
+    ["/fonts/sf-pro-display/SFProDisplay-Regular.otf", 298944],
+    ["/fonts/sf-pro-display/SFProDisplay-Medium.otf", 335512],
+    ["/fonts/sf-pro-display/SFProDisplay-Bold.otf", 334728]
   ]) {
     const fontResponse = await publicSession.request(fontPath, {
       method: "HEAD",
-      accept: "font/ttf"
+      accept: "font/otf"
     });
     assert.equal(fontResponse.text, "");
-    assert.match(fontResponse.response.headers.get("content-type") || "", /^font\/ttf/);
+    assert.match(fontResponse.response.headers.get("content-type") || "", /^font\/otf/);
     assert.equal(
       readFileSync(path.join(rootDir, "public", fontPath.replace(/^\//, ""))).byteLength,
       expectedLength,
-      `${fontPath} must match the supplied Geist Mono asset`
+      `${fontPath} must match the supplied SF Pro Display asset`
     );
   }
-  const geistLicense = await publicSession.request("/fonts/geist-mono/OFL.txt", { accept: "text/plain" });
-  assert.match(geistLicense.response.headers.get("content-type") || "", /^text\/plain/);
-  assert.match(geistLicense.text, /SIL OPEN FONT LICENSE Version 1\.1/);
+  const themeBootstrapScript = await publicSession.request("/theme-bootstrap.js", { accept: "text/javascript" });
+  assert.match(themeBootstrapScript.response.headers.get("content-type") || "", /javascript/);
+  assert.match(
+    themeBootstrapScript.text,
+    /const normalize = \(value\) => value === "light" \? "light" : "dark";[\s\S]*?return "dark";/,
+    "Missing, invalid, or unavailable cached preferences must safely default to dark"
+  );
+  assert.match(
+    themeBootstrapScript.text,
+    /window\.CommonGroundTheme = Object\.freeze\(\{ apply, read \}\);[\s\S]*?apply\(read\(\)\);/,
+    "The saved paint cache must be applied synchronously by the external bootstrap"
+  );
+  assert.match(
+    themeBootstrapScript.text,
+    /document\.querySelector\('meta\[name="theme-color"\]'\)\?\.setAttribute\("content", themeColors\[theme\]\)/,
+    "The browser chrome color must follow the active theme"
+  );
+  assert.match(
+    themeBootstrapScript.text,
+    /window\.addEventListener\("storage"[\s\S]*?event\.key === storageKey[\s\S]*?apply\(event\.newValue\)/,
+    "Theme changes must propagate across same-origin tabs"
+  );
+  assert.match(
+    themeBootstrapScript.text,
+    /dataset\.syncServer === "true"[\s\S]*?fetch\("\/api\/me"[\s\S]*?apply\(data\.theme, \{ persist: true \}\)/,
+    "Legal pages must reconcile their paint cache with the server-backed user preference"
+  );
   const datePickerScript = await publicSession.request("/date-picker.js", { accept: "text/javascript" });
   assert.match(
     datePickerScript.response.headers.get("content-type") || "",
@@ -676,15 +765,10 @@ try {
     /function bindRoomNameEditor\(target\)[\s\S]*?target\.addEventListener\("dblclick"[\s\S]*?startInlineRoomRename\(target\)[\s\S]*?bindRoomNameEditor\(topbarRoomName\)/,
     "The topbar room name must support the same double-click rename flow as the sidebar room name"
   );
-  assert.match(
+  assert.doesNotMatch(
     home.text,
-    /window\.CommonGroundTheme = Object\.freeze\(\{ apply, read \}\);[\s\S]*?apply\(read\(\)\);/,
-    "The saved theme must be applied before the app stylesheet paints"
-  );
-  assert.match(
-    home.text,
-    /document\.querySelector\('meta\[name="theme-color"\]'\)\?\.setAttribute\("content", themeColors\[theme\]\)/,
-    "The browser chrome color must follow the active theme"
+    /<script(?![^>]*\bsrc=)[^>]*>/i,
+    "The main page must not rely on inline script blocked by its CSP"
   );
   assert.match(
     eventComposerScript.text,
@@ -693,8 +777,18 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /themeToggle\?\.addEventListener\("change", \(\) => \{[\s\S]*?applyTheme\(theme, \{ persist: true \}\)/,
-    "Changing the Settings toggle must persist and apply the full-app theme"
+    /themeToggle\?\.addEventListener\("change", \(\) => \{[\s\S]*?applyTheme\(theme, \{ persist: true \}\);[\s\S]*?saveThemePreference\(theme\)/,
+    "Changing the Settings toggle must apply immediately and save the preference"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function loadConfigAndSession[\s\S]*?sessionInfo = me;[\s\S]*?applyTheme\(pendingThemePreference \|\| me\.theme, \{ persist: true \}\)/,
+    "Background refreshes must not overwrite an optimistic theme change"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /async function saveThemePreference\(theme\)[\s\S]*?pendingThemePreference = nextTheme;[\s\S]*?fetchJson\("\/api\/me\/preferences"[\s\S]*?method: "PATCH"[\s\S]*?pendingThemePreference = null;[\s\S]*?applyTheme\(previousTheme, \{ persist: true \}\)/,
+    "Theme changes must be server-backed and roll back cleanly if saving fails"
   );
   const commandActionsScript = await publicSession.request("/command-centre-actions.js", { accept: "text/javascript" });
   const commandCentreScript = await publicSession.request("/command-centre.js", { accept: "text/javascript" });
@@ -1478,9 +1572,12 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /addEventButton\.addEventListener\("click", \(\) => \{\s*void openCalendarEventComposerAt\(\{ date: dateKey\(currentFocusDate\) \}\);/,
-    "The main create action must enter through the calendar-anchored composer flow"
+    /addEventButton\.addEventListener\("click", \(\) => \{[\s\S]*?setSidebarCreateMenuOpen\(!isOpen\);[\s\S]*?sidebarCreateEventButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?openCalendarEventComposerAt\(\{ date: dateKey\(currentFocusDate\) \}\)/,
+    "The Create menu's Event action must enter through the calendar-anchored composer flow"
   );
+  assert.match(eventComposerScript.text, /sidebarCreateRoomButton\?\.addEventListener\("click",[\s\S]*?openCreateRoomModal\(\);/);
+  assert.match(eventComposerScript.text, /sidebarJoinRoomButton\?\.addEventListener\("click",[\s\S]*?await openRoomEntryPage\(\);/);
+  assert.match(eventComposerScript.text, /sidebarCreatePopover\?\.addEventListener\("keydown",[\s\S]*?"Escape"[\s\S]*?"ArrowDown"[\s\S]*?"ArrowUp"/);
   assert.match(
     eventComposerScript.text,
     /function closeEventModal\(\) \{[\s\S]*?deactivateEventComposerPreview\(\);[\s\S]*?stopDragCreate\(\);/,
@@ -1576,9 +1673,9 @@ try {
   );
   assert.match(eventComposerScript.text, /window\.addEventListener\("message", handleGoogleAuthPopupMessage\);/);
   const oauthPopupPage = await publicSession.request("/oauth-popup.html", { accept: "text/html" });
-  assert.match(oauthPopupPage.text, /@font-face\s*\{[^}]*font-family:\s*"Geist Mono";[^}]*GeistMono-VariableFont_wght\.ttf\?v=20260804-geist-mono[^}]*font-style:\s*normal;[^}]*font-weight:\s*100 900;/s);
-  assert.match(oauthPopupPage.text, /@font-face\s*\{[^}]*font-family:\s*"Geist Mono";[^}]*GeistMono-Italic-VariableFont_wght\.ttf\?v=20260804-geist-mono[^}]*font-style:\s*italic;[^}]*font-weight:\s*100 900;/s);
-  assert.match(oauthPopupPage.text, /html,\s*body\s*\{[^}]*font-family:\s*var\(--font-ui\);[^}]*font-synthesis:\s*none;[^}]*font-variant-numeric:\s*tabular-nums lining-nums;/s);
+  assert.match(oauthPopupPage.text, /@font-face\s*\{[^}]*font-family:\s*"SF Pro Display";[^}]*SFProDisplay-Regular\.otf\?v=20260805-sf-pro-display[^}]*font-style:\s*normal;[^}]*font-weight:\s*400;/s);
+  assert.match(oauthPopupPage.text, /@font-face\s*\{[^}]*font-family:\s*"SF Pro Display";[^}]*SFProDisplay-Bold\.otf\?v=20260805-sf-pro-display[^}]*font-style:\s*normal;[^}]*font-weight:\s*700;/s);
+  assert.match(oauthPopupPage.text, /html,\s*body\s*\{[^}]*font-family:\s*var\(--font-ui\);[^}]*font-synthesis:\s*none;[^}]*font-variant-numeric:\s*tabular-nums lining-nums;[^}]*font-feature-settings:\s*"tnum" 1, "lnum" 1;/s);
   assert.match(oauthPopupPage.text, /<script src="\/oauth-popup\.js\?v=20260718-modal" defer><\/script>/);
   assert.match(oauthPopupPage.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
   assert.match(oauthPopupPage.text, /<img class="mark" src="\/icons\/icon-192\.png\?v=20260724-appicon-new" alt="" width="46" height="46" \/>/);
@@ -1652,13 +1749,13 @@ try {
   assert.match(eventComposerScript.text, /let roomSwitcherRenderSignature = "";/);
   assert.match(
     eventComposerScript.text,
-    /const renderSignature = JSON\.stringify\(\{[\s\S]*?rooms: rooms\.map[\s\S]*?const expectedChildCount = rooms\.length \+ 1;[\s\S]*?renderSignature === roomSwitcherRenderSignature[\s\S]*?roomSwitcher\.childElementCount === expectedChildCount/,
-    "Unchanged room tiles must keep their DOM and in-progress hover state"
+    /const otherRooms = rooms\.filter[\s\S]*?rooms: otherRooms\.map[\s\S]*?const expectedChildCount = otherRooms\.length;[\s\S]*?renderSignature === roomSwitcherRenderSignature[\s\S]*?roomSwitcher\.childElementCount === expectedChildCount/,
+    "The room switcher must omit the active room while retaining stable DOM for unchanged room rows"
   );
-  assert.match(
+  assert.doesNotMatch(
     eventComposerScript.text,
-    /<span class="room-switch-mark" aria-hidden="true">\s*<span class="ui-icon ui-icon-plus"><\/span>\s*<\/span>/,
-    "The add-room icon must use the same 22px mark container as room icons"
+    /room-switch-add|Create or join another room/,
+    "Room creation must live in the unified Create menu instead of a duplicate switcher row"
   );
   assert.match(
     eventComposerScript.text,
@@ -1916,28 +2013,53 @@ try {
   const eventComposerStyles = await publicSession.request("/styles.css", { accept: "text/css" });
   assert.match(
     eventComposerStyles.text,
-    /@font-face\s*\{[^}]*font-family:\s*"Geist Mono";[^}]*GeistMono-VariableFont_wght\.ttf\?v=20260804-geist-mono[^}]*font-style:\s*normal;[^}]*font-weight:\s*100 900;[^}]*font-display:\s*swap;/s,
-    "The normal Geist Mono variable font must be self-hosted across its complete weight range"
+    /@font-face\s*\{[^}]*font-family:\s*"SF Pro Display";[^}]*SFProDisplay-Regular\.otf\?v=20260805-sf-pro-display[^}]*font-style:\s*normal;[^}]*font-weight:\s*400;[^}]*font-display:\s*swap;/s,
+    "The supplied SF Pro Display regular face must be self-hosted"
   );
   assert.match(
     eventComposerStyles.text,
-    /@font-face\s*\{[^}]*font-family:\s*"Geist Mono";[^}]*GeistMono-Italic-VariableFont_wght\.ttf\?v=20260804-geist-mono[^}]*font-style:\s*italic;[^}]*font-weight:\s*100 900;[^}]*font-display:\s*swap;/s,
-    "The italic Geist Mono variable font must be self-hosted across its complete weight range"
+    /@font-face\s*\{[^}]*font-family:\s*"SF Pro Display";[^}]*SFProDisplay-Medium\.otf\?v=20260805-sf-pro-display[^}]*font-style:\s*normal;[^}]*font-weight:\s*500;[^}]*font-display:\s*swap;/s,
+    "The supplied SF Pro Display medium face must be self-hosted"
   );
   assert.match(
     eventComposerStyles.text,
-    /:root\s*\{[^}]*--font-ui:\s*"Geist Mono"[^;]*;[^}]*--font-sans:\s*var\(--font-ui\);/s,
-    "Every CommonGround surface must share one Geist Mono typography token"
+    /@font-face\s*\{[^}]*font-family:\s*"SF Pro Display";[^}]*SFProDisplay-Bold\.otf\?v=20260805-sf-pro-display[^}]*font-style:\s*normal;[^}]*font-weight:\s*700;[^}]*font-display:\s*swap;/s,
+    "The supplied SF Pro Display bold face must be self-hosted"
   );
   assert.match(
     eventComposerStyles.text,
-    /html\s*\{[^}]*font-family:\s*var\(--font-ui\);[^}]*font-synthesis:\s*none;[^}]*font-variant-numeric:\s*tabular-nums lining-nums;/s,
-    "Global text, including dates and times, must use Geist Mono with stable tabular numerals"
+    /:root\s*\{[^}]*--font-ui:\s*"SF Pro Display"[^;]*;[^}]*--font-numeric:\s*"SF Pro Display"[^;]*;[^}]*--font-sans:\s*var\(--font-ui\);/s,
+    "Every CommonGround surface and numeric readout must share the SF Pro Display typography token"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /html\s*\{[^}]*font-family:\s*var\(--font-ui\);[^}]*font-synthesis:\s*none;[^}]*font-variant-numeric:\s*tabular-nums lining-nums;[^}]*font-feature-settings:\s*"tnum" 1, "lnum" 1;/s,
+    "Global text, including dates and times, must use stable tabular lining numerals"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /:where\([\s\S]*?\.calendar-period-label,[\s\S]*?\.day-header-date,[\s\S]*?\.time-picker-input,[\s\S]*?\.room-code,[\s\S]*?\)\s*\{[^}]*font-family:\s*var\(--font-numeric\);[^}]*font-variant-numeric:\s*tabular-nums lining-nums;[^}]*font-feature-settings:\s*"tnum" 1, "lnum" 1;/s,
+    "Dates, times, and codes must use one shared numeric style with equal-width digits"
   );
   assert.match(
     eventComposerStyles.text,
     /button,\s*input,\s*textarea,\s*select,\s*option\s*\{[^}]*font:\s*inherit;/s,
     "Native controls must inherit the same universal font"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal,\s*#eventModal \.event-composer,[\s\S]*?\.common-ground-date-picker\[popover\] button\s*\{[^}]*font-family:\s*var\(--font-ui\);/s,
+    "The entire event creation surface must explicitly use SF Pro Display"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal #eventDateInput,[\s\S]*?#eventModal \.time-picker-duration\s*\{[^}]*font-family:\s*var\(--font-numeric\);[^}]*font-size:\s*15px;[^}]*font-weight:\s*600;[^}]*font-variant-numeric:\s*tabular-nums lining-nums;[^}]*font-feature-settings:\s*"tnum" 1, "lnum" 1;/s,
+    "Composer dates and times must share the same SF Pro Display size, weight, and equal-width numeral style"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.common-ground-date-picker-header,[\s\S]*?\.common-ground-date-picker-day\s*\{[^}]*font-family:\s*var\(--font-numeric\);[^}]*font-size:\s*15px;[^}]*font-weight:\s*600;[^}]*font-variant-numeric:\s*tabular-nums lining-nums;[^}]*font-feature-settings:\s*"tnum" 1, "lnum" 1;/s,
+    "Date-picker labels and days must use the same size, weight, and universal numeric style"
   );
   const fontFamilies = [...eventComposerStyles.text.matchAll(/font-family:\s*([^;]+);/g)]
     .map((match) => match[1].trim());
@@ -1945,10 +2067,11 @@ try {
     [...new Set(fontFamilies)].sort(),
     [
       '"Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif',
-      '"Geist Mono"',
+      '"SF Pro Display"',
+      'var(--font-numeric)',
       'var(--font-ui)'
     ].sort(),
-    "Only Geist Mono and the necessary color-emoji renderer may define font families"
+    "Only SF Pro Display and the necessary color-emoji renderer may define font families"
   );
   assert.match(
     eventComposerStyles.text,
@@ -2108,8 +2231,8 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /\.time-picker-surface \.time-picker-dropdown\s*\{(?=[^}]*position:\s*absolute)(?=[^}]*background:\s*var\(--time-picker-popover\))(?=[^}]*box-shadow:\s*0 8px 24px rgba\(0, 0, 0, 0\.5\))[^}]*\}/s,
-    "All CommonGround editing surfaces must share the same elevated time menu"
+    /\.time-picker-surface \.time-picker-dropdown\s*\{(?=[^}]*position:\s*absolute)(?=[^}]*background:\s*var\(--time-picker-popover\))(?=[^}]*box-shadow:\s*var\(--shadow\))[^}]*\}/s,
+    "All CommonGround editing surfaces must share the same theme-aware elevated time menu"
   );
   assert.match(
     eventComposerStyles.text,
@@ -2125,8 +2248,8 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.composer-time-grid \.time-picker-input:hover\s*\{[^}]*background:\s*rgba\(255, 255, 255, 0\.05\)/s,
-    "Time fields must reveal only a restrained hover wash"
+    /#eventModal \.composer-time-grid \.time-picker-input:hover\s*\{[^}]*background:\s*color-mix\(in srgb, var\(--composer-ink\) 5%, transparent\)/s,
+    "Time fields must reveal a restrained, theme-aware hover wash"
   );
   assert.doesNotMatch(
     eventComposerStyles.text,
@@ -2135,15 +2258,15 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.time-picker-dropdown\s*\{(?=[^}]*position:\s*absolute)(?=[^}]*background:\s*var\(--composer-popover\))(?=[^}]*box-shadow:\s*0 8px 24px rgba\(0, 0, 0, 0\.5\))(?=[^}]*animation:\s*event-time-picker-in var\(--motion-slow\) var\(--ease-modal\))(?=[^}]*will-change:\s*transform, opacity)[^}]*\}/s,
+    /#eventModal \.time-picker-dropdown\s*\{(?=[^}]*position:\s*absolute)(?=[^}]*background:\s*var\(--composer-popover\))(?=[^}]*box-shadow:\s*var\(--shadow\))(?=[^}]*animation:\s*event-time-picker-in var\(--motion-slow\) var\(--ease-modal\))(?=[^}]*will-change:\s*transform, opacity)[^}]*\}/s,
     "Time menus must float on a detached elevated surface with compositor-safe motion"
   );
-  assert.match(eventComposerStyles.text, /#eventModal \.time-picker-list\s*\{[^}]*max-height:\s*240px[^}]*overflow-y:\s*auto[^}]*scrollbar-color:\s*rgba\(255, 255, 255, 0\.24\) transparent[^}]*scrollbar-width:\s*thin/s);
+  assert.match(eventComposerStyles.text, /#eventModal \.time-picker-list\s*\{[^}]*max-height:\s*240px[^}]*overflow-y:\s*auto[^}]*scrollbar-color:\s*var\(--composer-scrollbar\) transparent[^}]*scrollbar-width:\s*thin/s);
   assert.match(eventComposerStyles.text, /#eventModal \.time-picker-list::-webkit-scrollbar-button\s*\{[^}]*display:\s*none[^}]*width:\s*0[^}]*height:\s*0/s);
   assert.match(
     eventComposerStyles.text,
-    /#eventModal \.time-picker-option:hover,\s*#eventModal \.time-picker-option\.is-active\s*\{[^}]*background:\s*rgba\(255, 255, 255, 0\.06\)/s,
-    "Pointer and keyboard-highlighted time options must share the same visual state"
+    /#eventModal \.time-picker-option:hover,\s*#eventModal \.time-picker-option\.is-active\s*\{[^}]*background:\s*var\(--composer-hover\)/s,
+    "Pointer and keyboard-highlighted time options must share the same theme-aware visual state"
   );
   assert.match(
     eventComposerScript.text,
@@ -2294,8 +2417,13 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /#roomPage \.participants-card\s*\{[^}]*gap:\s*16px;[^}]*\}[\s\S]*?#roomPage \.sidebar-room-card\s*\{[^}]*padding:\s*12px;[^}]*border:\s*0;[^}]*background:\s*transparent;/s,
-    "The sidebar must use spacing and flat surfaces instead of nested card borders"
+    /#roomPage\.calendar-app-shell\s*\{[^}]*--shell-sidebar-width:\s*248px;[^}]*--shell-accent:\s*#b39458;[\s\S]*?#roomPage \.participants-card\s*\{[^}]*gap:\s*14px;[^}]*padding:\s*14px 16px 12px;[\s\S]*?#roomPage \.sidebar-room-card\s*\{[^}]*gap:\s*8px;[^}]*border-left:\s*2px solid var\(--shell-accent\);/s,
+    "The sidebar must use the compact rhythm and one subtle current-room accent"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.sidebar-create-button\s*\{[^}]*width:\s*118px;[^}]*height:\s*42px;[^}]*border-radius:\s*10px;[\s\S]*?#roomPage \.sidebar-create-popover\s*\{[^}]*width:\s*188px;[^}]*will-change:\s*transform, opacity;/s,
+    "The Create control and menu must stay compact and compositor-friendly"
   );
   assert.match(
     eventComposerStyles.text,
@@ -2336,6 +2464,36 @@ try {
     eventComposerStyles.text,
     /:root\[data-theme="light"\] \.common-ground-date-picker\[popover\]\s*\{[^}]*background:\s*rgba\(255, 253, 249, 0\.99\);[^}]*color:\s*var\(--text\);/s,
     "The shared date picker must follow the active theme everywhere it is used"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#roomPage \.mini-calendar-day\.is-today\s*\{[^}]*background:\s*transparent;[^}]*color:\s*var\(--shell-accent-strong\);[\s\S]*?#roomPage \.mini-calendar-day\.is-selected:not\(\.is-today\),[\s\S]*?background:\s*var\(--shell-accent\);[^}]*color:\s*#171512;/s,
+    "Today and the selected mini-calendar date must use the shared CommonGround gold accent"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.time-picker-surface\s*\{[^}]*--time-picker-hover:\s*color-mix\(in srgb, var\(--time-picker-ink\) 5%, transparent\);[^}]*--time-picker-scrollbar:\s*color-mix\(in srgb, var\(--time-picker-ink\) 24%, transparent\);/s,
+    "Shared time-picker interactions must derive from the active theme ink"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.time-picker-surface \.time-picker-field > \.time-picker-input:hover\s*\{[^}]*background:\s*var\(--time-picker-hover\);[\s\S]*?\.time-picker-surface \.time-picker-list\s*\{[^}]*scrollbar-color:\s*var\(--time-picker-scrollbar\) transparent;/s,
+    "Shared time inputs and scrollbars must remain visible in light mode"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal\s*\{[^}]*--composer-hover:\s*color-mix\(in srgb, var\(--text\) 6%, transparent\);[^}]*--composer-control:\s*color-mix\(in srgb, var\(--text\) 14%, transparent\);[^}]*--composer-shadow:/s,
+    "The event composer must derive interactive surfaces and shadows from theme-aware tokens"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /#eventModal \.composer-title::placeholder\s*\{[^}]*color:\s*color-mix\(in srgb, var\(--composer-ink\) 40%, transparent\);[\s\S]*?#eventModal \.mini-toggle-ui\s*\{[^}]*background:\s*var\(--composer-control\);/s,
+    "Composer placeholders and switches must remain legible in light mode"
+  );
+  assert.match(
+    eventComposerStyles.text,
+    /\.theme-toggle:has\(input:disabled\)\s*\{[^}]*opacity:\s*0\.58;[^}]*pointer-events:\s*none;/s,
+    "The theme switch must expose its short server-save state without accepting duplicate input"
   );
   assert.match(
     eventComposerStyles.text,
@@ -2997,6 +3155,7 @@ try {
   assert.match(siteGuard.text, /document\.addEventListener\(\s*"contextmenu"[\s\S]*?event\.preventDefault\(\)[\s\S]*?\{ capture: true \}/);
   const contentSecurityPolicy = home.response.headers.get("content-security-policy");
   assert.ok(contentSecurityPolicy, "CSP header is missing");
+  assert.match(contentSecurityPolicy, /script-src 'self'/);
   assert.doesNotMatch(contentSecurityPolicy, /script-src[^;]*'unsafe-inline'/);
   assert.equal(home.response.headers.get("x-content-type-options"), "nosniff");
   assert.ok(home.response.headers.get("referrer-policy"), "Referrer-Policy header is missing");
@@ -3011,8 +3170,14 @@ try {
     assert.match(legalPage.text, /<link rel="icon" href="\/icons\/favicon\.ico\?v=20260724-appicon-new" sizes="any" \/>/);
     assert.match(legalPage.text, /<link rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png\?v=20260724-appicon-new" \/>/);
     assert.match(legalPage.text, /<img class="mark app-brand-icon" src="\/icons\/icon-192\.png\?v=20260724-appicon-new" alt="" width="46" height="46" \/>/);
+    assert.match(legalPage.text, /<script src="\/theme-bootstrap\.js\?v=20260804-persisted-theme" data-sync-server="true"><\/script>/);
     assert.match(legalPage.text, /<script src="\/site-guard\.js\?v=20260724-contextmenu" defer><\/script>/);
-    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260804-geist-mono" \/>/);
+    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260805-sf-pro-composer" \/>/);
+    assert.doesNotMatch(
+      legalPage.text,
+      /<script(?![^>]*\bsrc=)[^>]*>/i,
+      "Legal pages must not rely on inline script blocked by CSP"
+    );
   }
   assert.match(privacyPage.text, /rounds your device latitude and longitude to roughly one kilometre/);
   assert.match(privacyPage.text, /not added to your room, shown to room members, or written to CommonGround's persistent database/);
@@ -3375,6 +3540,11 @@ try {
 
   await stopServer(server);
   server = await startServer();
+  assert.equal(
+    (await publicSession.request("/api/me")).payload.theme,
+    "light",
+    "Guest theme preferences must survive an application restart"
+  );
   const persistedRoom = await host.request(`/api/rooms/${firstCode}`);
   assert.ok(persistedRoom.payload.room.events.some((event) => event.id === eventId));
 

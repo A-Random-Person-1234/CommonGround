@@ -4,39 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#101c31" />
-    <script>
-      (() => {
-        const storageKey = "cg-theme";
-        const themeColors = Object.freeze({
-          dark: "#101c31",
-          light: "#f7f3ee"
-        });
-        const normalize = (value) => value === "light" ? "light" : "dark";
-        const read = () => {
-          try {
-            return normalize(localStorage.getItem(storageKey));
-          } catch {
-            return "dark";
-          }
-        };
-        const apply = (value, { persist = false } = {}) => {
-          const theme = normalize(value);
-          document.documentElement.dataset.theme = theme;
-          document.querySelector('meta[name="theme-color"]')?.setAttribute("content", themeColors[theme]);
-          if (persist) {
-            try {
-              localStorage.setItem(storageKey, theme);
-            } catch {
-              // The visible theme can still change when storage is unavailable.
-            }
-          }
-          return theme;
-        };
-
-        window.CommonGroundTheme = Object.freeze({ apply, read });
-        apply(read());
-      })();
-    </script>
+    <script src="/theme-bootstrap.js?v=20260804-persisted-theme"></script>
     <script src="/site-guard.js?v=20260724-contextmenu" defer></script>
     <title>CommonGround | Shared calendar rooms</title>
     <meta name="description" content="CommonGround helps groups compare calendar availability and find a time that works." />
@@ -50,7 +18,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20260724-appicon-new" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20260724-appicon-new" />
     <link rel="manifest" href="/site.webmanifest?v=20260724-appicon-new" />
-    <link rel="stylesheet" href="/styles.css?v=20260804-geist-mono" />
+    <link rel="stylesheet" href="/styles.css?v=20260805-sf-pro-composer" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -218,16 +186,31 @@
 
       <aside class="participants-sidebar" id="participantsSidebar" aria-label="Rooms and members" data-open="true">
         <div class="participants-card" id="participantsPanel">
-          <button class="primary add-event-button sidebar-create-button button-with-icon" id="addEventButton" type="button">
-            <span class="ui-icon ui-icon-plus" aria-hidden="true"></span>
-            <span>Create</span>
-          </button>
+          <div class="sidebar-create-menu" id="sidebarCreateMenu">
+            <button class="primary add-event-button sidebar-create-button button-with-icon" id="addEventButton" type="button" aria-haspopup="menu" aria-controls="sidebarCreatePopover" aria-expanded="false">
+              <span class="ui-icon ui-icon-plus" aria-hidden="true"></span>
+              <span>Create</span>
+            </button>
+            <div class="sidebar-create-popover hidden" id="sidebarCreatePopover" role="menu" aria-label="Create">
+              <button type="button" id="sidebarCreateEventButton" role="menuitem">
+                <span class="sidebar-create-item-icon ui-icon ui-icon-calendar-sync" aria-hidden="true"></span>
+                <span>Event</span>
+              </button>
+              <button type="button" id="sidebarCreateRoomButton" role="menuitem">
+                <span class="sidebar-create-item-icon ui-icon ui-icon-plus" aria-hidden="true"></span>
+                <span>Room</span>
+              </button>
+              <button type="button" id="sidebarJoinRoomButton" role="menuitem">
+                <span class="sidebar-create-item-icon ui-icon ui-icon-link" aria-hidden="true"></span>
+                <span>Join room</span>
+              </button>
+            </div>
+          </div>
 
           <section class="sidebar-room-card" aria-label="Current room">
             <div class="sidebar-room-heading">
               <img class="mark app-brand-icon" src="/icons/icon-192.png?v=20260724-appicon-new" alt="" width="32" height="32" />
               <div class="sidebar-room-copy">
-                <p class="eyebrow">CommonGround</p>
                 <div class="room-title-row">
                   <h2 id="roomName">Room</h2>
                   <span class="host-pill hidden" id="hostPill">Host</span>
@@ -240,9 +223,8 @@
                 <span class="ui-icon ui-icon-link" aria-hidden="true"></span>
               </button>
             </div>
+            <nav class="room-switcher hidden sidebar-room-switcher" id="roomSwitcher" aria-label="Other rooms"></nav>
           </section>
-
-          <nav class="room-switcher hidden sidebar-room-switcher" id="roomSwitcher" aria-label="Your rooms"></nav>
 
           <section class="mini-calendar" aria-labelledby="miniCalendarTitle">
             <header class="mini-calendar-header">
@@ -841,7 +823,7 @@
     </section>
 
     <script src="/date-picker.js?v=20260726-shared-date-picker"></script>
-    <script src="/app.js?v=20260804-room-name-topbar"></script>
+    <script src="/app.js?v=20260804-persisted-theme"></script>
     <script src="/command-centre-actions.js?v=20260726-assistant-upgrade"></script>
     <script src="/command-centre.js?v=20260726-assistant-input-reset"></script>
   </body>

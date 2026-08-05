@@ -686,6 +686,22 @@ function normalizeSyncState(sync = {}, fallbackStatus = "guest") {
   };
 }
 
+function normalizeThemePreference(value) {
+  return value === "light" || value === "dark" ? value : null;
+}
+
+function userThemePreference(user) {
+  return normalizeThemePreference(user?.preferences?.theme);
+}
+
+function sessionThemePreference(session) {
+  return normalizeThemePreference(session?.preferences?.theme);
+}
+
+function effectiveThemePreference(user, session) {
+  return userThemePreference(user) || sessionThemePreference(session) || "dark";
+}
+
 function normalizeUserRecord(user = {}) {
   const googleTokens = user.auth?.google?.tokens || user.googleTokens || null;
   const microsoftTokens = user.auth?.microsoft?.tokens || user.microsoftTokens || null;
@@ -737,6 +753,10 @@ function normalizeUserRecord(user = {}) {
       picture,
       preferredDisplayName,
       preferredColor
+    },
+    preferences: {
+      ...(user.preferences || {}),
+      theme: normalizeThemePreference(user.preferences?.theme)
     },
     auth: {
       google: {
@@ -1247,7 +1267,13 @@ function serveStatic(req, res) {
     return;
   }
 
-  if (!fs.existsSync(filePath) || fs.statSync(filePath).isDirectory()) {
+  if (!fs.existsSync(filePath)) {
+    res.writeHead(404);
+    res.end("Not found");
+    return;
+  }
+  const fileStats = fs.statSync(filePath);
+  if (fileStats.isDirectory()) {
     res.writeHead(404);
     res.end("Not found");
     return;
@@ -1261,6 +1287,7 @@ function serveStatic(req, res) {
     ext === ".png" ? "image/png" :
     ext === ".ico" ? "image/x-icon" :
     ext === ".ttf" ? "font/ttf" :
+    ext === ".otf" ? "font/otf" :
     ext === ".txt" ? "text/plain; charset=utf-8" :
     ext === ".webmanifest" ? "application/manifest+json" :
     ext === ".jpg" || ext === ".jpeg" ? "image/jpeg" :
@@ -1269,6 +1296,7 @@ function serveStatic(req, res) {
   applySecurityHeaders(res);
   res.writeHead(200, {
     "Content-Type": type,
+    "Content-Length": fileStats.size,
     "Cache-Control": "no-store"
   });
   if (req.method === "HEAD") {
@@ -1610,6 +1638,10 @@ function updateUserRecord(userId, updates = {}) {
       ...existing.profile,
       ...(updates.profile || {})
     },
+    preferences: {
+      ...existing.preferences,
+      ...(updates.preferences || {})
+    },
     auth: {
       ...existing.auth,
       google: {
@@ -1633,6 +1665,16 @@ function updateUserRecord(userId, updates = {}) {
   });
   store.users[userId] = next;
   return next;
+}
+
+function migrateSessionThemePreferenceToUser(userId, session) {
+  const user = store.users[userId];
+  if (!user || userThemePreference(user)) return user || null;
+  const theme = sessionThemePreference(session);
+  if (!theme) return user;
+  return updateUserRecord(userId, {
+    preferences: { theme }
+  });
 }
 
 function setUserGoogleConnection(userId, profile, tokens) {
@@ -4444,8 +4486,48 @@ const server = http.createServer(async (req, res) => {
         sessionId: session.id,
         connected: userConnected(user),
         user: publicUser(user),
+        theme: effectiveThemePreference(user, session),
         displayName: session.pendingDisplayName || userDisplayName(user) || "",
         roomCode: session.lastRoomCode || null
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/me/preferences") {
+      if (req.method !== "PATCH") {
+        sendMethodNotAllowed(res, ["PATCH"]);
+        return;
+      }
+      if (!/^application\/json(?:\s*;|$)/i.test(String(req.headers["content-type"] || ""))) {
+        sendJson(res, 415, { error: "Use application/json for preferences." });
+        return;
+      }
+      if (!enforceRateLimit(req, res, "theme-preference", 60, 10 * 60 * 1000)) return;
+
+      const session = getSession(req, res);
+      const user = currentUserFromSession(session);
+      const body = await readJsonBody(req, { maxBytes: 8_192 });
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        sendJson(res, 400, { error: "Use a JSON object for preferences." });
+        return;
+      }
+      const theme = normalizeThemePreference(body.theme);
+      if (!theme || Object.keys(body).some((key) => key !== "theme")) {
+        sendJson(res, 400, { error: "Theme must be light or dark." });
+        return;
+      }
+
+      session.preferences = {
+        ...(session.preferences || {}),
+        theme
+      };
+      const nextUser = user
+        ? updateUserRecord(user.id, { preferences: { theme } })
+        : null;
+      saveStore();
+      sendJson(res, 200, {
+        theme,
+        user: publicUser(nextUser)
       });
       return;
     }
@@ -5774,7 +5856,8 @@ if (url.pathname === "/auth/google") {
       const userId = resolveProviderUserId(sessionBeforeRotation, profile, "google");
       const session = rotateSession(sessionBeforeRotation, res);
       session.userId = userId;
-      const userRecord = setUserGoogleConnection(userId, profile, googleTokens);
+      let userRecord = setUserGoogleConnection(userId, profile, googleTokens);
+      userRecord = migrateSessionThemePreferenceToUser(userId, session) || userRecord;
       linkSessionParticipantsToUser(session, userRecord);
       propagateUserIdentityToRooms(userId);
       if (!session.pendingDisplayName) {
@@ -5859,7 +5942,8 @@ if (url.pathname === "/auth/google") {
       const userId = resolveProviderUserId(sessionBeforeRotation, profile, "microsoft");
       const session = rotateSession(sessionBeforeRotation, res);
       session.userId = userId;
-      const userRecord = setUserMicrosoftConnection(userId, profile, microsoftTokens);
+      let userRecord = setUserMicrosoftConnection(userId, profile, microsoftTokens);
+      userRecord = migrateSessionThemePreferenceToUser(userId, session) || userRecord;
       linkSessionParticipantsToUser(session, userRecord);
       propagateUserIdentityToRooms(userId);
       if (!session.pendingDisplayName) {

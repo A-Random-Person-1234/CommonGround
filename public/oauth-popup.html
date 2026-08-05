@@ -14,21 +14,35 @@
     <script src="/site-guard.js?v=20260724-contextmenu" defer></script>
     <style>
       @font-face {
-        font-family: "Geist Mono";
-        src: url("/fonts/geist-mono/GeistMono-VariableFont_wght.ttf?v=20260804-geist-mono") format("truetype-variations");
+        font-family: "SF Pro Display";
+        src: url("/fonts/sf-pro-display/SFProDisplay-Regular.otf?v=20260805-sf-pro-display") format("opentype");
         font-style: normal;
-        font-weight: 100 900;
+        font-weight: 400;
         font-display: swap;
       }
       @font-face {
-        font-family: "Geist Mono";
-        src: url("/fonts/geist-mono/GeistMono-Italic-VariableFont_wght.ttf?v=20260804-geist-mono") format("truetype-variations");
-        font-style: italic;
-        font-weight: 100 900;
+        font-family: "SF Pro Display";
+        src: url("/fonts/sf-pro-display/SFProDisplay-Medium.otf?v=20260805-sf-pro-display") format("opentype");
+        font-style: normal;
+        font-weight: 500;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: "SF Pro Display";
+        src: url("/fonts/sf-pro-display/SFProDisplay-Medium.otf?v=20260805-sf-pro-display") format("opentype");
+        font-style: normal;
+        font-weight: 600;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: "SF Pro Display";
+        src: url("/fonts/sf-pro-display/SFProDisplay-Bold.otf?v=20260805-sf-pro-display") format("opentype");
+        font-style: normal;
+        font-weight: 700;
         font-display: swap;
       }
       :root {
-        --font-ui: "Geist Mono", ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", "Segoe UI Emoji", "Apple Color Emoji", monospace;
+        --font-ui: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
       * { box-sizing: border-box; }
       html, body {
@@ -36,6 +50,7 @@
         font-family: var(--font-ui);
         font-synthesis: none;
         font-variant-numeric: tabular-nums lining-nums;
+        font-feature-settings: "tnum" 1, "lnum" 1;
       }
       body {
         margin: 0;
