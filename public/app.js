@@ -3716,6 +3716,18 @@ function busyVisibilityLabel(participant, isOwnBlock) {
   return ownBusyLabel(participant);
 }
 
+function calendarParticipantLabel(participant) {
+  const participantId = participant?.participantId || participant?.id || "";
+  if (participantId && participantId === currentParticipant?.id) return "You";
+  return String(participant?.ownerName || participant?.displayName || "Participant").trim() || "Participant";
+}
+
+function calendarEventOwnerLabel(eventBlock) {
+  const creatorId = eventBlock?.originalEvent?.createdByParticipantId || eventBlock?.createdByParticipantId || "";
+  if (creatorId && creatorId === currentParticipant?.id) return "You";
+  return String(eventBlock?.participantName || "Someone").trim() || "Someone";
+}
+
 function wireInlineNameEditor(target, getCurrentName, onSave, triggerEventName = "dblclick") {
   if (!target) return;
   target.addEventListener(triggerEventName, () => {
@@ -4215,7 +4227,7 @@ function openBusyDetail(group) {
     item.className = "busy-detail-item";
     item.style.setProperty("--item-color", participantColorOption(entry.color).value);
     const owner = document.createElement("strong");
-    owner.textContent = entry.ownerName || "Participant";
+    owner.textContent = calendarParticipantLabel(entry);
     const range = document.createElement("p");
     range.textContent = formatDateTimeRange(entry.start, entry.end);
     item.append(owner, range);
@@ -4914,7 +4926,7 @@ function invitedEventOverlap(participantId, date, startHour, endHour) {
 }
 
 function busyStackNameSummary(participants = [], limit = 3) {
-  const names = participants.slice(0, limit).map((participant) => participant.ownerName).filter(Boolean);
+  const names = participants.slice(0, limit).map(calendarParticipantLabel).filter(Boolean);
   const extraCount = Math.max(participants.length - names.length, 0);
   return {
     namesLabel: names.join(", "),
@@ -5073,7 +5085,7 @@ function createSingleBusyCard(segment, dayIndex) {
     googleItem?.end &&
     sameDate(new Date(googleItem.start), new Date(googleItem.end))
   );
-  const ownerLabel = participant.ownerName;
+  const ownerLabel = calendarParticipantLabel(participant);
   const visibilityLabel = busyVisibilityLabel(participant, isOwnBlock);
   const block = document.createElement("button");
   block.type = "button";
@@ -5113,7 +5125,6 @@ function createSingleBusyCard(segment, dayIndex) {
   const timeRange = coversVisibleDay ? "All day" : formatEventRange(segment.startHour, segment.endHour);
   const titleLabel = normalizedTextKey(visibilityLabel) === normalizedTextKey(ownerLabel) ? "" : visibilityLabel;
   const compactLine = [ownerLabel, titleLabel].filter(Boolean).join(" · ");
-  const compactLineWithTime = [compactLine || ownerLabel, timeRange].filter(Boolean).join(" · ");
   const tooltip = [ownerLabel, titleLabel || (isOwnBlock ? "No title" : "Busy"), timeRange].filter(Boolean).join(" · ");
   block.dataset.tooltip = tooltip;
   block.title = tooltip;
@@ -5128,10 +5139,8 @@ function createSingleBusyCard(segment, dayIndex) {
   };
 
   if (durationClass === "event-15") {
-    configureCalendarBlockTimeLine(
-      appendLine("busy-line-compact", compactLineWithTime),
-      { prefix: compactLine || ownerLabel }
-    );
+    appendLine("busy-line-compact", ownerLabel);
+    configureCalendarBlockTimeLine(appendLine("busy-line-time", timeRange));
   } else if (durationClass === "event-30") {
     appendLine("busy-line-owner", ownerLabel);
     appendLine("busy-line-title", titleLabel);
@@ -5217,7 +5226,7 @@ function createBusyStack(segment, dayIndex) {
 
   for (const [index, participant] of segment.participants.entries()) {
     const isOwnBlock = participant.participantId === currentParticipant?.id;
-    const ownerLabel = participant.ownerName;
+    const ownerLabel = calendarParticipantLabel(participant);
     const visibilityLabel = busyVisibilityLabel(participant, isOwnBlock);
     const participantStart = new Date(participant.start);
     const participantEnd = new Date(participant.end);
@@ -5349,14 +5358,13 @@ function createEventBlock(item, dayIndex, dayDate) {
   block.style.setProperty("--event-lane-index", laneIndex);
   applyCalendarLanePosition(block, dayIndex, laneCount, laneIndex);
   const timeRange = formatEventRange(item.startHour, item.endHour);
-  const ownerLabel = String(item.participantName || "Someone").trim() || "Someone";
+  const ownerLabel = calendarEventOwnerLabel(item);
   block.setAttribute("aria-label", `${ownerLabel}, ${item.title || "Event"}, ${timeRange}`);
   const tooltip = [ownerLabel, item.title, timeRange, item.location, item.summary].filter(Boolean).join("\n");
   block.dataset.tooltip = tooltip;
   block.title = tooltip;
   const titleText = item.title === "No title" ? "(No title)" : (item.title || "(No title)");
-  const compactPrefix = [ownerLabel, titleText].filter(Boolean).join(", ");
-  const fifteenLine = [compactPrefix, formatEventClock(item.startHour), item.location].filter(Boolean).join(", ");
+  const compactPrefix = [ownerLabel, titleText].filter(Boolean).join(" · ");
   const compactMeta = [timeRange, item.location].filter(Boolean).join(" · ");
 
   const appendLine = (className, text) => {
@@ -5369,10 +5377,8 @@ function createEventBlock(item, dayIndex, dayDate) {
   };
 
   if (durationClass === "event-15") {
-    configureCalendarBlockTimeLine(
-      appendLine("event-line-compact", fifteenLine),
-      { prefix: compactPrefix, suffix: item.location || "" }
-    );
+    appendLine("event-line-compact", compactPrefix);
+    configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
   } else if (durationClass === "event-30") {
     appendLine("event-line-owner", ownerLabel);
     appendLine("event-line-title", titleText);
@@ -5711,17 +5717,15 @@ function upsertCalendarEventPreview({
   dragPreviewNode.dataset.previewKind = composer ? "composer" : "drag";
   const titleText = String(title || "").trim() || "(No title)";
   const timeRange = formatEventRange(startHour, endHour);
-  const ownerLabel = String(currentParticipant?.displayName || "You").trim() || "You";
-  const compactPrefix = [ownerLabel, titleText].filter(Boolean).join(", ");
-  const compactLine = [compactPrefix, formatEventClock(startHour)].filter(Boolean).join(", ");
-  const timeLine = durationClass === "event-15" ? compactLine : timeRange;
+  const ownerLabel = "You";
+  const compactPrefix = [ownerLabel, titleText].filter(Boolean).join(" · ");
   dragPreviewNode.innerHTML = `
     <div class="drag-create-preview-copy">
       ${durationClass === "event-15"
-        ? `<div class="event-line event-line-compact">${escapeHtml(timeLine)}</div>`
+        ? `<div class="event-line event-line-compact">${escapeHtml(compactPrefix)}</div>`
         : `<div class="event-line event-line-owner">${escapeHtml(ownerLabel)}</div>
-           <div class="event-line event-line-title">${escapeHtml(titleText)}</div>
-           <div class="event-line event-line-meta" data-event-time-line="true" data-event-time-prefix="" data-event-time-suffix="">${escapeHtml(timeRange)}</div>`}
+           <div class="event-line event-line-title">${escapeHtml(titleText)}</div>`}
+      <div class="event-line event-line-meta" data-event-time-line="true" data-event-time-prefix="" data-event-time-suffix="">${escapeHtml(timeRange)}</div>
     </div>
   `;
   if (!dragPreviewNode.isConnected) {
@@ -6993,7 +6997,7 @@ function renderMonth() {
       chip.type = "button";
       chip.className = `event-chip ${eventBlock.isGroupEvent ? "is-group-event" : ""}`.trim();
       chip.style.setProperty("--event-color", eventBlock.participantColor || participantPalette[0].value);
-      const ownerLabel = String(eventBlock.participantName || "Someone").trim() || "Someone";
+      const ownerLabel = calendarEventOwnerLabel(eventBlock);
       const titleLabel = String(eventBlock.title || "Busy").trim() || "Busy";
       const timeLabel = eventBlock.startHour <= calendarStartHour && eventBlock.endHour >= calendarEndHour
         ? "All day"
@@ -7032,7 +7036,7 @@ function monthEventRowLimit() {
 }
 
 function monthEventChipLabel(eventBlock) {
-  const ownerLabel = String(eventBlock.participantName || "Someone").trim() || "Someone";
+  const ownerLabel = calendarEventOwnerLabel(eventBlock);
   const title = String(eventBlock.title || "Busy").trim() || "Busy";
   const isAllDayLike = eventBlock.startHour <= calendarStartHour && eventBlock.endHour >= calendarEndHour;
   return [isAllDayLike ? "" : formatTime(eventBlock.startHour), ownerLabel, title].filter(Boolean).join(" · ");
