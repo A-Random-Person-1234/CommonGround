@@ -3336,7 +3336,7 @@ async function fetchCalendarList(accessToken) {
   }
 
   const calendars = (payload.items || [])
-    .filter((calendar) => calendar.selected !== false && !calendar.deleted)
+    .filter((calendar) => calendar.primary === true && !calendar.deleted)
     .map((calendar) => ({
       id: calendar.id,
       summary: calendar.summaryOverride || calendar.summary || "Google Calendar",
@@ -3345,10 +3345,8 @@ async function fetchCalendarList(accessToken) {
       accessRole: calendar.accessRole || null
     }));
 
-  calendars.sort((left, right) => Number(right.primary) - Number(left.primary));
-
   return {
-    calendars: calendars.length ? calendars.slice(0, 50) : [{ id: "primary", summary: "Google calendar", primary: true }],
+    calendars: calendars.length ? calendars.slice(0, 1) : [{ id: "primary", summary: "Google calendar", primary: true }],
     needsReconnect: false,
     calendarListError: null
   };
@@ -3388,7 +3386,7 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
       const tokens = await getFreshTokensForUser(user.id);
       if (!tokens?.access_token) throw httpError(401, "Google Calendar needs reconnecting.");
       const googleCalendarList = await fetchCalendarList(tokens.access_token);
-      const calendars = (googleCalendarList.calendars || []).slice(0, 50);
+      const calendars = (googleCalendarList.calendars || []).slice(0, 1);
       const mirroredIntervals = syncedGoogleCalendarMirrorIntervals(room, participant, user.id);
       const viewerEventsByCalendar = new Map();
       const canExposeGoogleEventDetails = (
