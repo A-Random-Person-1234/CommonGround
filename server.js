@@ -2621,11 +2621,16 @@ function parseOutlookDateTime(value) {
   return null;
 }
 
-async function fetchOutlookCalendarEvents(accessToken, timeMin, timeMax) {
+async function fetchOutlookCalendarEvents(accessToken, timeMin, timeMax, { includeDetails = false } = {}) {
   const url = new URL("https://graph.microsoft.com/v1.0/me/calendar/calendarView");
   url.searchParams.set("startDateTime", timeMin.toISOString());
   url.searchParams.set("endDateTime", timeMax.toISOString());
-  url.searchParams.set("$select", "id,start,end,showAs,isCancelled");
+  url.searchParams.set(
+    "$select",
+    includeDetails
+      ? "id,start,end,showAs,isCancelled,subject,location,bodyPreview"
+      : "id,start,end,showAs,isCancelled"
+  );
   url.searchParams.set("$orderby", "start/dateTime");
   url.searchParams.set("$top", "2500");
 
@@ -3385,17 +3390,17 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
       const googleCalendarList = await fetchCalendarList(tokens.access_token);
       const calendars = (googleCalendarList.calendars || []).slice(0, 50);
       const mirroredIntervals = syncedGoogleCalendarMirrorIntervals(room, participant, user.id);
-      const editableEventsByCalendar = new Map();
-      const canExposeEditableGoogleEvents = (
+      const viewerEventsByCalendar = new Map();
+      const canExposeGoogleEventDetails = (
         participant.id === viewerParticipantId &&
         userHasGoogleCalendarWriteAccess(user)
       );
 
-      if (canExposeEditableGoogleEvents) {
+      if (canExposeGoogleEventDetails) {
         const mirroredIds = syncedGoogleCalendarMirrorIds(room, user.id);
-        const writableCalendars = calendars.filter(googleCalendarCanWriteEvents);
-        for (let offset = 0; offset < writableCalendars.length; offset += 4) {
-          const batch = writableCalendars.slice(offset, offset + 4);
+        const detailCalendars = calendars.filter(googleCalendarCanWriteEvents);
+        for (let offset = 0; offset < detailCalendars.length; offset += 4) {
+          const batch = detailCalendars.slice(offset, offset + 4);
           const results = await Promise.all(batch.map(async (calendar) => {
             try {
               const events = await fetchGoogleCalendarEventsForRange(user.id, calendar.id, start, end);
@@ -3404,7 +3409,8 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
                 events: events
                   .filter((event) => (
                     event?.id &&
-                    googleEventCanMove(event) &&
+                    event.status !== "cancelled" &&
+                    event.transparency !== "transparent" &&
                     !isSyncedGoogleMirrorEvent(room, event, mirroredIds)
                   ))
                   .map((event) => {
@@ -3413,6 +3419,10 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
                     return {
                       calendarId: calendar.id,
                       eventId: String(event.id),
+                      title: providerText(event.summary, textLimits.eventTitle),
+                      location: providerText(event.location, textLimits.eventLocation),
+                      description: providerText(event.description, textLimits.eventDescription),
+                      editable: googleEventCanMove(event),
                       start: range.start.toISOString(),
                       end: range.end.toISOString()
                     };
@@ -3425,7 +3435,7 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
           }));
 
           for (const result of results) {
-            editableEventsByCalendar.set(result.calendarId, result.events);
+            viewerEventsByCalendar.set(result.calendarId, result.events);
           }
         }
       }
@@ -3447,11 +3457,11 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
         throw httpError(response.status, payload.error?.message || "Could not fetch Google calendar availability.");
       }
       for (const calendar of calendars) {
-        const editableEvents = editableEventsByCalendar.get(calendar.id) || [];
-        for (const editableEvent of editableEvents) {
+        const viewerEvents = viewerEventsByCalendar.get(calendar.id) || [];
+        for (const viewerEvent of viewerEvents) {
           busy.push({
-            start: editableEvent.start,
-            end: editableEvent.end,
+            start: viewerEvent.start,
+            end: viewerEvent.end,
             participantId: participant.id,
             ownerName: participant.displayName,
             color: participant.color,
@@ -3459,25 +3469,25 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
             calendarId: "google",
             calendarColor: participant.color,
             items: [{
-              sourceId: googleItemSourceId(editableEvent.calendarId, editableEvent.eventId),
+              sourceId: googleItemSourceId(viewerEvent.calendarId, viewerEvent.eventId),
               provider: "google",
-              title: "",
-              location: "",
-              description: "",
-              visibility: "busy",
+              title: viewerEvent.title,
+              location: viewerEvent.location,
+              description: viewerEvent.description,
+              visibility: "private",
               sharedWithParticipantIds: [],
-              editable: true,
-              googleCalendarId: editableEvent.calendarId,
-              googleEventId: editableEvent.eventId,
-              start: editableEvent.start,
-              end: editableEvent.end
+              editable: viewerEvent.editable,
+              googleCalendarId: viewerEvent.editable ? viewerEvent.calendarId : "",
+              googleEventId: viewerEvent.editable ? viewerEvent.eventId : "",
+              start: viewerEvent.start,
+              end: viewerEvent.end
             }]
           });
         }
 
         const hiddenIntervals = [
           ...mirroredIntervals,
-          ...editableEvents.map((event) => ({
+          ...viewerEvents.map((event) => ({
             start: new Date(event.start).getTime(),
             end: new Date(event.end).getTime()
           }))
@@ -3539,7 +3549,10 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
       if (!tokens?.access_token) throw httpError(401, "Outlook Calendar needs reconnecting.");
       const outlookCalendar = await fetchMicrosoftPrimaryCalendar(tokens.access_token);
       const mirroredIds = syncedOutlookCalendarMirrorIds(room, user.id);
-      const intervals = await fetchOutlookCalendarEvents(tokens.access_token, start, end);
+      const canExposeOutlookEventDetails = participant.id === viewerParticipantId;
+      const intervals = await fetchOutlookCalendarEvents(tokens.access_token, start, end, {
+        includeDetails: canExposeOutlookEventDetails
+      });
       for (const interval of intervals || []) {
         const status = String(interval.showAs || "").toLowerCase();
         if (interval.isCancelled || mirroredIds.has(String(interval.id)) || status === "free") continue;
@@ -3562,10 +3575,16 @@ async function fetchUserFreeBusy(room, user, participant, timeMin, timeMax, view
           items: [{
             sourceId: `outlook-freebusy:${digest}`,
             provider: "outlook",
-            title: "",
-            location: "",
-            description: "",
-            visibility: "busy",
+            title: canExposeOutlookEventDetails
+              ? providerText(interval.subject, textLimits.eventTitle)
+              : "",
+            location: canExposeOutlookEventDetails
+              ? providerText(interval.location?.displayName, textLimits.eventLocation)
+              : "",
+            description: canExposeOutlookEventDetails
+              ? providerText(interval.bodyPreview, textLimits.eventDescription)
+              : "",
+            visibility: canExposeOutlookEventDetails ? "private" : "busy",
             sharedWithParticipantIds: [],
             editable: false,
             start: startDate.toISOString(),

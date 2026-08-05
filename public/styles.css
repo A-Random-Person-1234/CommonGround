@@ -8132,6 +8132,7 @@ button.free-block:not(:disabled):active {
    blocks can start cleanly at the next 15-minute boundary. */
 .event-card.event-15,
 .busy-card.event-15 {
+  --inline-time-space: min(68%, 116px);
   top: calc(var(--start) * var(--row-height) + 1px);
   height: max(9px, calc(var(--duration) * var(--row-height) - 2px));
   min-height: 0;
@@ -8395,13 +8396,18 @@ button.free-block:not(:disabled):active {
 
 .event-card.event-15 .event-line-compact,
 .busy-card.event-15 .busy-line-compact {
-  padding-right: 0;
+  padding-right: calc(var(--inline-time-space) + 6px);
 }
 
 @container (max-width: 190px) {
   .event-card .event-line:not(.event-line-meta),
   .busy-card .busy-line:not(.busy-line-time) {
     padding-right: 0;
+  }
+
+  .event-card.event-15 .event-line-compact,
+  .busy-card.event-15 .busy-line-compact {
+    padding-right: calc(var(--inline-time-space) + 4px);
   }
 
   .event-card:not(.event-15):not(.event-30) .event-line-meta,
