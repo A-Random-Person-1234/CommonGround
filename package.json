@@ -9,7 +9,7 @@
   },
   "scripts": {
     "start": "node server.js",
-    "check": "node --check server.js && node --check weather-forecast.js && node --check command-centre-date-time.js && node --check command-centre-parser.js && node --check command-centre-scheduling.js && node --check public/date-picker.js && node --check public/app.js && node --check public/command-centre-actions.js && node --check public/command-centre-predictor.js && node --check public/command-centre.js && node --check tests/weather-forecast.mjs && node --check tests/command-centre.mjs && node --check tests/command-centre-integration.mjs && node --check tests/smoke.mjs",
+    "check": "node --check server.js && node --check weather-forecast.js && node --check command-centre-date-time.js && node --check command-centre-parser.js && node --check command-centre-scheduling.js && node --check public/theme-bootstrap.js && node --check public/date-picker.js && node --check public/app.js && node --check public/command-centre-actions.js && node --check public/command-centre-predictor.js && node --check public/command-centre.js && node --check tests/weather-forecast.mjs && node --check tests/command-centre.mjs && node --check tests/command-centre-integration.mjs && node --check tests/smoke.mjs",
     "build": "npm run check",
     "test:command-centre": "node tests/command-centre.mjs",
     "test:weather": "node tests/weather-forecast.mjs",
