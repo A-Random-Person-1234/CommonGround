@@ -38,6 +38,42 @@ final result: passed
 
 ---
 
+# CommonGround simultaneous-overlap lane QA — 2026-08-06
+
+## Evidence and state
+
+- Source visual truth: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-ec83d4d3-47fd-451c-80b0-4a122ac173f2.png`
+- Regressed live state: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-96ae4762-71bf-456d-bf56-1b9012b32aec.png`
+- Browser-rendered implementation: `http://127.0.0.1:3000/room/BHXHGR`, refreshed with `styles.css?v=20260806-overlap-lanes` and `app.js?v=20260806-overlap-lanes`.
+- Viewport: 1280 x 720 CSS px; dark weekly room calendar; device scale factor 1.
+
+## Findings and correction history
+
+1. **P1 — two foreground events shared nearly the same full-width card area.** In a three-event collision (one long anchor plus two short foreground events), the foreground cards used 94% and 88.5% of a day column. Their text therefore covered one another and could appear hidden.
+   - Fix: retain the long card as the full-width background anchor. One foreground event keeps a 94% broad lane; two or more simultaneous foreground events divide the available foreground region into separate side-by-side lanes with a visible gutter.
+2. **Post-fix geometry:** in an anchor-plus-two conflict, the foreground cards now occupy `4% / 45.75%` and `52.25% / 45.75%` of the column. They no longer cover each other.
+
+## Required fidelity surfaces
+
+- **Fonts and typography:** passed. Existing title-first hierarchy and compact truncation remain, while each simultaneous foreground card receives its own reading lane.
+- **Spacing and layout rhythm:** passed. The reference's independent short-event cards are reproduced through fixed lane gaps rather than layered near-full-width cards.
+- **Colors and visual tokens:** passed. CommonGround Bordeaux and dark-grid tokens remain unchanged.
+- **Image quality and asset fidelity:** passed. No visual asset was replaced or introduced.
+- **Copy and content:** passed. Individual event titles/times remain separate DOM elements; no `+N` aggregation or hiding occurs.
+
+## Verification
+
+- Browser reload confirmed the new cache-busted application and stylesheet assets, with no console errors.
+- Overlap unit coverage now checks one wide foreground lane and two side-by-side foreground lanes.
+- `npm.cmd test`: passed.
+- `npm.cmd run check`: passed.
+
+No actionable P0, P1, or P2 differences remain for the overlap-lane behavior.
+
+final result: passed
+
+---
+
 # CommonGround overlap-card typography and location QA — 2026-08-06
 
 ## Evidence and state
