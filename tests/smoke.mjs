@@ -322,19 +322,19 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260806-day-blocks"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260806-event-card-layout"/);
   assert.match(home.text, /src="\/theme-bootstrap\.js\?v=20260804-persisted-theme"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260806-day-blocks"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260806-event-card-layout"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260805-whole-product"/);
   assertInOrder(
     home.text,
     [
       'src="/theme-bootstrap.js?v=20260804-persisted-theme"',
-      'href="/styles.css?v=20260806-day-blocks"',
+      'href="/styles.css?v=20260806-event-card-layout"',
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260806-day-blocks"'
+      'src="/app.js?v=20260806-event-card-layout"'
     ],
     "The CSP-safe theme bootstrap must precede CSS, and the date picker must precede the app controller"
   );
@@ -2030,6 +2030,11 @@ try {
   );
   assert.match(
     eventComposerScript.text,
+    /function calendarLocationLabel\(location\)[\s\S]*?source\.split\(\/\[,;\|\]\/, 1\)[\s\S]*?slice\(0, 3\)\.join\(" "\)[\s\S]*?const locationLabel = calendarLocationLabel\(item\.location\)[\s\S]*?appendLine\("event-line-location", locationLabel\)/,
+    "Calendar cards must use a concise venue label instead of overflowing full address text"
+  );
+  assert.match(
+    eventComposerScript.text,
     /block\.setAttribute\("aria-label", \[fullDateLabel, ownerLabel, item\.title \|\| "Event", timeRange\]\.filter\(Boolean\)\.join\(", "\)\)/,
     "Manual event cards must include their full date, creator, title, and time in the accessible name"
   );
@@ -2119,7 +2124,7 @@ try {
     "A short clash must sit in a separate lane above the full-width long event"
   );
   assertLaneGeometry(2, 0, 0, 1, "Two-event anchor");
-  assertLaneGeometry(2, 1, 0.045, 0.955, "Two-event foreground card");
+  assertLaneGeometry(2, 1, 0.04, 0.94, "Two-event foreground card");
 
   const denseClashLayout = overlapHelpers.layoutEventLanes([
     { id: "long", laneKind: "event", startHour: 9, endHour: 17 },
@@ -2135,8 +2140,8 @@ try {
     ],
     "Simultaneous foreground clashes must receive separate readable lanes"
   );
-  assertLaneGeometry(3, 1, 0.045, 0.955, "First three-event foreground card");
-  assertLaneGeometry(3, 2, 0.12, 0.88, "Second three-event foreground card");
+  assertLaneGeometry(3, 1, 0.04, 0.94, "First three-event foreground card");
+  assertLaneGeometry(3, 2, 0.095, 0.885, "Second three-event foreground card");
 
   const sourceNeutralSnapshot = (items) => overlapHelpers.layoutEventLanes(items)
     .map(({ id, laneIndex, laneCount, overlapRole }) => ({ id, laneIndex, laneCount, overlapRole }));
@@ -2171,8 +2176,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function calendarLaneGeometry\(laneCount = 1, laneIndex = 0\)[\s\S]*?leftFraction: 0,[\s\S]*?widthFraction: 1[\s\S]*?const overlayLaneCount = safeLaneCount - 1;[\s\S]*?0\.045 \+ \(0\.075 \* progress\)[\s\S]*?Math\.max\(0\.82, 1 - leftFraction\)/,
-    "Foreground clashes must cascade with a small inset while retaining at least eighty-two percent of the day column"
+    /function calendarLaneGeometry\(laneCount = 1, laneIndex = 0\)[\s\S]*?leftFraction: 0,[\s\S]*?widthFraction: 1[\s\S]*?Math\.min\(0\.14, 0\.04 \+ \(\(safeLaneIndex - 1\) \* 0\.055\)\)[\s\S]*?rightFraction = 0\.02[\s\S]*?Math\.max\(0\.84, 1 - leftFraction - rightFraction\)/,
+    "Foreground clashes must cascade with a small inset while retaining at least eighty-four percent of the day column"
   );
   assert.match(
     eventComposerScript.text,
@@ -3529,7 +3534,7 @@ try {
     assert.match(legalPage.text, /<link rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png\?v=20260724-appicon-new" \/>/);
     assert.match(legalPage.text, /<img class="mark app-brand-icon" src="\/icons\/icon-192\.png\?v=20260724-appicon-new" alt="" width="46" height="46" \/>/);
     assert.match(legalPage.text, /<script src="\/theme-bootstrap\.js\?v=20260804-persisted-theme" data-sync-server="true"><\/script>/);
-    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260806-day-blocks" \/>/);
+    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260806-event-card-layout" \/>/);
     assert.doesNotMatch(
       legalPage.text,
       /<script(?![^>]*\bsrc=)[^>]*>/i,

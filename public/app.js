@@ -3914,6 +3914,16 @@ function normalizedTextKey(value) {
   return String(value || "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function calendarLocationLabel(location) {
+  const source = String(location || "").trim().replace(/\s+/g, " ");
+  if (!source) return "";
+
+  // Prefer the venue/main name before address fragments, then cap the visible
+  // label at three words so calendar cards stay scannable in overlap stacks.
+  const primary = source.split(/[,;|]/, 1)[0].trim() || source;
+  return primary.split(/\s+/).filter(Boolean).slice(0, 3).join(" ");
+}
+
 function ownBusyLabel(participant) {
   const ownerKey = normalizedTextKey(participant.ownerName);
   const titles = [...new Set(
@@ -5258,15 +5268,13 @@ function calendarLaneGeometry(laneCount = 1, laneIndex = 0) {
     };
   }
 
-  const overlayLaneCount = safeLaneCount - 1;
-  const progress = overlayLaneCount === 1
-    ? 0
-    : (safeLaneIndex - 1) / Math.max(1, overlayLaneCount - 1);
-  const leftFraction = overlayLaneCount === 1
-    ? 0.045
-    : 0.045 + (0.075 * progress);
-  const rightFraction = 0;
-  const widthFraction = Math.max(0.82, 1 - leftFraction);
+  // Keep the long event as the full-width anchor, then cascade overlapping
+  // cards with a gentle inset. This preserves enough horizontal space for
+  // title, time, and location instead of collapsing foreground events into
+  // unreadable slivers.
+  const leftFraction = Math.min(0.14, 0.04 + ((safeLaneIndex - 1) * 0.055));
+  const rightFraction = 0.02;
+  const widthFraction = Math.max(0.84, 1 - leftFraction - rightFraction);
 
   return {
     laneCount: safeLaneCount,
@@ -5625,7 +5633,7 @@ function createSingleBusyCard(segment, dayIndex) {
   const timeRange = coversVisibleDay ? "All day" : formatEventRange(segment.startHour, segment.endHour);
   const titleLabel = normalizedTextKey(visibilityLabel) === normalizedTextKey(ownerLabel) ? "" : visibilityLabel;
   const titleText = titleLabel || (isOwnBlock ? "(No title)" : "Busy");
-  const locationLabel = isOwnBlock ? String(singleItem?.location || "").trim() : "";
+  const locationLabel = isOwnBlock ? calendarLocationLabel(singleItem?.location) : "";
   const participantLabel = isOwnBlock ? "" : ownerLabel;
   const compactLine = [ownerLabel, titleLabel].filter(Boolean).join(" · ");
   const tooltip = [ownerLabel, titleLabel || (isOwnBlock ? "No title" : "Busy"), timeRange].filter(Boolean).join(" · ");
@@ -5890,6 +5898,7 @@ function createEventBlock(item, dayIndex, dayDate) {
   block.title = tooltip;
   const titleText = item.title === "No title" ? "(No title)" : (item.title || "(No title)");
   const participantLabel = isOwnedByViewer ? "" : ownerLabel;
+  const locationLabel = calendarLocationLabel(item.location);
   const compactPrefix = [ownerLabel, titleText].filter(Boolean).join(" · ");
   const compactMeta = [timeRange, item.location].filter(Boolean).join(" · ");
 
@@ -5907,10 +5916,10 @@ function createEventBlock(item, dayIndex, dayDate) {
     configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
   } else if (durationClass === "event-45") {
     configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
-    appendLine("event-line-location", item.location || "");
+    appendLine("event-line-location", locationLabel);
   } else {
     configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
-    appendLine("event-line-location", item.location || "");
+    appendLine("event-line-location", locationLabel);
     appendLine("event-line-participant", participantLabel);
   }
 

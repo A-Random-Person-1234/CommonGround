@@ -38,6 +38,45 @@ final result: passed
 
 ---
 
+# CommonGround overlap-card typography and location QA — 2026-08-06
+
+## Evidence and state
+
+- Source visual truth: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-f877bb3e-2b78-4a84-9c87-6f4380f2ca2d.png`
+- Earlier broken state: `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-117af8d6-5af8-477c-a1a6-cd3734ee376d.png`
+- Browser-rendered implementation: `http://127.0.0.1:3000/room/BHXHGR` (captured in the Codex in-app browser after the `20260806-event-card-layout` asset refresh).
+- Comparison fixture: `C:\Users\aryan\Documents\Codex\2026-07-17\do\publish-event-owner-theme-full-20260805\.tmp-visual\readable-overlap-comparison.png`
+- Viewport: 1280 x 720 CSS px, dark weekly calendar, device scale factor 1.
+- State: long primary event with one or more shorter overlapping events; own-user card with a venue/address field.
+
+## Comparison history
+
+1. **P1 — foreground overlap cards were visually compressed.** The earlier live state rendered short conflicts as pill-like cards, cutting off their titles and making the relationship to the long event hard to read.
+   - Fix: retained the long card as the full-width anchor and changed foreground lanes to a gentle 4%/9.5% cascade with a guaranteed 84%+ readable width.
+2. **P2 — supporting text varied across title, time, and location.** Full locations also made dense cards hard to scan.
+   - Fix: title is the only bold treatment; time and location use the same 11 px, medium-weight, shared-opacity rule. Location now prefers the venue before a comma and limits the visible label to three words.
+3. **Post-fix evidence:** the refreshed local room capture presents broad, separately bordered overlay cards. The runtime renderer and smoke checks confirm title-first ordering, time/location parity, and concise venue labels.
+
+## Required fidelity surfaces
+
+- **Fonts and typography:** passed. Titles are bold; time and location share font size, weight, line-height, and opacity. Compact 15/30-minute cards retain the time on the right without shrinking title copy below legibility.
+- **Spacing and layout rhythm:** passed. Overlays remain broad enough to read, use a small cascade rather than a narrow split, and preserve the long event as the background surface.
+- **Colors and visual tokens:** passed. Existing CommonGround Bordeaux cards and dark grid are retained; this change does not import the reference's blue palette.
+- **Image quality and asset fidelity:** passed. The scoped card change introduces no image or icon substitutions.
+- **Copy and content:** passed. A long address such as `Ilona Rose House, Manette St, London` is shown as `Ilona Rose House`; a non-delimited venue is capped at its first three words.
+
+## Verification
+
+- `npm.cmd test`: passed.
+- `npm.cmd run check`: passed.
+- Browser refresh completed against the cache-busted `20260806-event-card-layout` assets.
+
+No actionable P0, P1, or P2 differences remain for the requested card layout, text hierarchy, and location truncation.
+
+final result: passed
+
+---
+
 # CommonGround duration-aware event-card design QA
 
 - Source visual truth (current incorrect hierarchy): `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-143121b9-7ecb-43f4-bdc5-533b3ac91fb7.png`
