@@ -5268,13 +5268,20 @@ function calendarLaneGeometry(laneCount = 1, laneIndex = 0) {
     };
   }
 
-  // Keep the long event as the full-width anchor, then cascade overlapping
-  // cards with a gentle inset. This preserves enough horizontal space for
-  // title, time, and location instead of collapsing foreground events into
-  // unreadable slivers.
-  const leftFraction = Math.min(0.14, 0.04 + ((safeLaneIndex - 1) * 0.055));
-  const rightFraction = 0.02;
-  const widthFraction = Math.max(0.84, 1 - leftFraction - rightFraction);
+  // A single foreground clash can sit broadly over its full-width anchor.
+  // When two or more foreground events overlap at the same time, give those
+  // cards distinct side-by-side lanes. Stacking near-full-width cards made
+  // their titles and times obscure one another.
+  const foregroundLaneCount = safeLaneCount - 1;
+  const foregroundLaneIndex = safeLaneIndex - 1;
+  const outerInset = 0.04;
+  const innerGap = 0.025;
+  const availableWidth = 1 - outerInset - 0.02 - (Math.max(0, foregroundLaneCount - 1) * innerGap);
+  const widthFraction = foregroundLaneCount === 1
+    ? availableWidth
+    : availableWidth / foregroundLaneCount;
+  const leftFraction = outerInset + (foregroundLaneIndex * (widthFraction + innerGap));
+  const rightFraction = Math.max(0, 1 - leftFraction - widthFraction);
 
   return {
     laneCount: safeLaneCount,
