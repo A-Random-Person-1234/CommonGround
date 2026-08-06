@@ -15124,3 +15124,165 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
     transition-duration: 1ms !important;
   }
 }
+
+/* Duration-aware busy-card hierarchy. The event title is always the primary
+   label; time and location step down in prominence, while another member's
+   name is reserved for cards with enough vertical and horizontal room. */
+#roomPage :is(.event-card, .busy-card) {
+  --event-card-compact-time-width: min(46%, 112px);
+}
+
+#roomPage :is(.event-card, .busy-card) :is(.event-line, .busy-line) {
+  min-width: 0;
+  max-width: 100%;
+  padding-right: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#roomPage :is(.event-card .event-line-title, .busy-card .busy-line-title) {
+  color: var(--resolved-event-ink);
+  font-weight: 800;
+}
+
+#roomPage :is(.event-card .event-line-meta, .busy-card .busy-line-time) {
+  color: color-mix(in srgb, var(--resolved-event-ink) 82%, transparent);
+  font-weight: 650;
+}
+
+#roomPage :is(.event-card .event-line-location, .busy-card .busy-line-location) {
+  color: color-mix(in srgb, var(--resolved-event-ink) 70%, transparent);
+  font-weight: 560;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-15, .event-30) {
+  padding: 3px 7px;
+  gap: 0;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-15, .event-30)
+  :is(.event-line-title, .busy-line-title) {
+  display: block;
+  padding-right: calc(var(--event-card-compact-time-width) + 5px);
+  font-size: 10.5px;
+  line-height: 1.15;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-15, .event-30)
+  :is(.event-line-meta, .busy-line-time) {
+  position: absolute;
+  top: 3px;
+  right: 7px;
+  display: block !important;
+  width: var(--event-card-compact-time-width);
+  max-width: var(--event-card-compact-time-width);
+  padding: 0;
+  font-size: 9.5px;
+  line-height: 1.15;
+  text-align: right;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-15, .event-30)
+  :is(.event-line-location, .event-line-participant, .busy-line-location, .busy-line-participant) {
+  display: none !important;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-45, .event-60plus) {
+  padding: 5px 8px;
+  gap: 1px;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-45, .event-60plus)
+  :is(.event-line, .busy-line) {
+  position: static;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  text-align: left;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-45, .event-60plus)
+  :is(.event-line-title, .busy-line-title) {
+  font-size: 11.5px;
+  line-height: 1.14;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-45, .event-60plus)
+  :is(.event-line-meta, .busy-line-time) {
+  font-size: 10px;
+  line-height: 1.12;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-45, .event-60plus)
+  :is(.event-line-location, .busy-line-location) {
+  display: block;
+  font-size: 9.5px;
+  line-height: 1.1;
+}
+
+#roomPage :is(.event-card, .busy-card).event-45
+  :is(.event-line-participant, .busy-line-participant) {
+  display: none !important;
+}
+
+#roomPage :is(.event-card, .busy-card).event-60plus
+  :is(.event-line-participant, .busy-line-participant) {
+  position: absolute;
+  right: 8px;
+  bottom: 5px;
+  display: block;
+  width: auto;
+  max-width: calc(100% - 16px);
+  padding: 0;
+  color: color-mix(in srgb, var(--resolved-event-ink) 74%, transparent);
+  font-size: 9.5px;
+  font-weight: 650;
+  line-height: 1.1;
+  text-align: right;
+}
+
+@container (max-width: 108px) {
+  #roomPage :is(.event-card, .busy-card).event-60plus
+    :is(.event-line-participant, .busy-line-participant) {
+    display: none;
+  }
+}
+
+/* Personal all-day availability overrides. */
+#roomPage #sidebarBlockDayButton.is-active {
+  background: color-mix(in srgb, var(--brand-strong) 12%, transparent);
+  color: var(--brand-strong);
+}
+
+#roomPage #sidebarBlockDayButton.is-active .sidebar-create-item-icon {
+  color: var(--brand-strong);
+}
+
+#roomPage :is(.mini-calendar-day, .year-view .mini-day).is-blocked-by-you {
+  position: relative;
+}
+
+#roomPage :is(.mini-calendar-day, .year-view .mini-day).is-blocked-by-you::after {
+  position: absolute;
+  left: 50%;
+  bottom: 2px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--brand-strong);
+  content: "";
+  transform: translateX(-50%);
+}
+
+#roomPage .day-block-chip {
+  border-color: color-mix(in srgb, var(--event-color) 66%, transparent);
+  background: color-mix(in srgb, var(--event-color) 24%, var(--shell-canvas));
+  font-weight: 700;
+}
+
+#roomPage .day-block-remove-button {
+  width: 100%;
+  margin-top: 10px;
+}

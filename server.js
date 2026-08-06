@@ -15,7 +15,8 @@ import {
 } from "./command-centre-scheduling.js";
 import {
   addDateKeyDays,
-  dateKeyInZone
+  dateKeyInZone,
+  dateRangeForKey
 } from "./command-centre-date-time.js";
 import {
   sanitizeGoogleDailyForecast,
@@ -870,6 +871,20 @@ function normalizeEventRecord(event = {}) {
   };
 }
 
+function normalizeDayBlockRecord(block = {}) {
+  const date = String(block.date || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  if (dateKeyInZone(`${date}T12:00:00.000Z`, "UTC") !== date) return null;
+  const participantId = String(block.participantId || "").trim();
+  if (!participantId) return null;
+  return {
+    participantId,
+    date,
+    createdAt: block.createdAt || nowIso(),
+    updatedAt: block.updatedAt || block.createdAt || nowIso()
+  };
+}
+
 function normalizeJoinRequestRecord(request = {}) {
   const source = ["google", "microsoft"].includes(request.source) ? request.source : "guest";
   return {
@@ -926,6 +941,9 @@ function normalizeRoomRecord(room = {}) {
     joinRequests: (room.joinRequests || []).map(normalizeJoinRequestRecord),
     participants,
     events: (room.events || []).map(normalizeEventRecord),
+    dayBlocks: (room.dayBlocks || room.availabilityOverrides || [])
+      .map(normalizeDayBlockRecord)
+      .filter(Boolean),
     structureVersion: Math.max(Number(room.structureVersion || 0), 3),
     createdAt: room.createdAt || nowIso(),
     updatedAt: room.updatedAt || nowIso()
@@ -1990,6 +2008,10 @@ function replaceParticipantReferences(room, fromParticipantId, toParticipantId) 
     ));
   }
 
+  for (const block of room.dayBlocks || []) {
+    if (block.participantId === fromParticipantId) block.participantId = toParticipantId;
+  }
+
   for (const notification of store.notifications || []) {
     if (notification.roomCode !== room.code) continue;
     if (notification.recipientParticipantId === fromParticipantId) {
@@ -2471,6 +2493,21 @@ function roomPublic(room, session, user, viewerParticipantId = null) {
       isCurrent: participant.sessionIds?.includes(session.id) || participant.sessionId === session.id
     })),
     events: room.events.map((event) => publicEvent(event, room, viewerParticipantId)),
+    dayBlocks: (room.dayBlocks || [])
+      .map((block) => {
+        const participant = findParticipantById(room, block.participantId);
+        if (!participant) return null;
+        return {
+          participantId: participant.id,
+          displayName: participant.displayName,
+          color: participant.color,
+          date: block.date,
+          isCurrent: participant.id === viewerParticipantId,
+          createdAt: block.createdAt,
+          updatedAt: block.updatedAt
+        };
+      })
+      .filter(Boolean),
     createdAt: room.createdAt,
     updatedAt: room.updatedAt
   };
@@ -4050,16 +4087,39 @@ function commandRoomEventBusyIntervals(room, participantIds, rangeStart, rangeEn
   return intervals;
 }
 
+function commandRoomDayBlockBusyIntervals(room, participantIds, rangeStart, rangeEnd, timezone = "UTC") {
+  const selected = new Set(participantIds);
+  const lower = new Date(rangeStart).getTime();
+  const upper = new Date(rangeEnd).getTime();
+  const intervals = [];
+  for (const block of room.dayBlocks || []) {
+    if (!selected.has(block.participantId)) continue;
+    const range = dateRangeForKey(block.date, timezone);
+    if (range.start.getTime() >= upper || range.end.getTime() <= lower) continue;
+    intervals.push({
+      start: range.start.toISOString(),
+      end: range.end.toISOString(),
+      participantId: block.participantId,
+      source: "day_block"
+    });
+  }
+  return intervals;
+}
+
 async function collectCommandBusyIntervals(room, participantIds, rangeStart, rangeEnd, viewerParticipantId, {
-  excludeEventId = null
+  excludeEventId = null,
+  timezone = "UTC"
 } = {}) {
-  const busyIntervals = commandRoomEventBusyIntervals(
-    room,
-    participantIds,
-    rangeStart,
-    rangeEnd,
-    { excludeEventId }
-  );
+  const busyIntervals = [
+    ...commandRoomEventBusyIntervals(
+      room,
+      participantIds,
+      rangeStart,
+      rangeEnd,
+      { excludeEventId }
+    ),
+    ...commandRoomDayBlockBusyIntervals(room, participantIds, rangeStart, rangeEnd, timezone)
+  ];
   const unavailableParticipantIds = [];
   const providerErrors = [];
 
@@ -4183,7 +4243,7 @@ async function commandAvailability(auth, input, {
     input.rangeStart,
     input.rangeEnd,
     auth.participant.id,
-    { excludeEventId }
+    { excludeEventId, timezone: input.timezone }
   );
   if (!collection.complete) {
     return {
@@ -4217,7 +4277,7 @@ async function revalidateCommandEventTime(auth, eventFields, participantIds, {
     eventFields.start,
     eventFields.end,
     auth.participant.id,
-    { excludeEventId }
+    { excludeEventId, timezone: eventFields.timezone || "UTC" }
   );
   if (!collection.complete) {
     const error = httpError(503, "Calendar availability could not be confirmed. Try again shortly.");
@@ -4406,6 +4466,7 @@ const server = http.createServer(async (req, res) => {
   const roomRefreshCodeMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/refresh-code$/);
   const roomParticipantPatchMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/participants\/([^/]+)$/);
   const roomParticipantDeleteMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/participants\/([^/]+)$/);
+  const roomDayBlockMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/day-blocks\/(\d{4}-\d{2}-\d{2})$/);
   const roomFreeBusyMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/freebusy$/);
   const roomPlacesAutocompleteMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/places\/autocomplete$/);
   const roomWeatherForecastMatch = url.pathname.match(/^\/api\/rooms\/([^/]+)\/weather\/forecast$/);
@@ -4802,6 +4863,7 @@ const server = http.createServer(async (req, res) => {
         joinRequests: [],
         participants: [],
         events: [],
+        dayBlocks: [],
         createdAt: time,
         updatedAt: time
       };
@@ -5626,6 +5688,48 @@ const server = http.createServer(async (req, res) => {
           start: updatedRange.start.toISOString(),
           end: updatedRange.end.toISOString()
         }
+      });
+      return;
+    }
+
+    if (roomDayBlockMatch) {
+      if (!["POST", "DELETE"].includes(req.method)) {
+        sendMethodNotAllowed(res, ["POST", "DELETE"]);
+        return;
+      }
+      const auth = requireExistingRoomParticipant(req, res, roomDayBlockMatch[1]);
+      if (!auth) return;
+      if (!enforceRateLimit(req, res, "day-block", 120, 60 * 60 * 1000, auth.participant.id)) return;
+      const blockDate = roomDayBlockMatch[2];
+      if (dateKeyInZone(`${blockDate}T12:00:00.000Z`, "UTC") !== blockDate) {
+        sendJson(res, 400, { error: "Date must use a valid YYYY-MM-DD value." });
+        return;
+      }
+      auth.room.dayBlocks = auth.room.dayBlocks || [];
+      if (req.method === "POST") {
+        const existing = auth.room.dayBlocks.find((block) => (
+          block.participantId === auth.participant.id && block.date === blockDate
+        ));
+        if (!existing) {
+          const time = nowIso();
+          auth.room.dayBlocks.push({
+            participantId: auth.participant.id,
+            date: blockDate,
+            createdAt: time,
+            updatedAt: time
+          });
+        }
+      } else {
+        auth.room.dayBlocks = auth.room.dayBlocks.filter((block) => !(
+          block.participantId === auth.participant.id && block.date === blockDate
+        ));
+      }
+      auth.room.updatedAt = nowIso();
+      saveStore();
+      sendJson(res, 200, {
+        ...buildRoomResponse(auth.room, auth.session, auth.participant),
+        blocked: req.method === "POST",
+        date: blockDate
       });
       return;
     }

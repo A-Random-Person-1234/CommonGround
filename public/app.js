@@ -184,6 +184,8 @@ const addEventButton = document.querySelector("#addEventButton");
 const sidebarCreateMenu = document.querySelector("#sidebarCreateMenu");
 const sidebarCreatePopover = document.querySelector("#sidebarCreatePopover");
 const sidebarCreateEventButton = document.querySelector("#sidebarCreateEventButton");
+const sidebarBlockDayButton = document.querySelector("#sidebarBlockDayButton");
+const sidebarBlockDayLabel = document.querySelector("#sidebarBlockDayLabel");
 const sidebarCreateRoomButton = document.querySelector("#sidebarCreateRoomButton");
 const sidebarJoinRoomButton = document.querySelector("#sidebarJoinRoomButton");
 const copyInviteButton = document.querySelector("#copyInviteButton");
@@ -895,10 +897,14 @@ function renderMiniCalendar() {
       "mini-calendar-day",
       date.getMonth() !== monthStart.getMonth() ? "is-outside-month" : "",
       sameDate(date, today) ? "is-today" : "",
-      sameDate(date, currentFocusDate) ? "is-selected" : ""
+      sameDate(date, currentFocusDate) ? "is-selected" : "",
+      currentParticipantDayBlock(date) ? "is-blocked-by-you" : ""
     ].filter(Boolean).join(" ");
     button.textContent = String(date.getDate());
-    button.setAttribute("aria-label", `Open week of ${formatFullDate(date)}`);
+    button.setAttribute(
+      "aria-label",
+      `${currentParticipantDayBlock(date) ? "Busy all day. " : ""}Open week of ${formatFullDate(date)}`
+    );
     if (sameDate(date, currentFocusDate)) button.setAttribute("aria-current", "date");
     button.addEventListener("click", async () => {
       miniCalendarCursor = new Date(date.getFullYear(), date.getMonth(), 1);
@@ -915,6 +921,36 @@ function formatFullDate(date) {
     day: "numeric",
     year: "numeric"
   }).format(date);
+}
+
+function dayBlocksForDate(date, { visibleOnly = true } = {}) {
+  const key = typeof date === "string" ? date : dateKey(date);
+  const visibleIds = visibleOnly ? visibleParticipantIds() : null;
+  return (currentRoom?.dayBlocks || []).filter((block) => (
+    block.date === key && (!visibleIds || visibleIds.has(block.participantId))
+  ));
+}
+
+function currentParticipantDayBlock(date = currentFocusDate) {
+  if (!currentParticipant?.id) return null;
+  return dayBlocksForDate(date, { visibleOnly: false })
+    .find((block) => block.participantId === currentParticipant.id) || null;
+}
+
+function renderDayBlockControls() {
+  if (!sidebarBlockDayButton || !sidebarBlockDayLabel) return;
+  const blocked = Boolean(currentParticipantDayBlock());
+  const fullDate = formatFullDate(currentFocusDate);
+  sidebarBlockDayButton.setAttribute("aria-pressed", String(blocked));
+  sidebarBlockDayButton.classList.toggle("is-active", blocked);
+  sidebarBlockDayLabel.textContent = blocked ? "Make day available" : "Block day";
+  sidebarBlockDayButton.setAttribute(
+    "aria-label",
+    blocked ? `Make ${fullDate} available` : `Mark ${fullDate} busy all day`
+  );
+  sidebarBlockDayButton.title = blocked
+    ? `Remove your all-day busy block for ${fullDate}`
+    : `Show that you are busy all day on ${fullDate}`;
 }
 
 function formatDayHeader(day) {
@@ -3278,8 +3314,11 @@ function participantCalendarVisible(participantId) {
 }
 
 function visibleParticipantIds() {
-  const connectedIds = connectedParticipants().map((participant) => participant.id);
-  return new Set(connectedIds.filter((id) => participantCalendarVisible(id)));
+  // Calendar visibility is a room-level preference, not a Google connection
+  // filter. A participant can block a day before connecting a provider, and
+  // that availability override must still render and affect suggestions.
+  const participantIds = (currentRoom?.participants || []).map((participant) => participant.id);
+  return new Set(participantIds.filter((id) => participantCalendarVisible(id)));
 }
 
 function roomInitials(room = {}) {
@@ -4542,6 +4581,36 @@ function setDetailTitleEditing(editing) {
   detailTitleField?.classList.toggle("hidden", !editing);
 }
 
+async function setDayBlocked(date, blocked) {
+  if (!currentRoom || !currentParticipant) return;
+  const key = typeof date === "string" ? date : dateKey(date);
+  const data = await fetchJson(`/api/rooms/${currentRoom.code}/day-blocks/${key}`, {
+    method: blocked ? "POST" : "DELETE"
+  });
+  currentRoom = data.room;
+  currentParticipant = data.participant;
+  currentIsHost = Boolean(data.isHost);
+  selectedBusyGroup = null;
+  render();
+  calendarStatus.textContent = blocked
+    ? `${formatFullDate(new Date(`${key}T12:00:00`))} is now busy all day.`
+    : `${formatFullDate(new Date(`${key}T12:00:00`))} is available again.`;
+}
+
+async function toggleFocusedDayBlock() {
+  const key = dateKey(currentFocusDate);
+  const blocked = Boolean(currentParticipantDayBlock(key));
+  if (sidebarBlockDayButton) sidebarBlockDayButton.disabled = true;
+  try {
+    await setDayBlocked(key, !blocked);
+  } catch (error) {
+    calendarStatus.textContent = error.message || "The day could not be updated.";
+  } finally {
+    if (sidebarBlockDayButton) sidebarBlockDayButton.disabled = false;
+    renderDayBlockControls();
+  }
+}
+
 function openBusyDetail(group) {
   if (activeEventTimePicker?.context === "detail") closeEventTimePicker();
   setPanelVisibility(detailPanel, true);
@@ -4594,6 +4663,22 @@ function openBusyDetail(group) {
           const description = document.createElement("p");
           description.textContent = busyItem.description;
           sub.appendChild(description);
+        }
+        if (busyItem.provider === "commonground_day_block" && busyItem.date) {
+          const removeButton = document.createElement("button");
+          removeButton.type = "button";
+          removeButton.className = "secondary day-block-remove-button";
+          removeButton.textContent = "Make this day available";
+          removeButton.addEventListener("click", async () => {
+            removeButton.disabled = true;
+            try {
+              await setDayBlocked(busyItem.date, false);
+            } catch (error) {
+              removeButton.disabled = false;
+              calendarStatus.textContent = error.message || "The day could not be updated.";
+            }
+          });
+          sub.appendChild(removeButton);
         }
         section.appendChild(sub);
       }
@@ -4882,12 +4967,40 @@ function normalizeBusyBlocks(blocks = []) {
   });
 }
 
+function roomDayBlockBusyBlocks() {
+  return (currentRoom?.dayBlocks || []).map((block) => {
+    const start = new Date(`${block.date}T00:00:00`);
+    const end = addDays(start, 1);
+    const participant = currentRoom?.participants?.find((entry) => entry.id === block.participantId);
+    const ownerName = participant?.displayName || block.displayName || "Participant";
+    const color = participant?.color || block.color || participantPalette[0].value;
+    const sourceId = `day-block:${block.participantId}:${block.date}`;
+    return {
+      participantId: block.participantId,
+      ownerId: block.participantId,
+      ownerName,
+      color,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      items: [{
+        provider: "commonground_day_block",
+        sourceId,
+        title: "Busy all day",
+        start: start.toISOString(),
+        end: end.toISOString(),
+        date: block.date,
+        editable: block.participantId === currentParticipant?.id
+      }]
+    };
+  });
+}
+
 function buildBusyDayBlocks() {
   const byDay = new Map();
   const visibleIds = visibleParticipantIds();
   const seenDayKeys = new Set();
 
-  for (const block of normalizeBusyBlocks(googleBusy)) {
+  for (const block of normalizeBusyBlocks([...googleBusy, ...roomDayBlockBusyBlocks()])) {
     if (!visibleIds.has(block.participantId)) continue;
     const start = new Date(block.start);
     const end = new Date(block.end);
@@ -5441,6 +5554,8 @@ function handleOutsideFloatingSurfaceClick(event) {
 function createSingleBusyCard(segment, dayIndex) {
   const participant = segment.participants[0];
   const isOwnBlock = participant.participantId === currentParticipant?.id;
+  const singleItem = participant.items?.length === 1 ? participant.items[0] : null;
+  const dayBlockItem = singleItem?.provider === "commonground_day_block" ? singleItem : null;
   const googleItem = participant.items?.length === 1 &&
     participant.items[0]?.provider === "google" &&
     participant.items[0]?.editable === true
@@ -5477,6 +5592,7 @@ function createSingleBusyCard(segment, dayIndex) {
     isOverlapAnchor ? "busy-overlap-anchor" : "",
     isOverlapOverlay ? "busy-overlap-lane" : "",
     laneSizeClass,
+    dayBlockItem ? "day-block-card" : "",
     canMove ? "can-move" : ""
   ].filter(Boolean).join(" ");
   block.dataset.canMove = String(canMove);
@@ -5486,6 +5602,7 @@ function createSingleBusyCard(segment, dayIndex) {
   block.dataset.eventStart = googleItem?.start || "";
   block.dataset.eventEnd = googleItem?.end || "";
   block.dataset.eventDate = dateKey(segment.date);
+  block.dataset.dayBlockDate = dayBlockItem?.date || "";
   block.dataset.dayIndex = String(dayIndex);
   block.dataset.startMinute = String(Math.round((segment.startHour - calendarStartHour) * 60));
   block.dataset.durationMinute = String(Math.max(
@@ -5507,7 +5624,9 @@ function createSingleBusyCard(segment, dayIndex) {
   const coversVisibleDay = duration >= (calendarEndHour - calendarStartHour) - 0.001;
   const timeRange = coversVisibleDay ? "All day" : formatEventRange(segment.startHour, segment.endHour);
   const titleLabel = normalizedTextKey(visibilityLabel) === normalizedTextKey(ownerLabel) ? "" : visibilityLabel;
-  const compactLine = [ownerLabel, titleLabel].filter(Boolean).join(" · ");
+  const titleText = titleLabel || (isOwnBlock ? "(No title)" : "Busy");
+  const locationLabel = isOwnBlock ? String(singleItem?.location || "").trim() : "";
+  const participantLabel = isOwnBlock ? "" : ownerLabel;
   const tooltip = [ownerLabel, titleLabel || (isOwnBlock ? "No title" : "Busy"), timeRange].filter(Boolean).join(" · ");
   block.dataset.tooltip = tooltip;
   block.title = tooltip;
@@ -5522,17 +5641,16 @@ function createSingleBusyCard(segment, dayIndex) {
     return line;
   };
 
-  if (durationClass === "event-15") {
-    appendLine("busy-line-compact", ownerLabel);
+  appendLine("busy-line-title", titleText);
+  if (durationClass === "event-15" || durationClass === "event-30") {
     configureCalendarBlockTimeLine(appendLine("busy-line-time", timeRange));
-  } else if (durationClass === "event-30") {
-    appendLine("busy-line-owner", ownerLabel);
-    appendLine("busy-line-title", titleLabel);
+  } else if (durationClass === "event-45") {
     configureCalendarBlockTimeLine(appendLine("busy-line-time", timeRange));
+    appendLine("busy-line-location", locationLabel);
   } else {
-    appendLine("busy-line-owner", ownerLabel);
-    appendLine("busy-line-title", titleLabel);
     configureCalendarBlockTimeLine(appendLine("busy-line-time", timeRange));
+    appendLine("busy-line-location", locationLabel);
+    appendLine("busy-line-participant", participantLabel);
   }
 
   block.addEventListener("click", (event) => {
@@ -5770,8 +5888,7 @@ function createEventBlock(item, dayIndex, dayDate) {
   block.dataset.tooltip = tooltip;
   block.title = tooltip;
   const titleText = item.title === "No title" ? "(No title)" : (item.title || "(No title)");
-  const compactPrefix = [ownerLabel, titleText].filter(Boolean).join(" · ");
-  const compactMeta = [timeRange, item.location].filter(Boolean).join(" · ");
+  const participantLabel = isOwnedByViewer ? "" : ownerLabel;
 
   const appendLine = (className, text) => {
     if (!text) return null;
@@ -5782,26 +5899,16 @@ function createEventBlock(item, dayIndex, dayDate) {
     return line;
   };
 
-  if (durationClass === "event-15") {
-    appendLine("event-line-compact event-line-owner", compactPrefix);
+  appendLine("event-line-title", titleText);
+  if (durationClass === "event-15" || durationClass === "event-30") {
     configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
-  } else if (durationClass === "event-30") {
-    appendLine("event-line-owner", ownerLabel);
-    appendLine("event-line-title", titleText);
-    configureCalendarBlockTimeLine(
-      appendLine("event-line-meta", compactMeta),
-      { suffix: item.location || "" }
-    );
   } else if (durationClass === "event-45") {
-    appendLine("event-line-owner", ownerLabel);
-    appendLine("event-line-title", titleText);
     configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
     appendLine("event-line-location", item.location || "");
   } else {
-    appendLine("event-line-owner", ownerLabel);
-    appendLine("event-line-title", titleText);
     configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
     appendLine("event-line-location", item.location || "");
+    appendLine("event-line-participant", participantLabel);
   }
 
   block.addEventListener("click", (event) => {
@@ -6128,15 +6235,10 @@ function upsertCalendarEventPreview({
   dragPreviewNode.dataset.previewKind = composer ? "composer" : "drag";
   const titleText = String(title || "").trim() || "(No title)";
   const timeRange = formatEventRange(startHour, endHour);
-  const ownerLabel = String(currentParticipant?.displayName || "You").trim() || "You";
-  const compactPrefix = [ownerLabel, titleText].filter(Boolean).join(" · ");
   applyEventInk(dragPreviewNode, previewColor);
   dragPreviewNode.innerHTML = `
     <div class="drag-create-preview-copy">
-      ${durationClass === "event-15"
-        ? `<div class="event-line event-line-compact event-line-owner">${escapeHtml(compactPrefix)}</div>`
-        : `<div class="event-line event-line-owner">${escapeHtml(ownerLabel)}</div>
-           <div class="event-line event-line-title">${escapeHtml(titleText)}</div>`}
+      <div class="event-line event-line-title">${escapeHtml(titleText)}</div>
       <div class="event-line event-line-meta" data-event-time-line="true" data-event-time-prefix="" data-event-time-suffix="">${escapeHtml(timeRange)}</div>
     </div>
   `;
@@ -7414,7 +7516,14 @@ function renderMonth() {
       .sort((a, b) => a.startHour - b.startHour || a.endHour - b.endHour);
     const isFreeDay = !(data?.segments?.length) && !events.length;
     const cell = document.createElement("div");
-    cell.className = ["month-cell", date.getMonth() !== monthStart.getMonth() ? "muted-month" : "", sameDate(date, today) ? "today" : "", sameDate(date, currentFocusDate) ? "selected" : ""].filter(Boolean).join(" ");
+    cell.className = [
+      "month-cell",
+      date.getMonth() !== monthStart.getMonth() ? "muted-month" : "",
+      sameDate(date, today) ? "today" : "",
+      sameDate(date, currentFocusDate) ? "selected" : "",
+      dayBlocksForDate(date).length ? "has-day-block" : "",
+      currentParticipantDayBlock(date) ? "is-blocked-by-you" : ""
+    ].filter(Boolean).join(" ");
     cell.setAttribute("role", "gridcell");
     cell.setAttribute("aria-rowindex", String(Math.floor(index / 7) + 2));
     cell.setAttribute("aria-colindex", String((index % 7) + 1));
@@ -7442,7 +7551,32 @@ function renderMonth() {
     if (weatherSymbol) cell.appendChild(weatherSymbol);
     cell.addEventListener("click", openWeek);
 
-    const visibleLimit = Math.max(1, events.length > maxRows ? maxRows - 1 : maxRows);
+    const dayBlockSegments = (data?.segments || []).filter((segment) => (
+      segment.participants?.some((participant) => (
+        participant.items?.some((item) => item.provider === "commonground_day_block")
+      ))
+    ));
+    const totalItems = dayBlockSegments.length + events.length;
+    const contentLimit = Math.max(1, totalItems > maxRows ? maxRows - 1 : maxRows);
+    const visibleDayBlocks = dayBlockSegments.slice(0, contentLimit);
+    for (const segment of visibleDayBlocks) {
+      const participant = segment.participants[0];
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "event-chip day-block-chip";
+      chip.style.setProperty("--event-color", participant?.color || participantPalette[0].value);
+      chip.textContent = participant?.participantId === currentParticipant?.id
+        ? "Busy all day"
+        : `${calendarParticipantLabel(participant)} · Busy all day`;
+      chip.setAttribute("aria-label", `${calendarParticipantLabel(participant)}, busy all day`);
+      chip.addEventListener("click", (event) => {
+        event.stopPropagation();
+        openBusyDetail(segment);
+      });
+      cell.appendChild(chip);
+    }
+
+    const visibleLimit = Math.max(0, contentLimit - visibleDayBlocks.length);
     for (const eventBlock of events.slice(0, visibleLimit)) {
       const chip = document.createElement("button");
       chip.type = "button";
@@ -7463,7 +7597,7 @@ function renderMonth() {
       cell.appendChild(chip);
     }
 
-    const hiddenCount = Math.max(0, events.length - visibleLimit);
+    const hiddenCount = Math.max(0, totalItems - visibleDayBlocks.length - Math.min(events.length, visibleLimit));
     if (hiddenCount) {
       const moreButton = document.createElement("button");
       moreButton.type = "button";
@@ -7560,7 +7694,9 @@ function renderYear() {
         "mini-day",
         date.getMonth() !== month ? "muted-month" : "",
         sameDate(date, today) ? "today" : "",
-        sameDate(date, currentFocusDate) ? "selected" : ""
+        sameDate(date, currentFocusDate) ? "selected" : "",
+        dayBlocksForDate(date).length ? "has-day-block" : "",
+        currentParticipantDayBlock(date) ? "is-blocked-by-you" : ""
       ].filter(Boolean).join(" ");
       node.textContent = date.getDate();
       node.setAttribute("aria-label", `View ${formatFullDate(date)} in week view`);
@@ -7608,6 +7744,7 @@ function render() {
   updateViewButtons();
   updateCalendarPeriodControls();
   renderRoomMeta();
+  renderDayBlockControls();
   renderRoomSwitcher();
   renderParticipants();
   renderMiniCalendar();
@@ -8554,7 +8691,7 @@ async function openRoomEntryPage() {
 }
 
 function sidebarCreateMenuItems() {
-  return [sidebarCreateEventButton, sidebarCreateRoomButton, sidebarJoinRoomButton].filter(Boolean);
+  return [sidebarCreateEventButton, sidebarBlockDayButton, sidebarCreateRoomButton, sidebarJoinRoomButton].filter(Boolean);
 }
 
 function setSidebarCreateMenuOpen(open, { focusItem = null } = {}) {
@@ -9795,6 +9932,10 @@ sidebarCreatePopover?.addEventListener("keydown", (event) => {
 sidebarCreateEventButton?.addEventListener("click", () => {
   setSidebarCreateMenuOpen(false);
   void openCalendarEventComposerAt({ date: dateKey(currentFocusDate) });
+});
+sidebarBlockDayButton?.addEventListener("click", () => {
+  setSidebarCreateMenuOpen(false);
+  void toggleFocusedDayBlock();
 });
 sidebarCreateRoomButton?.addEventListener("click", () => {
   setSidebarCreateMenuOpen(false);

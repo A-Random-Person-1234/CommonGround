@@ -322,19 +322,19 @@ try {
   assert.ok(!("googleMapsApiKey" in publicConfig.payload));
   assert.doesNotMatch(home.text, /AIza[0-9A-Za-z_-]{20,}/, "Public HTML must never contain a Google Maps API key");
   assert.match(home.text, /CommonGround/);
-  assert.match(home.text, /href="\/styles\.css\?v=20260805-primary-calendar-overlap"/);
+  assert.match(home.text, /href="\/styles\.css\?v=20260806-day-blocks"/);
   assert.match(home.text, /src="\/theme-bootstrap\.js\?v=20260804-persisted-theme"/);
   assert.match(home.text, /src="\/date-picker\.js\?v=20260726-shared-date-picker"/);
-  assert.match(home.text, /src="\/app\.js\?v=20260805-primary-calendar-overlap"/);
+  assert.match(home.text, /src="\/app\.js\?v=20260806-day-blocks"/);
   assert.match(home.text, /src="\/command-centre-actions\.js\?v=20260726-assistant-upgrade"/);
   assert.match(home.text, /src="\/command-centre\.js\?v=20260805-whole-product"/);
   assertInOrder(
     home.text,
     [
       'src="/theme-bootstrap.js?v=20260804-persisted-theme"',
-      'href="/styles.css?v=20260805-primary-calendar-overlap"',
+      'href="/styles.css?v=20260806-day-blocks"',
       'src="/date-picker.js?v=20260726-shared-date-picker"',
-      'src="/app.js?v=20260805-primary-calendar-overlap"'
+      'src="/app.js?v=20260806-day-blocks"'
     ],
     "The CSP-safe theme bootstrap must precede CSS, and the date picker must precede the app controller"
   );
@@ -623,7 +623,7 @@ try {
   );
   assert.match(
     home.text,
-    /id="addEventButton"[^>]*aria-haspopup="menu"[^>]*aria-controls="sidebarCreatePopover"[^>]*aria-expanded="false"[\s\S]*?id="sidebarCreatePopover" role="menu"[\s\S]*?id="sidebarCreateEventButton" role="menuitem"[\s\S]*?id="sidebarCreateRoomButton" role="menuitem"[\s\S]*?id="sidebarJoinRoomButton" role="menuitem"/,
+    /id="addEventButton"[^>]*aria-haspopup="menu"[^>]*aria-controls="sidebarCreatePopover"[^>]*aria-expanded="false"[\s\S]*?id="sidebarCreatePopover" role="menu"[\s\S]*?id="sidebarCreateEventButton" role="menuitem"[\s\S]*?id="sidebarBlockDayButton" role="menuitem" aria-pressed="false"[\s\S]*?id="sidebarCreateRoomButton" role="menuitem"[\s\S]*?id="sidebarJoinRoomButton" role="menuitem"/,
     "The compact Create control must expose event, room, and join actions in one accessible menu"
   );
   assert.match(
@@ -1427,6 +1427,11 @@ try {
   );
   assert.match(
     serverSource,
+    /function commandRoomDayBlockBusyIntervals\([\s\S]*?dateRangeForKey\(block\.date, timezone\)[\s\S]*?source: "day_block"[\s\S]*?commandRoomDayBlockBusyIntervals\(room, participantIds, rangeStart, rangeEnd, timezone\)/,
+    "Ask CommonGround availability must include personal all-day busy overrides"
+  );
+  assert.match(
+    serverSource,
     /async function revalidateCommandEventTime\([\s\S]*?if \(!collection\.complete\) \{[\s\S]*?httpError\(503,[\s\S]*?error\.code = "availability_unavailable"[\s\S]*?findConflicts/,
     "Confirmed mutations must fail closed before conflict checking when provider availability is unavailable"
   );
@@ -1628,6 +1633,21 @@ try {
     eventComposerScript.text,
     /addEventButton\.addEventListener\("click", \(\) => \{[\s\S]*?setSidebarCreateMenuOpen\(!isOpen\);[\s\S]*?sidebarCreateEventButton\?\.addEventListener\("click", \(\) => \{[\s\S]*?openCalendarEventComposerAt\(\{ date: dateKey\(currentFocusDate\) \}\)/,
     "The Create menu's Event action must enter through the calendar-anchored composer flow"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function renderDayBlockControls\(\)[\s\S]*?currentParticipantDayBlock\(\)[\s\S]*?Make day available[\s\S]*?Mark \$\{fullDate\} busy all day/,
+    "The Create menu must clearly switch between blocking and reopening the selected day"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function roomDayBlockBusyBlocks\(\)[\s\S]*?provider: "commonground_day_block"[\s\S]*?title: "Busy all day"[\s\S]*?normalizeBusyBlocks\(\[\.\.\.googleBusy, \.\.\.roomDayBlockBusyBlocks\(\)\]\)/,
+    "Personal day blocks must use the same busy-block rendering path as imported all-day availability"
+  );
+  assert.match(
+    eventComposerScript.text,
+    /function setDayBlocked\(date, blocked\)[\s\S]*?\/day-blocks\/\$\{key\}[\s\S]*?method: blocked \? "POST" : "DELETE"[\s\S]*?sidebarBlockDayButton\?\.addEventListener\("click"[\s\S]*?toggleFocusedDayBlock\(\)/,
+    "Blocking a day must persist through the dedicated idempotent room endpoint"
   );
   assert.match(eventComposerScript.text, /sidebarCreateRoomButton\?\.addEventListener\("click",[\s\S]*?openCreateRoomModal\(\);/);
   assert.match(eventComposerScript.text, /sidebarJoinRoomButton\?\.addEventListener\("click",[\s\S]*?await openRoomEntryPage\(\);/);
@@ -1980,18 +2000,18 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function createSingleBusyCard\(segment, dayIndex\)[\s\S]*?if \(durationClass === "event-15"\)[\s\S]*?appendLine\("busy-line-compact", ownerLabel\)[\s\S]*?configureCalendarBlockTimeLine\(appendLine\("busy-line-time", timeRange\)\)[\s\S]*?function createBusyStack/,
-    "A 15-minute Google event must keep its owner and live-updating right-aligned time in separate lines"
+    /function createSingleBusyCard\(segment, dayIndex\)[\s\S]*?appendLine\("busy-line-title", titleText\)[\s\S]*?durationClass === "event-15" \|\| durationClass === "event-30"[\s\S]*?configureCalendarBlockTimeLine\(appendLine\("busy-line-time", timeRange\)\)[\s\S]*?function createBusyStack/,
+    "Short Google event cards must keep their title and live-updating time in separate lines"
   );
   assert.match(
     eventComposerScript.text,
-    /function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?if \(durationClass === "event-15"\)[\s\S]*?appendLine\("event-line-compact event-line-owner", compactPrefix\)[\s\S]*?configureCalendarBlockTimeLine\(appendLine\("event-line-meta", timeRange\)\)[\s\S]*?function configureFreeGlowBlock/,
-    "A 15-minute CommonGround event must keep its owner/title and live-updating right-aligned time in separate lines"
+    /function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?appendLine\("event-line-title", titleText\)[\s\S]*?durationClass === "event-15" \|\| durationClass === "event-30"[\s\S]*?configureCalendarBlockTimeLine\(appendLine\("event-line-meta", timeRange\)\)[\s\S]*?function configureFreeGlowBlock/,
+    "Short CommonGround event cards must keep their title and live-updating time in separate lines"
   );
   assert.match(
     eventComposerScript.text,
-    /function upsertCalendarEventPreview\([\s\S]*?event-line-compact[\s\S]*?event-line event-line-meta[\s\S]*?data-event-time-line="true"/,
-    "A 15-minute composer preview must use the same dedicated time line as saved events"
+    /function upsertCalendarEventPreview\([\s\S]*?event-line event-line-title[\s\S]*?event-line event-line-meta[\s\S]*?data-event-time-line="true"/,
+    "The composer preview must use the same title-first hierarchy and dedicated time line as saved events"
   );
   assert.match(
     eventComposerScript.text,
@@ -2005,8 +2025,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function calendarEventOwnerLabel\(eventBlock\)[\s\S]*?creatorId === currentParticipant\?\.id[\s\S]*?currentParticipant\?\.displayName \|\| "You"[\s\S]*?function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?const ownerLabel = calendarEventOwnerLabel\(item\)[\s\S]*?appendLine\("event-line-owner", ownerLabel\)/,
-    "Manual event cards must visibly render the creator's room display name"
+    /function calendarEventOwnerLabel\(eventBlock\)[\s\S]*?creatorId === currentParticipant\?\.id[\s\S]*?currentParticipant\?\.displayName \|\| "You"[\s\S]*?function createEventBlock\(item, dayIndex, dayDate\)[\s\S]*?const ownerLabel = calendarEventOwnerLabel\(item\)[\s\S]*?const participantLabel = isOwnedByViewer \? "" : ownerLabel[\s\S]*?appendLine\("event-line-participant", participantLabel\)/,
+    "Manual event cards must suppress the viewer's own name and reserve other creators for roomy cards"
   );
   assert.match(
     eventComposerScript.text,
@@ -2015,8 +2035,8 @@ try {
   );
   assert.match(
     eventComposerScript.text,
-    /function upsertCalendarEventPreview\([\s\S]*?const ownerLabel = String\(currentParticipant\?\.displayName \|\| "You"\)[\s\S]*?event-line event-line-owner[\s\S]*?escapeHtml\(ownerLabel\)/,
-    "The live manual-event preview must use the current participant's room display name"
+    /function upsertCalendarEventPreview\([\s\S]*?event-line event-line-title[\s\S]*?escapeHtml\(titleText\)[\s\S]*?event-line event-line-meta/,
+    "The live manual-event preview must mirror the saved title-first card without showing the viewer's own name"
   );
   assert.match(
     eventComposerScript.text,
@@ -2826,13 +2846,13 @@ try {
   );
   assert.match(
     eventComposerStyles.text,
-    /\.event-card\.event-15 \.event-line-compact,\s*\.busy-card\.event-15 \.busy-line-compact\s*\{[^}]*padding-right:\s*calc\(var\(--inline-time-space\) \+ 6px\)/s,
-    "15-minute labels must reserve space for their independent right-aligned time"
+    /Duration-aware busy-card hierarchy[\s\S]*?:is\(\.event-card, \.busy-card\):is\(\.event-15, \.event-30\)[\s\S]*?:is\(\.event-line-title, \.busy-line-title\)[\s\S]*?padding-right:\s*calc\(var\(--event-card-compact-time-width\) \+ 5px\)/s,
+    "15- and 30-minute cards must reserve space for their independent right-aligned time"
   );
   assert.match(
     eventComposerStyles.text,
-    /@container \(max-width: 190px\)\s*\{[\s\S]*?\.event-card \.event-line:not\(\.event-line-meta\),\s*\.busy-card \.busy-line:not\(\.busy-line-time\)\s*\{[^}]*padding-right:\s*0;[^}]*\}[\s\S]*?\.event-card\.event-15 \.event-line-compact,\s*\.busy-card\.event-15 \.busy-line-compact\s*\{[^}]*padding-right:\s*calc\(var\(--inline-time-space\) \+ 4px\);[^}]*\}[\s\S]*?\.event-card:not\(\.event-15\):not\(\.event-30\):not\(\.event-overlap-anchor\) \.event-line-meta,\s*\.busy-card:not\(\.event-15\):not\(\.event-30\):not\(\.busy-overlap-anchor\) \.busy-line-time\s*\{[^}]*position:\s*static;[^}]*width:\s*100%;[^}]*max-width:\s*100%;[^}]*text-align:\s*left;[^}]*\}[\s\S]*?\.event-card\.event-30 \.event-line-meta,\s*\.busy-card\.event-30 \.busy-line-title,\s*\.busy-card\.event-30 \.busy-line-time\s*\{[^}]*display:\s*none;/s,
-    "Narrow cards must stack longer ranges safely without expanding overlap-anchor text beneath a foreground card"
+    /:is\(\.event-card, \.busy-card\)\.event-60plus[\s\S]*?:is\(\.event-line-participant, \.busy-line-participant\)[\s\S]*?position:\s*absolute;[\s\S]*?right:\s*8px;[\s\S]*?bottom:\s*5px;[\s\S]*?@container \(max-width: 108px\)[\s\S]*?display:\s*none;/s,
+    "Other members' names must sit at the bottom-right of roomy events and disappear in narrow overlap lanes"
   );
   assert.match(
     eventComposerStyles.text,
@@ -3509,7 +3529,7 @@ try {
     assert.match(legalPage.text, /<link rel="apple-touch-icon" sizes="180x180" href="\/icons\/apple-touch-icon\.png\?v=20260724-appicon-new" \/>/);
     assert.match(legalPage.text, /<img class="mark app-brand-icon" src="\/icons\/icon-192\.png\?v=20260724-appicon-new" alt="" width="46" height="46" \/>/);
     assert.match(legalPage.text, /<script src="\/theme-bootstrap\.js\?v=20260804-persisted-theme" data-sync-server="true"><\/script>/);
-    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260805-primary-calendar-overlap" \/>/);
+    assert.match(legalPage.text, /<link rel="stylesheet" href="\/styles\.css\?v=20260806-day-blocks" \/>/);
     assert.doesNotMatch(
       legalPage.text,
       /<script(?![^>]*\bsrc=)[^>]*>/i,
@@ -3657,6 +3677,58 @@ try {
   const hostId = hostRoom.payload.participant.id;
   assert.equal(hostRoom.payload.room.participants.length, 3);
   assertNoKeys(hostRoom.payload, new Set(["userId", "ownerEmail", "tokens", "googleTokens", "microsoftTokens"]));
+
+  const blockedDate = "2026-07-22";
+  const blockedDay = await host.request(`/api/rooms/${firstCode}/day-blocks/${blockedDate}`, {
+    method: "POST"
+  });
+  assert.equal(blockedDay.payload.blocked, true);
+  assert.ok(blockedDay.payload.room.dayBlocks.some((block) => (
+    block.participantId === hostId && block.date === blockedDate && block.isCurrent === true
+  )));
+  const duplicateBlockedDay = await host.request(`/api/rooms/${firstCode}/day-blocks/${blockedDate}`, {
+    method: "POST"
+  });
+  assert.equal(
+    duplicateBlockedDay.payload.room.dayBlocks.filter((block) => (
+      block.participantId === hostId && block.date === blockedDate
+    )).length,
+    1,
+    "Blocking the same day twice must remain idempotent"
+  );
+  const guestSeesBlockedDay = await guest.request(`/api/rooms/${firstCode}`);
+  assert.ok(guestSeesBlockedDay.payload.room.dayBlocks.some((block) => (
+    block.participantId === hostId && block.date === blockedDate && block.isCurrent === false
+  )));
+  await host.request(`/api/rooms/${firstCode}/day-blocks/2026-02-30`, {
+    method: "POST",
+    expected: 400
+  });
+  const blockedAvailability = await host.request(`/api/rooms/${firstCode}/command-centre/availability`, {
+    method: "POST",
+    body: {
+      participantIds: [hostId],
+      rangeStart: `${blockedDate}T00:00:00.000Z`,
+      rangeEnd: "2026-07-23T00:00:00.000Z",
+      durationMinutes: 60,
+      earliestMinute: 0,
+      latestMinute: 24 * 60,
+      timezone: "UTC"
+    }
+  });
+  assert.equal(blockedAvailability.payload.availability.complete, true);
+  assert.deepEqual(
+    blockedAvailability.payload.availability.slots,
+    [],
+    "Ask CommonGround must never suggest a time on a participant's blocked day"
+  );
+  const unblockedDay = await host.request(`/api/rooms/${firstCode}/day-blocks/${blockedDate}`, {
+    method: "DELETE"
+  });
+  assert.equal(unblockedDay.payload.blocked, false);
+  assert.ok(!unblockedDay.payload.room.dayBlocks.some((block) => (
+    block.participantId === hostId && block.date === blockedDate
+  )));
 
   const placesPath = `/api/rooms/${firstCode}/places/autocomplete`;
   await host.request(placesPath, { expected: 405 });

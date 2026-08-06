@@ -17,7 +17,7 @@
     <link rel="icon" type="image/png" sizes="16x16" href="/icons/favicon-16.png?v=20260724-appicon-new" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png?v=20260724-appicon-new" />
     <link rel="manifest" href="/site.webmanifest?v=20260724-appicon-new" />
-    <link rel="stylesheet" href="/styles.css?v=20260805-primary-calendar-overlap" />
+    <link rel="stylesheet" href="/styles.css?v=20260806-day-blocks" />
   </head>
   <body>
     <div class="notification-stack" id="notificationStack" role="status" aria-live="polite" aria-label="Notifications"></div>
@@ -198,6 +198,10 @@
               <button type="button" id="sidebarCreateEventButton" role="menuitem">
                 <span class="sidebar-create-item-icon ui-icon ui-icon-calendar-sync" aria-hidden="true"></span>
                 <span>Event</span>
+              </button>
+              <button type="button" id="sidebarBlockDayButton" role="menuitem" aria-pressed="false">
+                <span class="sidebar-create-item-icon ui-icon ui-icon-square" aria-hidden="true"></span>
+                <span id="sidebarBlockDayLabel">Block day</span>
               </button>
               <button type="button" id="sidebarCreateRoomButton" role="menuitem">
                 <span class="sidebar-create-item-icon ui-icon ui-icon-plus" aria-hidden="true"></span>
@@ -846,7 +850,7 @@
     </section>
 
     <script src="/date-picker.js?v=20260726-shared-date-picker"></script>
-    <script src="/app.js?v=20260805-primary-calendar-overlap"></script>
+    <script src="/app.js?v=20260806-day-blocks"></script>
     <script src="/command-centre-actions.js?v=20260726-assistant-upgrade"></script>
     <script src="/command-centre.js?v=20260805-whole-product"></script>
   </body>
