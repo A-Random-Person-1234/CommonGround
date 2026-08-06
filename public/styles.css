@@ -15432,3 +15432,57 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   font-weight: 500 !important;
   line-height: 1.08 !important;
 }
+
+/* Synced Google busy blocks use .busy-overlap-lane, not .event-overlap-lane.
+   Keep 30/45 minute synced overlaps readable with stacked title + time only. */
+#roomPage .busy-card.busy-overlap-lane:is(.event-30, .event-45) {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  justify-content: flex-start !important;
+  min-height: 40px !important;
+  height: max(40px, calc(var(--duration) * var(--row-height) - var(--calendar-block-gap))) !important;
+  padding: 6px 7px !important;
+  gap: 1px !important;
+  overflow: hidden !important;
+}
+
+#roomPage .busy-card.busy-overlap-lane.event-45 {
+  min-height: 48px !important;
+  height: max(48px, calc(var(--duration) * var(--row-height) - var(--calendar-block-gap))) !important;
+}
+
+#roomPage .busy-card.busy-overlap-lane:is(.event-30, .event-45)
+  .busy-line {
+  position: static !important;
+  display: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  text-align: left !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+#roomPage .busy-card.busy-overlap-lane:is(.event-30, .event-45)
+  :is(.busy-line-title, .busy-line-time) {
+  display: block !important;
+}
+
+#roomPage .busy-card.busy-overlap-lane:is(.event-30, .event-45)
+  .busy-line-title {
+  color: var(--calendar-card-copy) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  line-height: 1.08 !important;
+}
+
+#roomPage .busy-card.busy-overlap-lane:is(.event-30, .event-45)
+  .busy-line-time {
+  color: color-mix(in srgb, var(--calendar-card-copy) 88%, transparent) !important;
+  font-size: 9.5px !important;
+  font-weight: 500 !important;
+  line-height: 1.08 !important;
+}
