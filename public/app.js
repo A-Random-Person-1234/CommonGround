@@ -286,7 +286,7 @@ const weatherIconNames = new Set([
   "thermometer-snowflake"
 ]);
 
-const showFreeBlocks = true;
+const showFreeBlocks = false;
 
 function readStoredCalendarView() {
   try {
@@ -5145,9 +5145,15 @@ function calendarLaneGeometry(laneCount = 1, laneIndex = 0) {
     };
   }
 
-  const widthFraction = 1 / safeLaneCount;
-  const leftFraction = widthFraction * safeLaneIndex;
-  const rightFraction = Math.max(0, 1 - leftFraction - widthFraction);
+  const overlayLaneCount = safeLaneCount - 1;
+  const progress = overlayLaneCount === 1
+    ? 0
+    : (safeLaneIndex - 1) / Math.max(1, overlayLaneCount - 1);
+  const leftFraction = overlayLaneCount === 1
+    ? 0.045
+    : 0.045 + (0.075 * progress);
+  const rightFraction = 0;
+  const widthFraction = Math.max(0.82, 1 - leftFraction);
 
   return {
     laneCount: safeLaneCount,
@@ -5167,14 +5173,13 @@ function applyCalendarLanePosition(
 ) {
   const dayCount = Number(calendarGrid.style.getPropertyValue("--day-count")) || (currentView === "day" ? 1 : 7);
   const lane = calendarLaneGeometry(laneCount, laneIndex);
-  const safeClusterLaneCount = Math.max(lane.laneCount, Number(clusterLaneCount || lane.laneCount));
   const columnWidthPercent = 100 / dayCount;
   const laneLeftPercent = columnWidthPercent * (dayIndex + lane.leftFraction);
   const laneWidthPercent = columnWidthPercent * lane.widthFraction;
   block.style.left = `calc(${laneLeftPercent}% + var(--calendar-block-gap))`;
   block.style.width = `calc(${laneWidthPercent}% - var(--calendar-block-double-gap))`;
   block.style.setProperty("--event-stack-order", lane.laneIndex);
-  block.style.setProperty("--event-readable-lane-width", `${100 / safeClusterLaneCount}%`);
+  block.style.setProperty("--event-cluster-lane-count", Math.max(lane.laneCount, Number(clusterLaneCount || lane.laneCount)));
 }
 
 function eventBlocksForDate(date) {
