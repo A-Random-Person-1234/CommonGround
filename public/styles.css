@@ -15346,3 +15346,42 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   font-size: 11px !important;
   line-height: 1.22 !important;
 }
+
+/* Final guard for very short events: 15 minutes or less must render as one
+   fixed-height compact chip, never as stacked title/time text. */
+#roomPage :is(.event-card, .busy-card).event-15 {
+  --event-card-compact-time-width: 0px;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  height: 14px !important;
+  min-height: 14px !important;
+  max-height: 14px !important;
+  padding: 1px 6px !important;
+  gap: 0 !important;
+  overflow: hidden !important;
+}
+
+#roomPage :is(.event-card, .busy-card).event-15
+  :is(.event-line, .busy-line) {
+  position: static !important;
+  display: none !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  text-align: left !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+#roomPage :is(.event-card, .busy-card).event-15
+  :is(.event-line-compact, .busy-line-compact) {
+  display: block !important;
+  color: var(--calendar-card-copy) !important;
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  line-height: 10px !important;
+  letter-spacing: 0 !important;
+}

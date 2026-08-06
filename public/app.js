@@ -5366,11 +5366,11 @@ function eventCardMetrics(duration) {
   const minutes = Math.round(duration * 60);
   let durationClass = "event-60plus";
 
-  if (minutes <= 20 || renderedHeight < 22) {
+  if (minutes <= 15) {
     durationClass = "event-15";
-  } else if (minutes <= 35 || renderedHeight < 32) {
+  } else if (minutes <= 30) {
     durationClass = "event-30";
-  } else if (minutes <= 50 || renderedHeight < 46) {
+  } else if (minutes <= 45) {
     durationClass = "event-45";
   }
 
@@ -5642,7 +5642,7 @@ function createSingleBusyCard(segment, dayIndex) {
   const titleText = titleLabel || (isOwnBlock ? "(No title)" : "Busy");
   const locationLabel = isOwnBlock ? calendarLocationLabel(singleItem?.location) : "";
   const participantLabel = isOwnBlock ? "" : ownerLabel;
-  const compactLine = [ownerLabel, titleLabel].filter(Boolean).join(" · ");
+  const compactLine = [titleText, timeRange].filter(Boolean).join(" · ");
   const tooltip = [ownerLabel, titleLabel || (isOwnBlock ? "No title" : "Busy"), timeRange].filter(Boolean).join(" · ");
   block.dataset.tooltip = tooltip;
   block.title = tooltip;
@@ -5657,13 +5657,20 @@ function createSingleBusyCard(segment, dayIndex) {
     return line;
   };
 
-  appendLine("busy-line-title", titleText);
-  if (durationClass === "event-15" || durationClass === "event-30") {
+  if (durationClass === "event-15") {
+    configureCalendarBlockTimeLine(
+      appendLine("busy-line-compact", compactLine),
+      { prefix: titleText }
+    );
+  } else if (durationClass === "event-30") {
+    appendLine("busy-line-title", titleText);
     configureCalendarBlockTimeLine(appendLine("busy-line-time", timeRange));
   } else if (durationClass === "event-45") {
+    appendLine("busy-line-title", titleText);
     configureCalendarBlockTimeLine(appendLine("busy-line-time", timeRange));
     appendLine("busy-line-location", locationLabel);
   } else {
+    appendLine("busy-line-title", titleText);
     configureCalendarBlockTimeLine(appendLine("busy-line-time", timeRange));
     appendLine("busy-line-location", locationLabel);
     appendLine("busy-line-participant", participantLabel);
@@ -5906,7 +5913,8 @@ function createEventBlock(item, dayIndex, dayDate) {
   const titleText = item.title === "No title" ? "(No title)" : (item.title || "(No title)");
   const participantLabel = isOwnedByViewer ? "" : ownerLabel;
   const locationLabel = calendarLocationLabel(item.location);
-  const compactPrefix = [ownerLabel, titleText].filter(Boolean).join(" · ");
+  const compactPrefix = titleText;
+  const compactLine = [titleText, timeRange].filter(Boolean).join(" · ");
   const compactMeta = [timeRange, item.location].filter(Boolean).join(" · ");
 
   const appendLine = (className, text) => {
@@ -5918,13 +5926,20 @@ function createEventBlock(item, dayIndex, dayDate) {
     return line;
   };
 
+  if (durationClass === "event-15") {
+    configureCalendarBlockTimeLine(
+      appendLine("event-line-compact", compactLine),
+      { prefix: compactPrefix }
+    );
+  } else if (durationClass === "event-30") {
     appendLine("event-line-title", titleText);
-  if (durationClass === "event-15" || durationClass === "event-30") {
     configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
   } else if (durationClass === "event-45") {
+    appendLine("event-line-title", titleText);
     configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
     appendLine("event-line-location", locationLabel);
   } else {
+    appendLine("event-line-title", titleText);
     configureCalendarBlockTimeLine(appendLine("event-line-meta", timeRange));
     appendLine("event-line-location", locationLabel);
     appendLine("event-line-participant", participantLabel);
@@ -6255,15 +6270,17 @@ function upsertCalendarEventPreview({
   const titleText = String(title || "").trim() || "(No title)";
   const timeRange = formatEventRange(startHour, endHour);
   const ownerLabel = String(currentParticipant?.displayName || "You").trim() || "You";
-  const compactPrefix = [ownerLabel, titleText].filter(Boolean).join(" · ");
+  const compactPrefix = [titleText, timeRange].filter(Boolean).join(" · ");
   applyEventInk(dragPreviewNode, previewColor);
   dragPreviewNode.innerHTML = `
     <div class="drag-create-preview-copy">
       ${durationClass === "event-15"
-        ? `<div class="event-line event-line-compact event-line-owner">${escapeHtml(compactPrefix)}</div>`
+        ? `<div class="event-line event-line-compact event-line-owner" data-event-time-line="true" data-event-time-prefix="${escapeHtml(titleText)}" data-event-time-suffix="">${escapeHtml(compactPrefix)}</div>`
         : `<div class="event-line event-line-owner">${escapeHtml(ownerLabel)}</div>
            <div class="event-line event-line-title">${escapeHtml(titleText)}</div>`}
-      <div class="event-line event-line-meta" data-event-time-line="true" data-event-time-prefix="" data-event-time-suffix="">${escapeHtml(timeRange)}</div>
+      ${durationClass === "event-15"
+        ? ""
+        : `<div class="event-line event-line-meta" data-event-time-line="true" data-event-time-prefix="" data-event-time-suffix="">${escapeHtml(timeRange)}</div>`}
     </div>
   `;
   if (!dragPreviewNode.isConnected) {
