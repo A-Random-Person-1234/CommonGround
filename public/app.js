@@ -6278,15 +6278,13 @@ function upsertCalendarEventPreview({
   dragPreviewNode.dataset.previewKind = composer ? "composer" : "drag";
   const titleText = String(title || "").trim() || "(No title)";
   const timeRange = formatEventRange(startHour, endHour);
-  const ownerLabel = String(currentParticipant?.displayName || "You").trim() || "You";
   const compactPrefix = [titleText, timeRange].filter(Boolean).join(" · ");
   applyEventInk(dragPreviewNode, previewColor);
   dragPreviewNode.innerHTML = `
     <div class="drag-create-preview-copy">
       ${durationClass === "event-15"
         ? `<div class="event-line event-line-compact event-line-owner" data-event-time-line="true" data-event-time-prefix="${escapeHtml(titleText)}" data-event-time-suffix="">${escapeHtml(compactPrefix)}</div>`
-        : `<div class="event-line event-line-owner">${escapeHtml(ownerLabel)}</div>
-           <div class="event-line event-line-title">${escapeHtml(titleText)}</div>`}
+        : `<div class="event-line event-line-title">${escapeHtml(titleText)}</div>`}
       ${durationClass === "event-15"
         ? ""
         : `<div class="event-line event-line-meta" data-event-time-line="true" data-event-time-prefix="" data-event-time-suffix="">${escapeHtml(timeRange)}</div>`}
