@@ -38,6 +38,46 @@ final result: passed
 
 ---
 
+# CommonGround duration-aware event-card design QA
+
+- Source visual truth (current incorrect hierarchy): `C:\Users\aryan\AppData\Local\Temp\codex-clipboard-143121b9-7ecb-43f4-bdc5-533b3ac91fb7.png`
+- Implementation screenshot: `C:\Users\aryan\Documents\Codex\2026-07-17\do\publish-event-owner-theme-full-20260805\.tmp-visual\event-card-hierarchy.png`
+- State: dark-mode weekly room calendar with overlapping 60+ minute events, a 45-minute event with location, and a 60-minute own event with location.
+
+## Comparison evidence
+
+The reference exposes the existing defect: the owner name is the first line, the time is pinned to the top-right, and the actual title is visually secondary. The updated implementation reverses that hierarchy. Event titles are bold and first; time appears directly below for 45-minute and longer events; location appears below the time from 45 minutes; the current user's own name is absent.
+
+## Duration and ownership behavior
+
+- 15 and 30 minutes: title remains at the left and the live time range remains at the right. Location and participant labels are suppressed.
+- 45 minutes: title, time, and optional location are stacked in that order.
+- 60 minutes and longer: title, time, and optional location remain stacked. Only another participant's name may appear at the bottom-right.
+- Narrow overlap lanes: the optional participant label is removed below 108 px card width so it cannot collide with the primary event information.
+- Current user: the participant label is not created, including on manual previews and Google-backed busy cards.
+
+## Fidelity surfaces
+
+- Typography: passed. Titles are the strongest label; time and location step down in weight and opacity.
+- Spacing: passed. Compact cards reserve a bounded right-hand time column; taller cards use a clean vertical stack.
+- Colors: passed. Existing participant colors and contrast-aware event ink remain unchanged.
+- Content: passed. The renderer preserves title, time, and location data while applying the requested duration thresholds.
+- Responsive containment: passed. Ellipsis and the card container query prevent labels from overflowing narrow overlap lanes.
+
+## Verification
+
+- Browser comparison completed against the supplied incorrect-state screenshot.
+- Own 45-minute and 60-minute cards were exercised in the running app; the owner name did not render.
+- Static regression checks cover title-first rendering, duration thresholds, other-user-only participant labels, compact right-aligned time, and narrow-card suppression.
+- `npm.cmd run check` passed.
+- `npm.cmd run test:smoke` passed.
+
+No actionable P0, P1, or P2 visual differences remain for this scoped change.
+
+final result: passed
+
+---
+
 # CommonGround readable clash lanes - design QA
 
 ## Evidence and normalization
