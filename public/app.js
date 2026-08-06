@@ -2397,6 +2397,16 @@ function clampVisibleHour(hour) {
   return Math.min(calendarEndHour, Math.max(calendarStartHour, hour));
 }
 
+const calendarOverlapEpsilonHours = 1 / 3600;
+
+function calendarRangesOverlap(startA, endA, startB, endB) {
+  return startA < endB - calendarOverlapEpsilonHours && endA > startB + calendarOverlapEpsilonHours;
+}
+
+function calendarRangeStartsAfterOrAtEnd(startHour, endHour) {
+  return startHour >= endHour - calendarOverlapEpsilonHours;
+}
+
 function normalizedDragRange(startHour, endHour, fallbackDuration = 0.5) {
   const start = clampVisibleHour(startHour);
   const end = clampVisibleHour(endHour);
@@ -5201,7 +5211,7 @@ function layoutEventLanes(events = []) {
 
     for (const eventBlock of cluster) {
       if (eventBlock === anchor) continue;
-      let overlayLaneIndex = overlayLaneEnds.findIndex((laneEnd) => eventBlock.startHour >= laneEnd);
+      let overlayLaneIndex = overlayLaneEnds.findIndex((laneEnd) => calendarRangeStartsAfterOrAtEnd(eventBlock.startHour, laneEnd));
       if (overlayLaneIndex === -1) {
         overlayLaneIndex = overlayLaneEnds.length;
         overlayLaneEnds.push(eventBlock.endHour);
@@ -5217,8 +5227,7 @@ function layoutEventLanes(events = []) {
         1,
         ...clusterItems
           .filter((candidate) => (
-            candidate.startHour < item.endHour &&
-            candidate.endHour > item.startHour
+            calendarRangesOverlap(candidate.startHour, candidate.endHour, item.startHour, item.endHour)
           ))
           .map((candidate) => candidate.laneIndex + 1)
       );
@@ -5235,7 +5244,7 @@ function layoutEventLanes(events = []) {
   };
 
   for (const eventBlock of sorted) {
-    if (clusterEnd === null || eventBlock.startHour >= clusterEnd) {
+    if (clusterEnd === null || calendarRangeStartsAfterOrAtEnd(eventBlock.startHour, clusterEnd)) {
       flushCluster();
       cluster = [eventBlock];
       clusterEnd = eventBlock.endHour;
