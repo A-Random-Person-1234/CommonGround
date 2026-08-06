@@ -15161,12 +15161,23 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   gap: 0;
 }
 
+#roomPage :is(.event-card, .busy-card).event-15 {
+  --event-card-compact-time-width: min(46%, 66px);
+  padding: 1px 6px;
+}
+
 #roomPage :is(.event-card, .busy-card):is(.event-15, .event-30)
-  :is(.event-line-title, .busy-line-title) {
+  :is(.event-line-title, .event-line-compact, .busy-line-title, .busy-line-compact) {
   display: block;
   padding-right: calc(var(--event-card-compact-time-width) + 5px);
   font-size: 10.5px;
   line-height: 1.15;
+}
+
+#roomPage :is(.event-card, .busy-card).event-15
+  :is(.event-line-title, .event-line-compact, .busy-line-title, .busy-line-compact) {
+  font-size: 9px;
+  line-height: 10px;
 }
 
 #roomPage :is(.event-card, .busy-card):is(.event-15, .event-30)
@@ -15181,6 +15192,14 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   font-size: 9.5px;
   line-height: 1.15;
   text-align: right;
+}
+
+#roomPage :is(.event-card, .busy-card).event-15
+  :is(.event-line-meta, .busy-line-time) {
+  top: 1px;
+  right: 6px;
+  font-size: 8.5px;
+  line-height: 10px;
 }
 
 #roomPage :is(.event-card, .busy-card):is(.event-15, .event-30)
