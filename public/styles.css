@@ -15286,3 +15286,44 @@ input.common-ground-date-input::-webkit-calendar-picker-indicator {
   width: 100%;
   margin-top: 10px;
 }
+
+/* Final calendar-card pass: titles lead, while time and location use one
+   consistent supporting style. Overlay cards retain a broad readable lane
+   rather than being compressed by older compact-card rules. */
+#roomPage :is(.event-card, .busy-card) {
+  --calendar-card-copy: color-mix(in srgb, var(--resolved-event-ink) 84%, transparent);
+}
+
+#roomPage :is(.event-card, .busy-card) :is(.event-line, .busy-line) {
+  color: var(--calendar-card-copy) !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  line-height: 1.22 !important;
+}
+
+#roomPage :is(.event-card .event-line-title, .busy-card .busy-line-title) {
+  color: var(--calendar-card-copy) !important;
+  font-weight: 700 !important;
+}
+
+#roomPage :is(.event-card, .busy-card).event-overlap-lane {
+  padding: 6px 8px !important;
+}
+
+#roomPage :is(.event-card, .busy-card).event-overlap-lane:is(.event-15, .event-30) {
+  padding: 3px 7px !important;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-15, .event-30)
+  :is(.event-line-meta, .busy-line-time) {
+  top: 3px;
+  right: 7px;
+  font-size: 11px !important;
+  line-height: 1.22 !important;
+}
+
+#roomPage :is(.event-card, .busy-card):is(.event-15, .event-30)
+  :is(.event-line-title, .busy-line-title) {
+  font-size: 11px !important;
+  line-height: 1.22 !important;
+}
